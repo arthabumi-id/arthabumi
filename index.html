@@ -551,7 +551,7 @@ function beliInput(){
       <div style="font-weight:700;margin-bottom:8px;color:#854d0e">📋 Paste Daftar Belanja (Cepat)</div>
       <div class="fg">
         <label class="fl">Tempel daftar (satu baris satu item)</label>
-        <textarea id="quick-paste-text" rows="4" class="fc" placeholder="Cat Tembok 2 75000 Toko: Sumber Makmur&#10;Semen 50kg 3 85000&#10;Besi 10mm 5 120000"></textarea>
+        <textarea id="quick-paste-text" rows="4" class="fc" placeholder="Cat Tembok, 2, 75000 Toko: Sumber Makmur&#10;Semen hitam, 50, 85000&#10;Besi 10mm tes, 5, 120000"></textarea>
         <div style="font-size:10px;color:#a16207;margin-top:4px">Format: <strong>nama jumlah harga</strong> (toko opsional, pakai "Toko: NamaToko" di akhir baris)</div>
       </div>
       <div class="g2" style="margin-bottom:8px">
@@ -590,55 +590,62 @@ function processQuickPaste() {
     line = line.trim();
     if (line.length < 3) continue;
     
-    // Bersihkan: hapus "Rp", hapus titik ribuan, ganti koma jadi titik
-    let cleaned = line.replace(/Rp\.?\s*/gi, '').replace(/\.(\d{3})/g, '$1').replace(/,/g, '.');
-    
-    // Pisahkan berdasarkan spasi, tab, atau koma
-    let parts = cleaned.split(/[\s,]+/);
-    if (parts.length < 2) continue;
-    
-    // Ekstrak nama (bisa mengandung spasi) → cari angka dari belakang
-    let qty = 1;
-    let harga = 0;
-    let nama = '';
+    // Ekstrak toko dari baris (format: "Toko: NamaToko")
     let toko = defaultToko;
-    
-    // Baca dari belakang: angka terakhir = harga satuan, angka sebelumnya = qty (jika ada)
-    let angka = [];
-    let idxAngka = [];
-    for (let i = 0; i < parts.length; i++) {
-      let num = parseFloat(parts[i].replace(/[^\d.-]/g, ''));
-      if (!isNaN(num)) {
-        angka.push(num);
-        idxAngka.push(i);
-      }
-    }
-    if (angka.length === 0) continue;
-    
-    harga = angka[angka.length-1];
-    if (angka.length >= 2) {
-      // Jika angka sebelumnya <= 1000 dan masuk akal sebagai qty
-      let calonQty = angka[angka.length-2];
-      if (calonQty >= 0.5 && calonQty <= 10000 && calonQty < harga) {
-        qty = calonQty;
-      }
-    }
-    
-    // Nama adalah gabungan kata sebelum angka pertama yang ditemukan (atau semua non-angka)
-    let firstNumIdx = idxAngka.length > 0 ? idxAngka[0] : parts.length;
-    let namaParts = parts.slice(0, firstNumIdx);
-    if (namaParts.length === 0) namaParts = parts.slice(0, -angka.length);
-    nama = namaParts.join(' ').trim();
-    if (nama.length === 0) nama = parts[0]; // fallback
-    
-    // Cek apakah ada kata "toko:" di akhir baris (opsional override)
     let tokoMatch = line.match(/toko[:]\s*(.+)$/i);
     if (tokoMatch) {
       toko = tokoMatch[1].trim();
-      // hapus kata "toko:xxx" dari nama agar tidak ikut
-      nama = nama.replace(/toko:.+$/i, '').trim();
+      line = line.replace(/toko[:].+$/i, '').trim();
     }
     
+    // Normalisasi: hapus "Rp", hapus titik ribuan (80.000 -> 80000), ganti koma desimal jadi titik
+    let cleaned = line.replace(/Rp\.?\s*/gi, '')
+                      .replace(/\.(\d{3})/g, '$1')
+                      .replace(/,/g, '.');
+    
+    // Ambil semua angka (termasuk desimal)
+    const numberMatches = [...cleaned.matchAll(/\b(\d+(?:\.\d+)?)\b/g)];
+    if (numberMatches.length === 0) continue;
+    
+    // Angka terakhir = harga satuan
+    let harga = parseFloat(numberMatches[numberMatches.length-1][1]);
+    let qty = 1;
+    let nama = '';
+    
+    // Jika ada lebih dari satu angka, coba ambil angka sebelumnya sebagai qty
+    if (numberMatches.length >= 2) {
+      let candidateQty = parseFloat(numberMatches[numberMatches.length-2][1]);
+      // Qty biasanya <= 1000 dan lebih kecil dari harga (atau harga barang murah < 1000)
+      if (candidateQty >= 0.5 && candidateQty <= 10000 && (candidateQty < harga || harga < 1000)) {
+        qty = candidateQty;
+      }
+    }
+    
+    // Tentukan posisi angka terakhir (harga) dalam string
+    let lastNumberIndex = numberMatches[numberMatches.length-1].index;
+    let namaRaw = cleaned.substring(0, lastNumberIndex).trim();
+    
+    // Jika kita pakai qty dari angka kedua terakhir, hapus qty dari akhir namaRaw
+    if (qty !== 1 && numberMatches.length >= 2) {
+      let qtyStr = numberMatches[numberMatches.length-2][1];
+      // Hapus qtyStr dari ujung namaRaw (bisa dengan spasi atau tanpa)
+      let qtyPattern = new RegExp('\\s*' + qtyStr + '\\s*$');
+      namaRaw = namaRaw.replace(qtyPattern, '').trim();
+    }
+    
+    // Bersihkan nama: hapus karakter aneh, ganti multiple spasi
+    nama = namaRaw.replace(/[^\w\s\-\/]/g, '').replace(/\s+/g, ' ').trim();
+    
+    // Fallback: jika nama kosong, ambil dari awal sampai koma/spasi sebelum angka pertama
+    if (nama.length === 0 && numberMatches.length > 0) {
+      let firstNumberIndex = numberMatches[0].index;
+      nama = cleaned.substring(0, firstNumberIndex).replace(/[^\w\s\-\/]/g, '').trim();
+    }
+    
+    // Hapus titik di akhir (sisa koma atau spasi)
+    nama = nama.replace(/\.+$/, '');
+    
+    // Validasi
     if (nama.length < 2) continue;
     if (harga <= 0 || harga > 100000000) continue;
     if (qty <= 0 || qty > 10000) continue;
@@ -656,11 +663,10 @@ function processQuickPaste() {
   }
   
   if (newItems.length === 0) {
-    showToast('Tidak ada item valid. Cek format: nama jumlah harga (toko opsional)', 'err');
+    showToast('Tidak ada item valid. Contoh: "Cat Tembok, 2, 75000" atau "Besi 10mm tes, 5, 120000"', 'err');
     return;
   }
   
-  // Gabungkan dengan item existing? Ganti total? Kita replace S.formItems
   S.formItems = newItems;
   go('beli');
   showToast(`✅ ${newItems.length} item ditambahkan. Cek & edit jika perlu`, 'ok');
