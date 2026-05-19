@@ -1157,7 +1157,7 @@ function setTab(page,tab){S.tab[page]=tab;go(page);}
 // ── Init ───────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
   loadLocal();
-  S.webAppUrl=sg(KS.url,'');
+  S.webAppUrl=sg(KS.url,'https://script.google.com/macros/s/AKfycbw5QZMmOwxhAHK2pwSz8MfySKiB_fLmQ8memuuiY_RFSA5VrkBSvcY5oMTFpoYNiG3H/exec');
   S.pollInterval=Number(sg(KS.poll,60))||60;
   go('dashboard');
   document.getElementById('nav').innerHTML=buildNav();
