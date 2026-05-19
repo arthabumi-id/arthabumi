@@ -158,24 +158,21 @@ const S = {
   webAppUrl:'', pollInterval:60,
   syncing:false, lastSync:null, syncError:null,
   countdown:0, retryQ:[],
-  // ── BARU ──
   beliFilter:{dari:'',sampai:''},
-    notaTgl:'',
-  // form temps
+  notaTgl:'',
   formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}],
   payItems:[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}],
   absRows:[],
 };
 
 // ── Storage ────────────────────────────────────────
-const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',gk:'ab3-gk'};
+const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll'};
 const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 function loadLocal(){
   S.projects=sg(KS.p,[]);S.pembelian=sg(KS.beli,[]);S.karyawan=sg(KS.kr,[]);
   S.logAbsensi=sg(KS.abs,[]);S.logKasbon=sg(KS.ksb,[]);S.logPembayaran=sg(KS.bayar,[]);
   S.masterBarang=sg(KS.brg,[]);S.masterToko=sg(KS.toko,[]);
-  S.geminiKey=sg(KS.gk,'AIzaSyC3pbDbmb4NfUdNqE6CeA0FeUu_0NG0uiY');
 }
 function saveKey(key,val){S[key]=val;ss(KS[key]||key,val);}
 
@@ -552,7 +549,7 @@ function beliInput(){
       <div class="fg">
         <label class="fl">Tempel daftar (satu baris satu item)</label>
         <textarea id="quick-paste-text" rows="4" class="fc" placeholder="Cat Tembok, 2, 75000 Toko: Sumber Makmur&#10;Semen hitam, 50, 85000&#10;Besi 10mm tes, 5, 120000"></textarea>
-        <div style="font-size:10px;color:#a16207;margin-top:4px">Format: <strong>nama jumlah harga</strong> (toko opsional, pakai "Toko: NamaToko" di akhir baris)</div>
+        <div style="font-size:10px;color:#a16207;margin-top:4px">Format: <strong>nama, jumlah, harga</strong> (toko opsional, pakai "Toko: NamaToko" di akhir baris)</div>
       </div>
       <div class="g2" style="margin-bottom:8px">
         <div class="fg">
@@ -590,7 +587,6 @@ function processQuickPaste() {
     line = line.trim();
     if (line.length < 3) continue;
     
-    // Ekstrak toko dari baris (format: "Toko: NamaToko")
     let toko = defaultToko;
     let tokoMatch = line.match(/toko[:]\s*(.+)$/i);
     if (tokoMatch) {
@@ -598,54 +594,40 @@ function processQuickPaste() {
       line = line.replace(/toko[:].+$/i, '').trim();
     }
     
-    // Normalisasi: hapus "Rp", hapus titik ribuan (80.000 -> 80000), ganti koma desimal jadi titik
     let cleaned = line.replace(/Rp\.?\s*/gi, '')
                       .replace(/\.(\d{3})/g, '$1')
                       .replace(/,/g, '.');
     
-    // Ambil semua angka (termasuk desimal)
     const numberMatches = [...cleaned.matchAll(/\b(\d+(?:\.\d+)?)\b/g)];
     if (numberMatches.length === 0) continue;
     
-    // Angka terakhir = harga satuan
     let harga = parseFloat(numberMatches[numberMatches.length-1][1]);
     let qty = 1;
-    let nama = '';
     
-    // Jika ada lebih dari satu angka, coba ambil angka sebelumnya sebagai qty
     if (numberMatches.length >= 2) {
       let candidateQty = parseFloat(numberMatches[numberMatches.length-2][1]);
-      // Qty biasanya <= 1000 dan lebih kecil dari harga (atau harga barang murah < 1000)
       if (candidateQty >= 0.5 && candidateQty <= 10000 && (candidateQty < harga || harga < 1000)) {
         qty = candidateQty;
       }
     }
     
-    // Tentukan posisi angka terakhir (harga) dalam string
     let lastNumberIndex = numberMatches[numberMatches.length-1].index;
     let namaRaw = cleaned.substring(0, lastNumberIndex).trim();
     
-    // Jika kita pakai qty dari angka kedua terakhir, hapus qty dari akhir namaRaw
     if (qty !== 1 && numberMatches.length >= 2) {
       let qtyStr = numberMatches[numberMatches.length-2][1];
-      // Hapus qtyStr dari ujung namaRaw (bisa dengan spasi atau tanpa)
       let qtyPattern = new RegExp('\\s*' + qtyStr + '\\s*$');
       namaRaw = namaRaw.replace(qtyPattern, '').trim();
     }
     
-    // Bersihkan nama: hapus karakter aneh, ganti multiple spasi
-    nama = namaRaw.replace(/[^\w\s\-\/]/g, '').replace(/\s+/g, ' ').trim();
+    let nama = namaRaw.replace(/[^\w\s\-\/]/g, '').replace(/\s+/g, ' ').trim();
     
-    // Fallback: jika nama kosong, ambil dari awal sampai koma/spasi sebelum angka pertama
     if (nama.length === 0 && numberMatches.length > 0) {
       let firstNumberIndex = numberMatches[0].index;
       nama = cleaned.substring(0, firstNumberIndex).replace(/[^\w\s\-\/]/g, '').trim();
     }
     
-    // Hapus titik di akhir (sisa koma atau spasi)
     nama = nama.replace(/\.+$/, '');
-    
-    // Validasi
     if (nama.length < 2) continue;
     if (harga <= 0 || harga > 100000000) continue;
     if (qty <= 0 || qty > 10000) continue;
@@ -671,20 +653,16 @@ function processQuickPaste() {
   go('beli');
   showToast(`✅ ${newItems.length} item ditambahkan. Cek & edit jika perlu`, 'ok');
 }
-  
+
 function beliLog(){
   const {dari,sampai}=S.beliFilter;
   let list=[...S.pembelian].reverse();
-
-  // Helper parse tanggal lokal
   const parseTgl=tgl=>{
     if(!tgl)return null;
     const parts=String(tgl).split('-').map(Number);
     if(parts.length===3&&!isNaN(parts[0]))return new Date(parts[0],parts[1]-1,parts[2]).getTime();
     const d=new Date(tgl);return isNaN(d.getTime())?null:d.getTime();
   };
-
-  // Filter tanggal
   if(dari){
     const dMs=parseTgl(dari);
     if(dMs)list=list.filter(b=>{const t=parseTgl(b.tgl);return t===null||t>=dMs;});
@@ -693,10 +671,8 @@ function beliLog(){
     const sMs=parseTgl(sampai);
     if(sMs)list=list.filter(b=>{const t=parseTgl(b.tgl);return t===null||t<=(sMs+86399999);});
   }
-
   const totalNominal=list.reduce((s,b)=>s+calcTotal(b),0);
   const aktif=dari||sampai;
-
   const filterUI=`
     <div class="card" style="margin-bottom:10px">
       <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px">🔍 Filter Tanggal</div>
@@ -717,22 +693,21 @@ function beliLog(){
         ${aktif?`<button class="btn btn-g btn-sm" onclick="S.beliFilter={dari:'',sampai:''};setTab('beli','log')">✕ Reset Filter</button>`:''}
       </div>
     </div>`;
-
   const rows=list.slice(0,100).map(b=>`
     <div class="card">
       <div class="row">
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="item-name">${esc(b.namaBarang)}</div>
           <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div>
+          <div class="item-sub" style="margin-top:4px">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:8px">
           <div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>
           ${bdg(b.status)}
+          <button class="btn btn-d btn-sm" style="margin-top:6px;padding:4px 8px;font-size:10px" onclick="deletePembelian('${b.id}')">🗑 Hapus</button>
         </div>
       </div>
-      <div class="item-sub" style="margin-top:4px">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div>
     </div>`).join('');
-
   return filterUI+(list.length===0?'<div class="empty">Tidak ada data untuk periode ini</div>':rows);
 }
 
@@ -750,9 +725,22 @@ function submitBeli(){
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
   showToast('✅ '+newItems.length+' item disimpan lokal');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
-  S.notaTgl=''; // reset tanggal dari scan
+  S.notaTgl='';
   setTab('beli','log');
   doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
+}
+
+// ── HAPUS PEMBELIAN ─────────────────────────────────
+function deletePembelian(id) {
+  const item = S.pembelian.find(b => b.id === id);
+  if (!item) return;
+  if (!confirm(`Hapus pembelian "${item.namaBarang}" (${fRp(calcTotal(item))}) ?`)) return;
+  
+  S.pembelian = S.pembelian.filter(b => b.id !== id);
+  ss(KS.beli, S.pembelian);
+  showToast('🗑 Pembelian dihapus', 'ok');
+  go('beli');
+  doSync('deletePembelian', { id: id });
 }
 
 // ── MASTER KARYAWAN ────────────────────────────────
