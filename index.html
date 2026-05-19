@@ -158,6 +158,10 @@ const S = {
   webAppUrl:'', pollInterval:60,
   syncing:false, lastSync:null, syncError:null,
   countdown:0, retryQ:[],
+  // ── BARU ──
+  beliFilter:{dari:'',sampai:''},
+  anthropicKey:'',
+  notaTgl:'',
   // form temps
   formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}],
   payItems:[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}],
@@ -165,20 +169,20 @@ const S = {
 };
 
 // ── Storage ────────────────────────────────────────
-const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll'};
+const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',ak:'ab3-ak'};
 const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 function loadLocal(){
   S.projects=sg(KS.p,[]);S.pembelian=sg(KS.beli,[]);S.karyawan=sg(KS.kr,[]);
   S.logAbsensi=sg(KS.abs,[]);S.logKasbon=sg(KS.ksb,[]);S.logPembayaran=sg(KS.bayar,[]);
   S.masterBarang=sg(KS.brg,[]);S.masterToko=sg(KS.toko,[]);
+  S.anthropicKey=sg(KS.ak,'');
 }
 function saveKey(key,val){S[key]=val;ss(KS[key]||key,val);}
 
 // ── Utilities ──────────────────────────────────────
 const fRp=v=>'Rp '+(Number(v)||0).toLocaleString('id-ID');
 const fDate=d=>{if(!d)return'-';try{
-  // Parse as local date to avoid timezone shift
   if(typeof d==='string'&&d.match(/^\d{4}-\d{2}-\d{2}$/)){
     const[y,m,dy]=d.split('-').map(Number);
     return new Date(y,m-1,dy).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
@@ -200,7 +204,6 @@ async function gsFetch(url){
   const j=await r.json();if(!j.ok)throw new Error(j.error||'GSheet error');return j.data;
 }
 async function gsWrite(url,action,data){
-  // Kirim via GET — lebih reliable dengan Apps Script (tidak ada CORS redirect issue)
   const payloadStr = JSON.stringify(data);
   if(payloadStr.length > 7000){
     throw new Error('Data terlalu besar ('+payloadStr.length+' chars). Kurangi jumlah item.');
@@ -214,7 +217,6 @@ async function gsWrite(url,action,data){
   if(!j.ok) throw new Error(j.error||'Apps Script error');
   return j.data;
 }
-// Alias untuk kompatibilitas
 const gsPF = gsWrite;
 const gsPost = (url,action,data)=>gsWrite(url,action,data);
 function applyGS(d){
@@ -244,7 +246,6 @@ async function doSync(action,payload){
     const d=await gsWrite(S.webAppUrl,action,payload);
     applyGS(d);
     showToast('✅ GSheet berhasil diupdate!');
-    // Re-render halaman supaya data fresh dari GSheet
     go(S.page);
   }
   catch(e){
@@ -283,7 +284,6 @@ document.addEventListener('visibilitychange',()=>{
     if(gap>30000)doFetch();
   }
 });
-// Retry queue
 setInterval(async()=>{
   if(!S.webAppUrl||S.retryQ.length===0||S.syncing)return;
   const item=S.retryQ[0];if(!item)return;
@@ -328,7 +328,7 @@ function openModal(html){
 function closeModal(){document.getElementById('overlay').classList.remove('show');}
 function openSettings(){
   openModal(`
-    <div class="modal-title">⚙️ Pengaturan GSheet</div>
+    <div class="modal-title">⚙️ Pengaturan</div>
     <div class="info-box">
       <strong>Cara deploy Apps Script:</strong>
       <ol>
@@ -338,7 +338,7 @@ function openSettings(){
         <li>Execute as: Me | Access: Anyone → copy URL</li>
       </ol>
     </div>
-    <div class="fg"><label class="fl">Web App URL</label>
+    <div class="fg"><label class="fl">Web App URL (GSheet)</label>
       <input class="fc" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.webAppUrl)}">
     </div>
     <div class="fg"><label class="fl">Auto-Sync Interval</label>
@@ -346,17 +346,21 @@ function openSettings(){
         ${[{v:30,l:'30 dtk'},{v:60,l:'1 mnt'},{v:120,l:'2 mnt'},{v:300,l:'5 mnt'},{v:0,l:'Manual'}].map(o=>`<button class="tab ${S.pollInterval===o.v?'tab-on':'tab-off'}" onclick="setPoll(${o.v})">${o.l}</button>`).join('')}
       </div>
     </div>
+    <div class="fg" style="border-top:1px solid #f1f5f9;padding-top:12px;margin-top:4px">
+      <label class="fl">🤖 Anthropic API Key <span style="color:#94a3b8;font-weight:400">(untuk fitur Scan Foto Nota)</span></label>
+      <input class="fc" id="cfg-ak" type="password" placeholder="sk-ant-api03-..." value="${esc(S.anthropicKey)}" autocomplete="off">
+      <div style="font-size:10.5px;color:#94a3b8;margin-top:5px">Dapatkan di <strong>console.anthropic.com</strong> → API Keys · Tersimpan lokal di browser Anda saja</div>
+    </div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap">
-      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test</button>
+      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test GSheet</button>
       <button class="btn btn-p btn-sm" onclick="saveSettings()">💾 Simpan</button>
-      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus</button>':''}
+      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus GSheet</button>':''}
     </div>
   `);
 }
 function setPoll(v){
   S.pollInterval=v;
-  // re-render poll buttons
   document.querySelectorAll('#overlay .tab').forEach((btn,i)=>{
     const vals=[30,60,120,300,0];btn.className='tab '+(vals[i]===v?'tab-on':'tab-off');
   });
@@ -370,10 +374,11 @@ async function testConn(){
 }
 async function saveSettings(){
   const url=document.getElementById('cfg-url').value.trim();
-  S.webAppUrl=url;S.syncError=null;
-  ss(KS.url,url);ss(KS.poll,S.pollInterval);
+  const ak=(document.getElementById('cfg-ak')?.value||'').trim();
+  S.webAppUrl=url;S.syncError=null;S.anthropicKey=ak;
+  ss(KS.url,url);ss(KS.poll,S.pollInterval);ss(KS.ak,ak);
   closeModal();updateSyncBadge();
-  if(url){showToast('🔗 Mengambil data…','info');await doFetch(url);startPoll();}
+  if(url){showToast('🔗 Mengambil data dari GSheet…','info');await doFetch(url);startPoll();}
   else{showToast('Mode lokal aktif','info');}
 }
 function clearGS(){S.webAppUrl='';S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
@@ -385,7 +390,6 @@ function buildPage(p){
 }
 
 // ── DASHBOARD ──────────────────────────────────────
-// Dashboard filter state
 if(!S.dashFilter) S.dashFilter='Berjalan';
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
 
@@ -511,11 +515,15 @@ function pgBeli(){
   return `
     <div class="row" style="margin-bottom:11px">
       <div class="sec-title" style="margin:0">Pembelian</div>
-      <div class="tabs"><button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button><button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button></div>
+      <div class="tabs">
+        <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button>
+        <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button>
+      </div>
     </div>
     ${tab==='input'?beliInput():beliLog()}
   `;
 }
+
 function beliInput(){
   if(!S.formItems||S.formItems.length===0)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
@@ -544,10 +552,25 @@ function beliInput(){
         </div>
       </div>
     </div>`).join('');
+
+  // Banner kalau ada hasil scan nota
+  const hasScan=S.formItems.some(it=>it.namaBarang);
+  const scanHint=hasScan?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:9px 12px;font-size:11.5px;color:#1d4ed8;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+    <span>📋 <strong>${S.formItems.length} item dari scan nota</strong> — periksa & edit dulu</span>
+    <button onclick="S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];S.notaTgl='';go('beli')" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:11px;font-weight:600">✕ Reset</button>
+  </div>`:'';
+
   return `
     <div class="card">
-      <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${today()}"></div>
-      <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:11px;color:#64748b">Input manual atau foto nota</span>
+        <button id="btn-scan-nota" class="btn btn-o btn-sm" onclick="scanNota()">📷 Scan Nota</button>
+      </div>
+      ${scanHint}
+      <div class="g2">
+        <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${S.notaTgl||today()}"></div>
+        <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div>
+      </div>
       ${items}
       <div class="act-row">
         <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
@@ -555,15 +578,181 @@ function beliInput(){
       </div>
     </div>`;
 }
+
+// ── SCAN NOTA (AI OCR) ─────────────────────────────
+async function scanNota(){
+  if(!S.anthropicKey){
+    showToast('Set API Key Anthropic di ⚙️ Pengaturan dulu','err');
+    openSettings();
+    return;
+  }
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.onchange=async(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    const btn=document.getElementById('btn-scan-nota');
+    if(btn){btn.textContent='🔍 Membaca…';btn.disabled=true;btn.style.opacity='0.6';}
+    showToast('🔍 AI sedang membaca nota…','info');
+    try{
+      // Convert ke base64
+      const base64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result.split(',')[1]);
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
+      const mediaType=file.type||'image/jpeg';
+      // Panggil Anthropic API
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':S.anthropicKey,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:1500,
+          messages:[{role:'user',content:[
+            {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+            {type:'text',text:`Ini adalah foto nota / struk pembelian material bangunan kontraktor Indonesia.
+
+Tugasmu: Extract semua item pembelian dari nota ini.
+
+Return HANYA JSON array murni, tidak ada teks lain, tidak ada markdown backtick:
+[
+  {
+    "namaBarang": "nama barang",
+    "kategori": "Material",
+    "satuan": "pcs",
+    "qty": 1,
+    "harga": 0,
+    "diskon": 0,
+    "toko": "nama toko",
+    "tglNota": ""
+  }
+]
+
+Aturan penting:
+- kategori: Material / Upah / Lainnya
+- satuan: pcs / kg / m / m2 / m3 / lbr / btg / zak / dus / rol / set / unit / liter
+- harga = harga PER SATUAN (BUKAN total baris)
+- diskon = angka persen saja, 0 jika tidak ada
+- toko = nama toko dari kop nota, kosong string jika tidak ada
+- tglNota = format YYYY-MM-DD jika terbaca, kosong string jika tidak jelas
+- Jika nota tidak terbaca atau bukan nota belanja, return array kosong: []`}
+          ]}]
+        })
+      });
+      const json=await resp.json();
+      if(!resp.ok){
+        const errMsg=json.error?.message||'API error '+resp.status;
+        throw new Error(errMsg);
+      }
+      const txt=(json.content?.find(c=>c.type==='text')?.text||'').trim();
+      let items;
+      try{
+        const clean=txt.replace(/```json|```/g,'').trim();
+        items=JSON.parse(clean);
+      }catch{
+        throw new Error('Gagal parse hasil AI — coba foto ulang lebih terang');
+      }
+      if(!Array.isArray(items)||items.length===0){
+        showToast('❌ Tidak ada item terdeteksi — pastikan foto nota jelas','err');
+        return;
+      }
+      // Pre-fill form items
+      S.formItems=items.map(it=>({
+        namaBarang:String(it.namaBarang||''),
+        kategori:String(it.kategori||'Material'),
+        satuan:String(it.satuan||'pcs'),
+        qty:Number(it.qty)||1,
+        harga:Number(it.harga)||0,
+        diskon:Number(it.diskon)||0,
+        status:'HABIS',
+        toko:String(it.toko||'')
+      }));
+      // Set tanggal dari nota kalau ada
+      const tglDariNota=items.find(it=>it.tglNota&&String(it.tglNota).match(/^\d{4}-\d{2}-\d{2}$/))?.tglNota||'';
+      if(tglDariNota)S.notaTgl=tglDariNota;
+      showToast(`✅ ${items.length} item terdeteksi — periksa & edit sebelum simpan`);
+      go('beli');
+    }catch(err){
+      showToast('❌ '+err.message,'err');
+      console.error('scanNota error:',err);
+    }finally{
+      const b=document.getElementById('btn-scan-nota');
+      if(b){b.textContent='📷 Scan Nota';b.disabled=false;b.style.opacity='1';}
+    }
+  };
+  inp.click();
+}
+
 function beliLog(){
-  const list=[...S.pembelian].reverse().slice(0,60);
-  return list.length===0?'<div class="empty">Belum ada data</div>':list.map(b=>`
+  const {dari,sampai}=S.beliFilter;
+  let list=[...S.pembelian].reverse();
+
+  // Helper parse tanggal lokal
+  const parseTgl=tgl=>{
+    if(!tgl)return null;
+    const parts=String(tgl).split('-').map(Number);
+    if(parts.length===3&&!isNaN(parts[0]))return new Date(parts[0],parts[1]-1,parts[2]).getTime();
+    const d=new Date(tgl);return isNaN(d.getTime())?null:d.getTime();
+  };
+
+  // Filter tanggal
+  if(dari){
+    const dMs=parseTgl(dari);
+    if(dMs)list=list.filter(b=>{const t=parseTgl(b.tgl);return t===null||t>=dMs;});
+  }
+  if(sampai){
+    const sMs=parseTgl(sampai);
+    if(sMs)list=list.filter(b=>{const t=parseTgl(b.tgl);return t===null||t<=(sMs+86399999);});
+  }
+
+  const totalNominal=list.reduce((s,b)=>s+calcTotal(b),0);
+  const aktif=dari||sampai;
+
+  const filterUI=`
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px">🔍 Filter Tanggal</div>
+      <div class="g2" style="margin-bottom:8px">
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Dari</label>
+          <input class="fc" type="date" value="${esc(dari)}" onchange="S.beliFilter.dari=this.value;setTab('beli','log')">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Sampai</label>
+          <input class="fc" type="date" value="${esc(sampai)}" onchange="S.beliFilter.sampai=this.value;setTab('beli','log')">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+        <span style="font-size:11.5px;color:#64748b">
+          <strong>${list.length}</strong> item &nbsp;·&nbsp; Total: <strong style="color:#10b981">${fRp(totalNominal)}</strong>
+        </span>
+        ${aktif?`<button class="btn btn-g btn-sm" onclick="S.beliFilter={dari:'',sampai:''};setTab('beli','log')">✕ Reset Filter</button>`:''}
+      </div>
+    </div>`;
+
+  const rows=list.slice(0,100).map(b=>`
     <div class="card">
-      <div class="row"><div><div class="item-name">${esc(b.namaBarang)}</div><div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div></div>
-      <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div></div>
+      <div class="row">
+        <div>
+          <div class="item-name">${esc(b.namaBarang)}</div>
+          <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:8px">
+          <div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>
+          ${bdg(b.status)}
+        </div>
+      </div>
       <div class="item-sub" style="margin-top:4px">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div>
     </div>`).join('');
+
+  return filterUI+(list.length===0?'<div class="empty">Tidak ada data untuk periode ini</div>':rows);
 }
+
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''});go('beli');}
 function delBeliRow(i){S.formItems.splice(i,1);if(S.formItems.length===0)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];go('beli');}
 function submitBeli(){
@@ -578,6 +767,7 @@ function submitBeli(){
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
   showToast('✅ '+newItems.length+' item disimpan lokal');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
+  S.notaTgl=''; // reset tanggal dari scan
   setTab('beli','log');
   doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
 }
@@ -655,34 +845,25 @@ function pgAbsensi(){
     ${tab==='input'?absInput():absLog()}`;
 }
 function absInput(){
-  // Status buttons style
   const STS=['Hadir','Setengah','Tidak Hadir','Libur'];
   const STS_FULL={'Hadir':'Hadir','Setengah':'Setengah Hari','Tidak Hadir':'Tidak Hadir','Libur':'Libur'};
   const STS_COLOR={'Hadir':'#10b981','Setengah':'#f59e0b','Tidak Hadir':'#ef4444','Libur':'#94a3b8'};
-  
-  // Proyek dropdown pakai NAMA
   const prjOptsNama=`<option value="">— Proyek Default —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
-  
   const rows=S.karyawan.map((k,i)=>{
     const r=S.absRows[i]||{status:'',kodeProj:'',ket:''};
     const curFull=r.status;
     const upahHariIni=curFull==='Hadir'?k.upahHarian:curFull==='Setengah Hari'?k.upahHarian*0.5:0;
-    
-    // Status tombol cepat — tap langsung pilih
     const stsBtns=STS.map(s=>{
       const full=STS_FULL[s];
       const active=curFull===full;
       const col=STS_COLOR[s];
       return `<button type="button" onclick="setAbsRow(${i},'status','${full}')" style="flex:1;padding:8px 2px;border-radius:9px;border:2px solid ${active?col:'#e2e8f0'};background:${active?col:'#fff'};color:${active?'#fff':'#64748b'};font-size:11px;font-weight:600;cursor:pointer;transition:all .15s">${s}</button>`;
     }).join('');
-    
-    // Nama proyek per karyawan
     const curProj=r.kodeProj||'';
     const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)">
       <option value="">— Default —</option>
       ${S.projects.map(p=>`<option value="${esc(p.kode)}" ${curProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}
     </select>`;
-    
     return `<div class="card" style="margin-bottom:8px">
       <div class="row" style="margin-bottom:8px">
         <div>
@@ -691,19 +872,14 @@ function absInput(){
         </div>
         ${upahHariIni>0?`<span style="font-weight:700;color:#10b981;font-size:14px;flex-shrink:0">${fRp(upahHariIni)}</span>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
       </div>
-      <!-- Status buttons -->
       <div style="display:flex;gap:5px;margin-bottom:8px">${stsBtns}</div>
-      <!-- Proyek per karyawan -->
       <div class="fg" style="margin-bottom:0">${projSel}</div>
     </div>`;
   }).join('');
-  
-  // Proyek default (untuk karyawan yang tidak pilih proyek spesifik)
   const defProj=`<select class="fc" id="abs-prj">
     <option value="">— Tidak ada default —</option>
     ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('')}
   </select>`;
-  
   return `
     <div class="card" style="margin-bottom:10px">
       <div class="g2">
@@ -726,7 +902,6 @@ function absInput(){
 function setAbsRow(i,key,val){
   if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};
   S.absRows[i][key]=val;
-  // Re-render hanya saat status berubah (perlu update tombol + upah)
   if(key==='status') go('absensi');
 }
 function submitAbsensi(){
@@ -752,8 +927,7 @@ function submitAbsensi(){
 function absLog(){
   const list=[...S.logAbsensi].reverse().slice(0,80);
   if(list.length===0) return '<div class="empty">Belum ada data</div>';
-  return list.map((a,idx)=>{
-    // Cari index asli di S.logAbsensi
+  return list.map((a)=>{
     const realIdx=S.logAbsensi.findIndex(x=>x.id===a.id);
     const canDel=a.statusBayar!=='Sudah Dibayar';
     return `<div class="card">
@@ -780,7 +954,6 @@ function delAbsensi(idx){
   ss(KS.abs,S.logAbsensi);
   showToast('🗑 Absensi dihapus');
   go('absensi');
-  // Sync delete ke GSheet
   doSync('deleteAbsensi',{tgl:a.tgl,idKaryawan:a.idKaryawan});
 }
 
@@ -988,7 +1161,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   S.pollInterval=Number(sg(KS.poll,60))||60;
   go('dashboard');
   document.getElementById('nav').innerHTML=buildNav();
-  // Hide splash
   setTimeout(()=>{
     const spl=document.getElementById('spl');
     if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}
