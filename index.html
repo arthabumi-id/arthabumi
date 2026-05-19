@@ -579,97 +579,173 @@ function beliInput(){
     </div>`;
 }
 
-// ── SCAN NOTA (AI OCR) ─────────────────────────────
-async function scanNota(){
-  if(!S.geminiKey){
-    showToast('Set API Key Gemini di ⚙️ Pengaturan dulu','err');
-    openSettings();
-    return;
-  }
-  const inp=document.createElement('input');
-  inp.type='file';inp.accept='image/*'; // iOS: muncul pilihan Kamera / Album / Files
-  inp.onchange=async(e)=>{
-    const file=e.target.files[0];if(!file)return;
-    const btn=document.getElementById('btn-scan-nota');
-    if(btn){btn.textContent='🔍 Membaca…';btn.disabled=true;btn.style.opacity='0.6';}
-    showToast('🔍 AI sedang membaca nota…','info');
-    try{
-      // Convert ke base64
-      const base64=await new Promise((res,rej)=>{
-        const r=new FileReader();
-        r.onload=()=>res(r.result.split(',')[1]);
-        r.onerror=rej;
-        r.readAsDataURL(file);
+// ── SCAN NOTA (OCR.SPACE) GRATIS TANPA API KEY ─────────────────
+async function scanNota() {
+  const btn = document.getElementById('btn-scan-nota');
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (btn) { btn.textContent = '🔍 Memproses...'; btn.disabled = true; btn.style.opacity = '0.6'; }
+    showToast('📸 Mengirim ke OCR.space (gratis)...', 'info');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('language', 'ind');   // Bahasa Indonesia
+    formData.append('isOverlayRequired', 'false');
+    formData.append('OCREngine', '2');     // Engine standard, lebih cepat
+    
+    try {
+      // OCR.space free tier (tanpa API key) → 500 request/hari per IP
+      const response = await fetch('https://api.ocr.space/parse/image', {
+        method: 'POST',
+        body: formData
       });
-      const mediaType=file.type||'image/jpeg';
-      // Panggil Gemini API (gratis)
-      const prompt=`Ini adalah foto nota / struk pembelian material bangunan kontraktor Indonesia.
-Tugasmu: Extract semua item pembelian dari nota ini.
-Return HANYA JSON array murni, tidak ada teks lain, tidak ada markdown backtick:
-[{"namaBarang":"","kategori":"Material","satuan":"pcs","qty":1,"harga":0,"diskon":0,"toko":"","tglNota":""}]
-Aturan:
-- kategori: Material / Upah / Lainnya
-- satuan: pcs/kg/m/m2/m3/lbr/btg/zak/dus/rol/set/unit/liter
-- harga = harga PER SATUAN (bukan total baris)
-- diskon = angka persen, 0 jika tidak ada
-- toko = nama toko dari kop nota, kosong jika tidak ada
-- tglNota = YYYY-MM-DD jika terbaca, kosong jika tidak jelas
-- Jika bukan nota belanja, return: []`;
-      const resp=await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${S.geminiKey}`,
-        {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            contents:[{parts:[
-              {inline_data:{mime_type:mediaType,data:base64}},
-              {text:prompt}
-            ]}]
-          })
+      const data = await response.json();
+      
+      if (data.IsErroredOnProcessing) {
+        throw new Error(data.ErrorMessage?.[0] || 'Gagal membaca nota');
+      }
+      
+      const parsedText = data.ParsedResults?.[0]?.ParsedText || '';
+      if (!parsedText.trim()) {
+        throw new Error('Tidak ada teks terdeteksi, coba foto lebih jelas');
+      }
+      
+      // Konversi teks mentah ke format item pembelian
+      const items = parseOCRTextToItems(parsedText);
+      
+      if (items.length === 0) {
+        throw new Error('Tidak bisa mengekstrak item dari nota. Coba foto lebih rapi.');
+      }
+      
+      // Isi form
+      S.formItems = items;
+      // Coba ambil tanggal dari teks (opsional)
+      const tglMatch = parsedText.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|(\d{4}-\d{2}-\d{2})/);
+      if (tglMatch) {
+        let tglRaw = tglMatch[0];
+        if (tglRaw.includes('/')) {
+          const parts = tglRaw.split('/');
+          if (parts[2].length === 2) parts[2] = '20' + parts[2];
+          S.notaTgl = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        } else if (tglRaw.match(/^\d{4}-\d{2}-\d{2}/)) {
+          S.notaTgl = tglRaw.slice(0,10);
         }
-      );
-      const json=await resp.json();
-      if(!resp.ok){
-        const errMsg=json.error?.message||'Gemini API error '+resp.status;
-        throw new Error(errMsg);
       }
-      const txt=(json.candidates?.[0]?.content?.parts?.[0]?.text||'').trim();
-      let items;
-      try{
-        const clean=txt.replace(/```json|```/g,'').trim();
-        items=JSON.parse(clean);
-      }catch{
-        throw new Error('Gagal parse hasil AI — coba foto ulang lebih terang');
-      }
-      if(!Array.isArray(items)||items.length===0){
-        showToast('❌ Tidak ada item terdeteksi — pastikan foto nota jelas','err');
-        return;
-      }
-      // Pre-fill form items
-      S.formItems=items.map(it=>({
-        namaBarang:String(it.namaBarang||''),
-        kategori:String(it.kategori||'Material'),
-        satuan:String(it.satuan||'pcs'),
-        qty:Number(it.qty)||1,
-        harga:Number(it.harga)||0,
-        diskon:Number(it.diskon)||0,
-        status:'HABIS',
-        toko:String(it.toko||'')
-      }));
-      // Set tanggal dari nota kalau ada
-      const tglDariNota=items.find(it=>it.tglNota&&String(it.tglNota).match(/^\d{4}-\d{2}-\d{2}$/))?.tglNota||'';
-      if(tglDariNota)S.notaTgl=tglDariNota;
-      showToast(`✅ ${items.length} item terdeteksi — periksa & edit sebelum simpan`);
+      
+      showToast(`✅ ${items.length} item ditemukan — periksa & edit sebelum simpan`, 'ok');
       go('beli');
-    }catch(err){
-      showToast('❌ '+err.message,'err');
-      console.error('scanNota error:',err);
-    }finally{
-      const b=document.getElementById('btn-scan-nota');
-      if(b){b.textContent='📷 Scan Nota';b.disabled=false;b.style.opacity='1';}
+      
+    } catch (err) {
+      showToast('❌ ' + err.message, 'err');
+      console.error('OCR error:', err);
+    } finally {
+      if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
     }
   };
   inp.click();
+}
+
+// ========== PARSING TEKS DARI OCR MENJADI ITEM PEMBELIAN ==========
+function parseOCRTextToItems(rawText) {
+  // Normalisasi teks: hapus koma jadi titik, ubah baris jadi array
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  const items = [];
+  
+  // Pola umum struk Indonesia: "Nama Barang   Qty   Harga   Total"
+  // Atau "Nama Barang @ Harga x Qty = Total"
+  // Kita coba ekstrak baris yang mengandung angka (harga atau qty)
+  
+  for (let line of lines) {
+    // Skip baris yang terlalu pendek atau hanya tanggal/salam
+    if (line.length < 5) continue;
+    if (/(tanggal|tgl|kasir|terima kasih|total akhir|bayar|kembali|disc|diskon)/i.test(line)) continue;
+    
+    // Cari angka nominal (harga satuan atau total)
+    const numbers = line.match(/(\d+[.,]?\d*)/g);
+    if (!numbers || numbers.length === 0) continue;
+    
+    // Asumsikan angka terakhir adalah harga satuan (atau total)
+    let harga = 0;
+    let qty = 1;
+    let diskon = 0;
+    
+    // Jika ada pola "x Qty" / "@ Qty"
+    const qtyMatch = line.match(/[xX@*]\s*(\d+([.,]\d+)?)/);
+    if (qtyMatch) {
+      qty = parseFloat(qtyMatch[1].replace(',', '.'));
+      // Harga = angka terakhir setelah qty
+      const angkaSetelah = line.match(/(\d+[.,]?\d*)\s*$/);
+      if (angkaSetelah) harga = parseFloat(angkaSetelah[1].replace(',', '.'));
+      else harga = parseFloat(numbers[numbers.length-1].replace(',', '.'));
+    } else {
+      // Jika hanya satu angka, anggap itu harga satuan, qty=1
+      if (numbers.length === 1) {
+        harga = parseFloat(numbers[0].replace(',', '.'));
+      } else {
+        // Jika banyak angka, ambil yang terakhir sebagai harga
+        harga = parseFloat(numbers[numbers.length-1].replace(',', '.'));
+        // Jika ada angka kedua terakhir mungkin qty?
+        if (numbers.length >= 2 && numbers[numbers.length-2].length <= 3) {
+          qty = parseFloat(numbers[numbers.length-2].replace(',', '.'));
+        }
+      }
+    }
+    
+    // Nama barang = teks sebelum angka pertama
+    let namaBarang = line.replace(/\d+[.,]?\d*/g, '').replace(/[xX@*]/g, '').trim();
+    // Bersihkan karakter aneh
+    namaBarang = namaBarang.replace(/[^\w\s\-\/]/g, '').trim();
+    if (namaBarang.length === 0) continue;
+    if (namaBarang.length > 40) namaBarang = namaBarang.substring(0, 40);
+    if (harga <= 0 || harga > 100000000) continue;
+    
+    items.push({
+      namaBarang: namaBarang,
+      kategori: 'Material',
+      satuan: 'pcs',
+      qty: qty,
+      harga: harga,
+      diskon: diskon,
+      status: 'HABIS',
+      toko: ''
+    });
+  }
+  
+  // Jika tidak dapat item, coba pendekatan lain: ambil baris yang punya angka dan huruf
+  if (items.length === 0) {
+    for (let line of lines) {
+      if (line.length < 8) continue;
+      const hasLetter = /[a-zA-Z]/i.test(line);
+      const hasNumber = /\d/.test(line);
+      if (hasLetter && hasNumber && !/(total|jumlah|bayar|kembali)/i.test(line)) {
+        const angka = line.match(/(\d+[.,]?\d*)/g);
+        if (angka && angka.length) {
+          let harga = parseFloat(angka[angka.length-1].replace(',', '.'));
+          let nama = line.replace(/\d+[.,]?\d*/g, '').replace(/[xX@*]/g, '').trim();
+          if (nama.length > 2 && harga > 1000 && harga < 100000000) {
+            items.push({
+              namaBarang: nama,
+              kategori: 'Material',
+              satuan: 'pcs',
+              qty: 1,
+              harga: harga,
+              diskon: 0,
+              status: 'HABIS',
+              toko: ''
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  // Limit maksimal 30 item per scan
+  return items.slice(0, 30);
 }
 
 function beliLog(){
