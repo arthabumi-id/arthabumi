@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Arthabumi</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arthabumi">
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjI1NiIgeT0iMzMwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzEwYjk4MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUI8L3RleHQ+PC9zdmc+">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;-webkit-text-size-adjust:100%;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+*{-webkit-tap-highlight-color:transparent}
+input,select,textarea{-webkit-appearance:none;appearance:none;font-family:inherit;font-size:16px;background:#fff}
+button{-webkit-appearance:none;font-family:inherit}
+
+/* Splash */
+#spl{position:fixed;inset:0;background:#0f172a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:9999;transition:opacity .3s}
+#spl.out{opacity:0;pointer-events:none}
+.spl-logo{color:#10b981;font-size:2rem;font-weight:800;letter-spacing:-1px}
+.spl-sub{color:#475569;font-size:.8rem}
+.spin{width:28px;height:28px;border:3px solid #1e293b;border-top-color:#10b981;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* Header */
+#hdr{background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px;flex-shrink:0;height:calc(48px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px)}
+.hdr-logo{font-weight:800;font-size:16px;color:#10b981}
+.hdr-sync{font-size:11px;margin-top:1px}
+.hdr-acts{display:flex;gap:6px}
+.hdr-btn{background:rgba(255,255,255,.1);border:none;color:#cbd5e1;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+
+/* Content */
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 20px}
+
+/* Nav */
+#nav{background:#0f172a;display:flex;overflow-x:auto;flex-shrink:0;border-top:1px solid rgba(255,255,255,.08);padding-bottom:env(safe-area-inset-bottom,0px);scrollbar-width:none}
+#nav::-webkit-scrollbar{display:none}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:9px 10px;min-width:56px;flex-shrink:0;border:none;background:none;cursor:pointer;color:#64748b}
+.nav-btn.on{color:#10b981}
+.nav-dot{width:4px;height:4px;background:#10b981;border-radius:50%;margin-top:1px}
+
+/* Toast */
+#toast{position:fixed;bottom:85px;left:12px;right:12px;z-index:800;padding:11px 15px;border-radius:13px;color:#fff;font-size:13px;font-weight:500;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25);display:none;animation:tin .2s ease}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.t-ok{background:#10b981}.t-err{background:#ef4444}.t-info{background:#3b82f6}
+
+/* Modal */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:none;align-items:flex-start;justify-content:center;padding:14px;padding-top:56px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#overlay.show{display:flex}
+.modal{background:#fff;border-radius:20px;width:100%;max-width:480px;padding:18px;position:relative;margin-bottom:20px}
+.modal-x{position:absolute;top:14px;right:14px;background:#f1f5f9;border:none;border-radius:8px;width:30px;height:30px;font-size:15px;cursor:pointer;color:#64748b}
+.modal-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:14px;padding-right:28px}
+
+/* Cards & layout */
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid #f1f5f9;padding:13px;margin-bottom:9px}
+.sub-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:11px;margin-bottom:8px}
+.sec-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:11px}
+.row{display:flex;align-items:center;justify-content:space-between}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.item-name{font-weight:600;font-size:13.5px;color:#1e293b}
+.item-sub{font-size:11px;color:#94a3b8;margin-top:1px}
+.chip{background:#f8fafc;border-radius:9px;padding:7px 9px}
+.chip-lbl{font-size:10px;color:#94a3b8;margin-bottom:1px}
+.chip-val{font-size:12px;font-weight:700;color:#1e293b}
+.empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:14px}
+.act-row{display:flex;gap:8px;margin-top:8px}
+
+/* Form */
+.fg{margin-bottom:11px}
+.fl{display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px}
+.req{color:#ef4444;margin-left:2px}
+.fc{width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:15px;color:#1e293b;outline:none;transition:border-color .15s}
+.fc:focus{border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:10px;padding:10px 16px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn-p{background:#10b981;color:#fff}
+.btn-d{background:#ef4444;color:#fff}
+.btn-g{background:#f1f5f9;color:#475569}
+.btn-o{background:#fff;color:#10b981;border:1.5px solid #10b981}
+.btn-sm{padding:7px 13px;font-size:12.5px;border-radius:9px}
+.btn-w{width:100%}
+
+/* Badge */
+.bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.bdg-blue{background:#dbeafe;color:#1d4ed8}
+.bdg-green{background:#dcfce7;color:#15803d}
+.bdg-yellow{background:#fef9c3;color:#854d0e}
+.bdg-red{background:#fee2e2;color:#b91c1c}
+.bdg-gray{background:#f1f5f9;color:#475569}
+.bdg-orange{background:#fed7aa;color:#c2410c}
+.bdg-purple{background:#ede9fe;color:#7c3aed}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px}
+.kpi{background:#fff;border-radius:13px;padding:11px 13px;box-shadow:0 1px 4px rgba(0,0,0,.07);border:1px solid #f1f5f9}
+.kpi-lbl{font-size:9.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.kpi-val{font-size:13px;font-weight:700;color:#1e293b;word-break:break-word}
+
+/* Tabs */
+.tabs{display:flex;gap:5px}
+.tab{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:pointer}
+.tab-on{background:#10b981;color:#fff}
+.tab-off{background:#f1f5f9;color:#64748b}
+
+/* Info box */
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:11px;font-size:11.5px;color:#1d4ed8;line-height:1.5;margin-bottom:11px}
+.info-box ol{padding-left:15px;margin-top:5px}
+</style>
+</head>
+<body>
+<div id="spl">
+  <div class="spl-logo">Arthabumi</div>
+  <div class="spin"></div>
+  <div class="spl-sub">Memuat aplikasi…</div>
+</div>
+<div id="app">
+  <div id="hdr">
+    <div>
+      <div class="hdr-logo">Arthabumi</div>
+      <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
+    </div>
+    <div class="hdr-acts">
+      <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
+      <button class="hdr-btn" id="btn-sync" style="display:none;background:rgba(16,185,129,.25);color:#6ee7b7" onclick="manualSync()" title="Refresh dari GSheet">↻ GSheet</button>
+      <button class="hdr-btn" onclick="openSettings()">⚙️</button>
+    </div>
+  </div>
+  <div id="content"></div>
+  <nav id="nav"></nav>
+</div>
+<div id="toast"></div>
+<div id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal()">✕</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════
+// PURE VANILLA JS — ZERO DEPENDENCIES — WORKS OFFLINE
+// ═══════════════════════════════════════════════════
+
+// ── State ──────────────────────────────────────────
+const S = {
+  page:'dashboard', tab:{},
+  projects:[], pembelian:[], karyawan:[],
+  logAbsensi:[], logKasbon:[], logPembayaran:[],
+  masterBarang:[], masterToko:[],
+  webAppUrl:'', pollInterval:60,
+  syncing:false, lastSync:null, syncError:null,
+  countdown:0, retryQ:[],
+  // form temps
+  formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}],
+  payItems:[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}],
+  absRows:[],
+};
+
+// ── Storage ────────────────────────────────────────
+const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll'};
+const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
+const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
+function loadLocal(){
+  S.projects=sg(KS.p,[]);S.pembelian=sg(KS.beli,[]);S.karyawan=sg(KS.kr,[]);
+  S.logAbsensi=sg(KS.abs,[]);S.logKasbon=sg(KS.ksb,[]);S.logPembayaran=sg(KS.bayar,[]);
+  S.masterBarang=sg(KS.brg,[]);S.masterToko=sg(KS.toko,[]);
+}
+function saveKey(key,val){S[key]=val;ss(KS[key]||key,val);}
+
+// ── Utilities ──────────────────────────────────────
+const fRp=v=>'Rp '+(Number(v)||0).toLocaleString('id-ID');
+const fDate=d=>{if(!d)return'-';try{
+  // Parse as local date to avoid timezone shift
+  if(typeof d==='string'&&d.match(/^\d{4}-\d{2}-\d{2}$/)){
+    const[y,m,dy]=d.split('-').map(Number);
+    return new Date(y,m-1,dy).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+  }
+  return new Date(d).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+}catch{return d;}};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const calcTotal=it=>{const b=(Number(it.qty)||0)*(Number(it.harga)||0),d=it.diskon>0?b*(it.diskon/100):0;return it.status==='ASET'?0:b-d;};
+const padId=(pfx,arr,key='id')=>pfx+'-'+String(Math.max(0,...arr.map(x=>parseInt((x[key]||'0').split('-').pop())||0))+1).padStart(3,'0');
+const bdgClass=s=>({Berjalan:'bdg-blue',Selesai:'bdg-green',Hold:'bdg-yellow',Batal:'bdg-red',Hadir:'bdg-green','Tidak Hadir':'bdg-red','Setengah Hari':'bdg-yellow',Libur:'bdg-gray',AMBIL:'bdg-orange',POTONG:'bdg-purple','Belum Dibayar':'bdg-red','Sudah Dibayar':'bdg-green'}[s]||'bdg-gray');
+const bdg=(s,extra='')=>`<span class="bdg ${bdgClass(s)} ${extra}">${esc(s)}</span>`;
+function showToast(msg,type='ok'){const el=document.getElementById('toast');el.textContent=msg;el.className=`t-${type}`;el.style.display='block';el.style.fontSize='14px';el.style.padding='13px 18px';clearTimeout(el._t);const dur=type==='err'?6000:type==='info'?2000:4000;el._t=setTimeout(()=>el.style.display='none',dur);}
+
+// ── GSheet API ─────────────────────────────────────
+async function gsFetch(url){
+  const r=await fetch(url+'?action=getAllData&t='+Date.now(),{redirect:'follow',cache:'no-cache'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();if(!j.ok)throw new Error(j.error||'GSheet error');return j.data;
+}
+async function gsWrite(url,action,data){
+  // Kirim via GET — lebih reliable dengan Apps Script (tidak ada CORS redirect issue)
+  const payloadStr = JSON.stringify(data);
+  if(payloadStr.length > 7000){
+    throw new Error('Data terlalu besar ('+payloadStr.length+' chars). Kurangi jumlah item.');
+  }
+  const payload = encodeURIComponent(payloadStr);
+  const r = await fetch(url+'?action='+action+'&payload='+payload+'&t='+Date.now(),
+    {redirect:'follow',cache:'no-cache'});
+  if(!r.ok) throw new Error('HTTP '+r.status+' - cek Apps Script deployment');
+  let j;
+  try{ j = await r.json(); } catch(e){ throw new Error('Response bukan JSON - cek Apps Script'); }
+  if(!j.ok) throw new Error(j.error||'Apps Script error');
+  return j.data;
+}
+// Alias untuk kompatibilitas
+const gsPF = gsWrite;
+const gsPost = (url,action,data)=>gsWrite(url,action,data);
+function applyGS(d){
+  if(!d)return;
+  if(d.projects){S.projects=d.projects;ss(KS.p,d.projects);}
+  if(d.pembelian){S.pembelian=d.pembelian;ss(KS.beli,d.pembelian);}
+  if(d.karyawan){S.karyawan=d.karyawan;ss(KS.kr,d.karyawan);}
+  if(d.logAbsensi){S.logAbsensi=d.logAbsensi;ss(KS.abs,d.logAbsensi);}
+  if(d.logKasbon){S.logKasbon=d.logKasbon;ss(KS.ksb,d.logKasbon);}
+  if(d.logPembayaran){S.logPembayaran=d.logPembayaran;ss(KS.bayar,d.logPembayaran);}
+  if(d.barang){S.masterBarang=d.barang;ss(KS.brg,d.barang);}
+  if(d.toko){S.masterToko=d.toko;ss(KS.toko,d.toko);}
+  S.lastSync=new Date();S.syncError=null;updateSyncBadge();
+}
+async function doFetch(url){
+  const u=url||S.webAppUrl;if(!u)return;
+  S.syncing=true;updateSyncBadge();
+  try{const d=await gsFetch(u);applyGS(d);}
+  catch(e){S.syncError=e.message;showToast('⚠️ GSheet gagal','err');}
+  finally{S.syncing=false;updateSyncBadge();}
+}
+async function doSync(action,payload){
+  if(!S.webAppUrl)return;
+  S.syncing=true;S.syncError=null;updateSyncBadge();
+  showToast('🔄 Menyimpan ke GSheet…','info');
+  try{
+    const d=await gsWrite(S.webAppUrl,action,payload);
+    applyGS(d);
+    showToast('✅ GSheet berhasil diupdate!');
+    // Re-render halaman supaya data fresh dari GSheet
+    go(S.page);
+  }
+  catch(e){
+    S.syncError=e.message;
+    S.retryQ.push({action,payload,retries:0});
+    showToast('❌ Gagal: '+e.message,'err');
+    console.error('doSync error:',action,e);
+  }
+  finally{S.syncing=false;updateSyncBadge();}
+}
+function updateSyncBadge(){
+  const el=document.getElementById('sync-badge');if(!el)return;
+  if(!S.webAppUrl){el.textContent='⚪ Lokal';el.style.color='#64748b';}
+  else if(S.syncing){el.textContent='🔄 Sync…';el.style.color='#60a5fa';}
+  else if(S.syncError){el.textContent='⚠️ Gagal';el.style.color='#f87171';}
+  else if(S.lastSync){el.textContent='✅ '+S.lastSync.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+(S.countdown>0?' ·'+S.countdown+'d':'');el.style.color='#34d399';}
+  else{el.textContent='⚡ GSheet';el.style.color='#fbbf24';}
+  const rb=document.getElementById('retry-badge');
+  if(rb){rb.style.display=S.retryQ.length>0?'inline':'none';rb.textContent='⏳'+S.retryQ.length;}
+  const sb=document.getElementById('btn-sync');
+  if(sb)sb.style.display=S.webAppUrl?'block':'none';
+}
+function manualSync(){S.countdown=S.pollInterval;doFetch();}
+
+// Poll & visibility
+let pollTimer=null,countdownTimer=null;
+function startPoll(){
+  if(pollTimer)clearInterval(pollTimer);if(countdownTimer)clearInterval(countdownTimer);
+  if(!S.webAppUrl||!S.pollInterval||S.pollInterval<=0)return;
+  S.countdown=S.pollInterval;
+  countdownTimer=setInterval(()=>{S.countdown--;updateSyncBadge();if(S.countdown<=0){S.countdown=S.pollInterval;if(!S.syncing)doFetch();}},1000);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&S.webAppUrl&&!S.syncing){
+    const gap=S.lastSync?(Date.now()-S.lastSync.getTime()):Infinity;
+    if(gap>30000)doFetch();
+  }
+});
+// Retry queue
+setInterval(async()=>{
+  if(!S.webAppUrl||S.retryQ.length===0||S.syncing)return;
+  const item=S.retryQ[0];if(!item)return;
+  if(item.retries>=3){S.retryQ.shift();showToast('❌ Retry gagal 3x','err');return;}
+  S.syncing=true;
+  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('✅ Retry OK');}
+  catch{item.retries++;}
+  finally{S.syncing=false;updateSyncBadge();}
+},30000);
+
+// ── Navigation ─────────────────────────────────────
+const NAV=[
+  {id:'dashboard',label:'Dashboard',icon:'📊'},
+  {id:'project',label:'Proyek',icon:'🏗️'},
+  {id:'beli',label:'Pembelian',icon:'🛒'},
+  {id:'karyawan',label:'Karyawan',icon:'👷'},
+  {id:'absensi',label:'Absensi',icon:'📋'},
+  {id:'kasbon',label:'Kasbon',icon:'💸'},
+  {id:'closing',label:'Closing',icon:'🔒'},
+  {id:'bayar',label:'Bayar',icon:'💰'},
+];
+function buildNav(){
+  return NAV.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
+    <span style="font-size:19px;line-height:1">${n.icon}</span>
+    <span style="font-size:9.5px;font-weight:500">${n.label}</span>
+    ${S.page===n.id?'<div class="nav-dot"></div>':''}
+  </button>`).join('');
+}
+function go(page){
+  S.page=page;
+  if(!S.tab[page])S.tab[page]='input';
+  document.getElementById('content').innerHTML=buildPage(page);
+  document.getElementById('nav').innerHTML=buildNav();
+  window.scrollTo&&window.scrollTo(0,0);
+}
+
+// ── Modal ──────────────────────────────────────────
+function openModal(html){
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('show');}
+function openSettings(){
+  openModal(`
+    <div class="modal-title">⚙️ Pengaturan GSheet</div>
+    <div class="info-box">
+      <strong>Cara deploy Apps Script:</strong>
+      <ol>
+        <li>Google Sheets → Extensions → Apps Script</li>
+        <li>Buat file baru → paste isi arthabumi-webapi.gs</li>
+        <li>Deploy → New deployment → Web app</li>
+        <li>Execute as: Me | Access: Anyone → copy URL</li>
+      </ol>
+    </div>
+    <div class="fg"><label class="fl">Web App URL</label>
+      <input class="fc" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.webAppUrl)}">
+    </div>
+    <div class="fg"><label class="fl">Auto-Sync Interval</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[{v:30,l:'30 dtk'},{v:60,l:'1 mnt'},{v:120,l:'2 mnt'},{v:300,l:'5 mnt'},{v:0,l:'Manual'}].map(o=>`<button class="tab ${S.pollInterval===o.v?'tab-on':'tab-off'}" onclick="setPoll(${o.v})">${o.l}</button>`).join('')}
+      </div>
+    </div>
+    <div id="cfg-res"></div>
+    <div class="act-row" style="flex-wrap:wrap">
+      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test</button>
+      <button class="btn btn-p btn-sm" onclick="saveSettings()">💾 Simpan</button>
+      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus</button>':''}
+    </div>
+  `);
+}
+function setPoll(v){
+  S.pollInterval=v;
+  // re-render poll buttons
+  document.querySelectorAll('#overlay .tab').forEach((btn,i)=>{
+    const vals=[30,60,120,300,0];btn.className='tab '+(vals[i]===v?'tab-on':'tab-off');
+  });
+}
+async function testConn(){
+  const url=document.getElementById('cfg-url').value.trim();
+  if(!url)return;
+  const el=document.getElementById('cfg-res');el.textContent='🔄 Testing…';
+  try{const d=await gsFetch(url);el.textContent=`✅ OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='#15803d';}
+  catch(e){el.textContent='❌ '+e.message;el.style.color='#b91c1c';}
+}
+async function saveSettings(){
+  const url=document.getElementById('cfg-url').value.trim();
+  S.webAppUrl=url;S.syncError=null;
+  ss(KS.url,url);ss(KS.poll,S.pollInterval);
+  closeModal();updateSyncBadge();
+  if(url){showToast('🔗 Mengambil data…','info');await doFetch(url);startPoll();}
+  else{showToast('Mode lokal aktif','info');}
+}
+function clearGS(){S.webAppUrl='';S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
+
+// ── Page Builder ───────────────────────────────────
+function buildPage(p){
+  const fn={dashboard:pgDashboard,project:pgProject,beli:pgBeli,karyawan:pgKaryawan,absensi:pgAbsensi,kasbon:pgKasbon,closing:pgClosing,bayar:pgBayar};
+  return (fn[p]||pgDashboard)();
+}
+
+// ── DASHBOARD ──────────────────────────────────────
+// Dashboard filter state
+if(!S.dashFilter) S.dashFilter='Berjalan';
+function setDashFilter(v){S.dashFilter=v;go('dashboard');}
+
+function pgDashboard(){
+  if(!S.dashFilter) S.dashFilter='Berjalan';
+  const filtered=S.dashFilter==='Semua'?S.projects:S.projects.filter(p=>p.status===S.dashFilter);
+  const tK=filtered.reduce((s,p)=>s+(Number(p.nilaiKontrak)||0),0);
+  const tB=S.logPembayaran.filter(x=>filtered.find(p=>p.kode===x.kodeProj)).reduce((s,p)=>s+(Number(p.nominal)||0),0);
+  const tM=S.pembelian.filter(b=>b.status!=='ASET'&&filtered.find(p=>p.kode===b.kodeProj)).reduce((s,b)=>s+calcTotal(b),0);
+  const tU=S.logAbsensi.filter(a=>filtered.find(p=>p.kode===a.kodeProj)).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const tL=tK-(tM+tU);
+  const rows=filtered.map(p=>{
+    const biaya=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0)+S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+    const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    const laba=(Number(p.nilaiKontrak)||0)-biaya,piutang=(Number(p.nilaiKontrak)||0)-bayar;
+    return {p,biaya,bayar,laba,piutang};
+  });
+  const statuses=['Semua','Berjalan','Selesai','Hold','Batal'];
+  const filterBar=statuses.map(s=>`<button onclick="setDashFilter('${s}')" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${S.dashFilter===s?'#10b981':'#f1f5f9'};color:${S.dashFilter===s?'#fff':'#64748b'};flex-shrink:0">${s}${S.dashFilter===s?' ('+filtered.length+')':''}</button>`).join('');
+  return `
+    <div class="sec-title">Dashboard</div>
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">${filterBar}</div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-lbl">Kontrak${S.dashFilter!=='Semua'?' ('+S.dashFilter+')':''}</div><div class="kpi-val" style="color:#2563eb">${fRp(tK)}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+tU)}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Est. Laba</div><div class="kpi-val" style="color:${tL>=0?'#16a34a':'#dc2626'}">${fRp(tL)}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Diterima</div><div class="kpi-val" style="color:#7c3aed">${fRp(tB)}</div></div>
+    </div>
+    ${rows.length===0?'<div class="empty">Tidak ada proyek '+esc(S.dashFilter)+'</div>':rows.map(({p,biaya,bayar,laba,piutang})=>`
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}</div></div>
+        ${bdg(p.status)}
+      </div>
+      <div class="g3">
+        <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
+        <div class="chip"><div class="chip-lbl">Biaya</div><div class="chip-val" style="color:#ea580c">${fRp(biaya)}</div></div>
+        <div class="chip"><div class="chip-lbl">Laba</div><div class="chip-val" style="color:${laba>=0?'#16a34a':'#dc2626'}">${fRp(laba)}</div></div>
+        <div class="chip"><div class="chip-lbl">Bayar</div><div class="chip-val" style="color:#2563eb">${fRp(bayar)}</div></div>
+        <div class="chip" style="grid-column:span 2"><div class="chip-lbl">Piutang</div><div class="chip-val" style="color:${piutang>0?'#dc2626':'#64748b'}">${fRp(piutang)}</div></div>
+      </div>
+    </div>`).join('')}
+  `;
+}
+
+// ── MASTER PROYEK ──────────────────────────────────
+function pgProject(){
+  return `
+    <div class="row" style="margin-bottom:11px">
+      <div class="sec-title" style="margin:0">Master Proyek</div>
+      <button class="btn btn-p btn-sm" onclick="openAddProject()">+ Tambah</button>
+    </div>
+    ${S.projects.length===0?'<div class="empty">Belum ada proyek</div>':S.projects.map((p,i)=>`
+    <div class="card">
+      <div class="row">
+        <div style="flex:1;min-width:0">
+          <div class="item-name">${esc(p.nama)}</div>
+          <div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
+          ${bdg(p.status)}
+          <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${i})">✏️</button>
+          <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">🗑</button>
+        </div>
+      </div>
+    </div>`).join('')}
+  `;
+}
+function openAddProject(){
+  const kode=padId('PRJ',S.projects);
+  openModal(`
+    <div class="modal-title">Tambah Proyek</div>
+    <div class="g2"><div class="fg"><label class="fl">Kode<span class="req">*</span></label><input class="fc" id="p-kode" value="${esc(kode)}"></div>
+    <div class="fg"><label class="fl">Status</label><select class="fc" id="p-sts"><option>Berjalan</option><option>Selesai</option><option>Hold</option><option>Batal</option></select></div></div>
+    <div class="fg"><label class="fl">Nama Proyek<span class="req">*</span></label><input class="fc" id="p-nama" placeholder="Renovasi Pak Budi"></div>
+    <div class="g2"><div class="fg"><label class="fl">Jenis</label><select class="fc" id="p-jenis"><option>Renovasi</option><option>Pembangunan</option><option>Interior</option><option>Besi</option><option>Waterproofing</option><option>Lainnya</option></select></div>
+    <div class="fg"><label class="fl">Nilai Kontrak<span class="req">*</span></label><input class="fc" id="p-kontrak" type="number" placeholder="350000000"></div></div>
+    <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date"></div>
+    <div class="act-row" style="justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeModal()">Batal</button>
+      <button class="btn btn-p" onclick="saveProject()">💾 Simpan</button>
+    </div>
+  `);
+}
+function openEditProject(i){
+  const p=S.projects[i];
+  openModal(`
+    <div class="modal-title">Edit Proyek</div>
+    <input type="hidden" id="p-idx" value="${i}">
+    <div class="g2"><div class="fg"><label class="fl">Kode</label><input class="fc" id="p-kode" value="${esc(p.kode)}" disabled></div>
+    <div class="fg"><label class="fl">Status</label><select class="fc" id="p-sts"><option ${p.status==='Berjalan'?'selected':''}>Berjalan</option><option ${p.status==='Selesai'?'selected':''}>Selesai</option><option ${p.status==='Hold'?'selected':''}>Hold</option><option ${p.status==='Batal'?'selected':''}>Batal</option></select></div></div>
+    <div class="fg"><label class="fl">Nama Proyek<span class="req">*</span></label><input class="fc" id="p-nama" value="${esc(p.nama)}"></div>
+    <div class="g2"><div class="fg"><label class="fl">Jenis</label><select class="fc" id="p-jenis"><option ${p.jenis==='Renovasi'?'selected':''}>Renovasi</option><option ${p.jenis==='Pembangunan'?'selected':''}>Pembangunan</option><option ${p.jenis==='Interior'?'selected':''}>Interior</option><option ${p.jenis==='Besi'?'selected':''}>Besi</option><option ${p.jenis==='Waterproofing'?'selected':''}>Waterproofing</option><option ${p.jenis==='Lainnya'?'selected':''}>Lainnya</option></select></div>
+    <div class="fg"><label class="fl">Nilai Kontrak<span class="req">*</span></label><input class="fc" id="p-kontrak" type="number" value="${p.nilaiKontrak}"></div></div>
+    <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date" value="${p.tglMulai||''}"></div>
+    <div class="act-row" style="justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeModal()">Batal</button>
+      <button class="btn btn-p" onclick="saveProject(true)">💾 Simpan</button>
+    </div>
+  `);
+}
+function saveProject(isEdit){
+  const kode=document.getElementById('p-kode').value.trim();
+  const nama=document.getElementById('p-nama').value.trim();
+  const kontrak=document.getElementById('p-kontrak').value;
+  if(!kode||!nama||!kontrak){showToast('Lengkapi field wajib','err');return;}
+  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:Number(kontrak),tglMulai:document.getElementById('p-tgl').value};
+  if(isEdit){const i=Number(document.getElementById('p-idx').value);S.projects[i]=d;}
+  else{S.projects.push(d);}
+  ss(KS.p,S.projects);closeModal();go('project');
+  showToast(isEdit?'✅ Proyek diperbarui':'✅ Proyek ditambahkan');
+  doSync(isEdit?'updateProject':'addProject',d);
+}
+function delProject(kode){
+  if(!confirm('Hapus proyek '+kode+'?'))return;
+  S.projects=S.projects.filter(p=>p.kode!==kode);ss(KS.p,S.projects);go('project');
+  showToast('🗑 Dihapus');doSync('deleteProject',{kode});
+}
+
+// ── PEMBELIAN ──────────────────────────────────────
+function pgBeli(){
+  const tab=S.tab.beli||'input';
+  return `
+    <div class="row" style="margin-bottom:11px">
+      <div class="sec-title" style="margin:0">Pembelian</div>
+      <div class="tabs"><button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button><button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button></div>
+    </div>
+    ${tab==='input'?beliInput():beliLog()}
+  `;
+}
+function beliInput(){
+  if(!S.formItems||S.formItems.length===0)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
+  const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
+  const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
+  const prjOpts=`<option value="">— Pilih Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)}</option>`).join('');
+  const items=S.formItems.map((it,i)=>`
+    <div class="sub-card">
+      <div class="row" style="margin-bottom:8px">
+        <span style="font-size:11px;font-weight:600;color:#64748b">Item ${i+1}</span>
+        ${S.formItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delBeliRow(${i})">✕ Hapus</button>`:''}
+      </div>
+      <div class="fg"><label class="fl">Nama Barang</label>
+        <input class="fc" list="brg-dl" value="${esc(it.namaBarang)}" placeholder="Nama barang" oninput="S.formItems[${i}].namaBarang=this.value">
+        <datalist id="brg-dl">${brg}</datalist>
+      </div>
+      <div class="g3">
+        <div class="fg"><label class="fl">Qty</label><input class="fc" type="number" value="${it.qty}" oninput="S.formItems[${i}].qty=this.value"></div>
+        <div class="fg"><label class="fl">Harga</label><input class="fc" type="number" value="${it.harga}" oninput="S.formItems[${i}].harga=this.value"></div>
+        <div class="fg"><label class="fl">Diskon%</label><input class="fc" type="number" value="${it.diskon}" oninput="S.formItems[${i}].diskon=this.value"></div>
+      </div>
+      <div class="g2">
+        <div class="fg"><label class="fl">Status</label><select class="fc" onchange="S.formItems[${i}].status=this.value"><option ${it.status==='HABIS'?'selected':''}>HABIS</option><option ${it.status==='SISA'?'selected':''}>SISA</option><option ${it.status==='ASET'?'selected':''}>ASET</option></select></div>
+        <div class="fg"><label class="fl">Toko</label>
+          <input class="fc" list="tk-dl" value="${esc(it.toko)}" oninput="S.formItems[${i}].toko=this.value">
+          <datalist id="tk-dl">${tk}</datalist>
+        </div>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="card">
+      <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${today()}"></div>
+      <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div></div>
+      ${items}
+      <div class="act-row">
+        <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
+        <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
+      </div>
+    </div>`;
+}
+function beliLog(){
+  const list=[...S.pembelian].reverse().slice(0,60);
+  return list.length===0?'<div class="empty">Belum ada data</div>':list.map(b=>`
+    <div class="card">
+      <div class="row"><div><div class="item-name">${esc(b.namaBarang)}</div><div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div></div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div></div>
+      <div class="item-sub" style="margin-top:4px">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div>
+    </div>`).join('');
+}
+function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''});go('beli');}
+function delBeliRow(i){S.formItems.splice(i,1);if(S.formItems.length===0)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];go('beli');}
+function submitBeli(){
+  const tgl=document.getElementById('beli-tgl').value;
+  const kodeProj=document.getElementById('beli-prj').value;
+  if(!kodeProj){showToast('Pilih proyek','err');return;}
+  if(S.formItems.some(it=>!it.namaBarang||!it.harga)){showToast('Lengkapi nama & harga','err');return;}
+  const newItems=S.formItems.map(it=>({id:'BLI-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,kodeProj,...it,harga:Number(it.harga),qty:Number(it.qty),diskon:Number(it.diskon)||0}));
+  S.pembelian.push(...newItems);ss(KS.beli,S.pembelian);
+  const brg=[...S.masterBarang],tk=[...S.masterToko];
+  newItems.forEach(it=>{if(!brg.find(b=>b.nama.toLowerCase()===it.namaBarang.toLowerCase()))brg.push({id:padId('BRG',brg,'id'),nama:it.namaBarang,kategori:it.kategori,satuan:it.satuan,hargaTerakhir:it.harga});if(it.toko&&!tk.includes(it.toko))tk.push(it.toko);});
+  S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
+  showToast('✅ '+newItems.length+' item disimpan lokal');
+  S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
+  setTab('beli','log');
+  doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
+}
+
+// ── MASTER KARYAWAN ────────────────────────────────
+function pgKaryawan(){
+  return `
+    <div class="row" style="margin-bottom:11px">
+      <div class="sec-title" style="margin:0">Karyawan</div>
+      <button class="btn btn-p btn-sm" onclick="openAddKaryawan()">+ Tambah</button>
+    </div>
+    ${S.karyawan.length===0?'<div class="empty">Belum ada karyawan</div>':S.karyawan.map((k,i)=>{
+      const abs=S.logAbsensi.filter(a=>a.idKaryawan===k.id);
+      const tu=abs.reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+      const hr=abs.filter(a=>a.status==='Hadir').length+abs.filter(a=>a.status==='Setengah Hari').length*0.5;
+      const am=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+      const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+      const sisa=am-pt;
+      return `<div class="card">
+        <div class="row" style="margin-bottom:8px">
+          <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${esc(k.jabatan)} · ${esc(k.id)}</div></div>
+          <div style="display:flex;gap:8px"><button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditKaryawan(${i})">✏️</button><button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delKaryawan('${esc(k.id)}')">🗑</button></div>
+        </div>
+        <div class="g4">
+          <div class="chip"><div class="chip-lbl">Upah/Hr</div><div class="chip-val">${fRp(k.upahHarian)}</div></div>
+          <div class="chip"><div class="chip-lbl">Hari</div><div class="chip-val">${hr}</div></div>
+          <div class="chip"><div class="chip-lbl">Total</div><div class="chip-val">${fRp(tu)}</div></div>
+          <div class="chip" style="background:${sisa>0?'#fff7ed':'#f8fafc'}"><div class="chip-lbl">Kasbon</div><div class="chip-val" style="color:${sisa>0?'#c2410c':'#1e293b'}">${fRp(sisa)}</div></div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+function krModal(k,i){
+  const isEdit=k!==null;
+  return `
+    <div class="modal-title">${isEdit?'Edit':'Tambah'} Karyawan</div>
+    ${isEdit?`<input type="hidden" id="k-idx" value="${i}">`:''}
+    <div class="g2">
+      <div class="fg"><label class="fl">ID<span class="req">*</span></label><input class="fc" id="k-id" value="${isEdit?esc(k.id):padId('KRY',S.karyawan)}" ${isEdit?'disabled':''}></div>
+      <div class="fg"><label class="fl">Jabatan</label><select class="fc" id="k-jab">${['Mandor','Tukang','Pembantu','Tim Besi','Tim Interior'].map(j=>`<option ${isEdit&&k.jabatan===j?'selected':''}>${j}</option>`).join('')}</select></div>
+    </div>
+    <div class="fg"><label class="fl">Nama<span class="req">*</span></label><input class="fc" id="k-nama" value="${isEdit?esc(k.nama):''}"></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Upah Harian<span class="req">*</span></label><input class="fc" id="k-upah" type="number" value="${isEdit?k.upahHarian:''}"></div>
+      <div class="fg"><label class="fl">No HP</label><input class="fc" id="k-hp" type="tel" value="${isEdit?esc(k.noHP||''):''}"></div>
+    </div>
+    <div class="act-row" style="justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeModal()">Batal</button>
+      <button class="btn btn-p" onclick="saveKaryawan(${isEdit})">💾 Simpan</button>
+    </div>`;
+}
+function openAddKaryawan(){openModal(krModal(null,null));}
+function openEditKaryawan(i){openModal(krModal(S.karyawan[i],i));}
+function saveKaryawan(isEdit){
+  const id=document.getElementById('k-id').value.trim();
+  const nama=document.getElementById('k-nama').value.trim();
+  const upah=document.getElementById('k-upah').value;
+  if(!id||!nama||!upah){showToast('Lengkapi field wajib','err');return;}
+  const d={id,nama,jabatan:document.getElementById('k-jab').value,upahHarian:Number(upah),noHP:document.getElementById('k-hp').value};
+  if(isEdit){const idx=Number(document.getElementById('k-idx').value);S.karyawan[idx]=d;}else{S.karyawan.push(d);}
+  ss(KS.kr,S.karyawan);closeModal();go('karyawan');
+  showToast(isEdit?'✅ '+d.nama+' diperbarui':'✅ '+d.nama+' ditambahkan');
+  doSync(isEdit?'updateKaryawan':'addKaryawan',d);
+}
+function delKaryawan(id){if(!confirm('Hapus '+id+'?'))return;S.karyawan=S.karyawan.filter(k=>k.id!==id);ss(KS.kr,S.karyawan);go('karyawan');showToast('🗑 Dihapus');doSync('deleteKaryawan',{id});}
+
+// ── ABSENSI ────────────────────────────────────────
+function pgAbsensi(){
+  const tab=S.tab.absensi||'input';
+  return `
+    <div class="row" style="margin-bottom:11px">
+      <div class="sec-title" style="margin:0">Absensi Harian</div>
+      <div class="tabs"><button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('absensi','input')">Input</button><button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('absensi','log')">Log</button></div>
+    </div>
+    ${tab==='input'?absInput():absLog()}`;
+}
+function absInput(){
+  // Status buttons style
+  const STS=['Hadir','Setengah','Tidak Hadir','Libur'];
+  const STS_FULL={'Hadir':'Hadir','Setengah':'Setengah Hari','Tidak Hadir':'Tidak Hadir','Libur':'Libur'};
+  const STS_COLOR={'Hadir':'#10b981','Setengah':'#f59e0b','Tidak Hadir':'#ef4444','Libur':'#94a3b8'};
+  
+  // Proyek dropdown pakai NAMA
+  const prjOptsNama=`<option value="">— Proyek Default —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  
+  const rows=S.karyawan.map((k,i)=>{
+    const r=S.absRows[i]||{status:'',kodeProj:'',ket:''};
+    const curFull=r.status;
+    const upahHariIni=curFull==='Hadir'?k.upahHarian:curFull==='Setengah Hari'?k.upahHarian*0.5:0;
+    
+    // Status tombol cepat — tap langsung pilih
+    const stsBtns=STS.map(s=>{
+      const full=STS_FULL[s];
+      const active=curFull===full;
+      const col=STS_COLOR[s];
+      return `<button type="button" onclick="setAbsRow(${i},'status','${full}')" style="flex:1;padding:8px 2px;border-radius:9px;border:2px solid ${active?col:'#e2e8f0'};background:${active?col:'#fff'};color:${active?'#fff':'#64748b'};font-size:11px;font-weight:600;cursor:pointer;transition:all .15s">${s}</button>`;
+    }).join('');
+    
+    // Nama proyek per karyawan
+    const curProj=r.kodeProj||'';
+    const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)">
+      <option value="">— Default —</option>
+      ${S.projects.map(p=>`<option value="${esc(p.kode)}" ${curProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}
+    </select>`;
+    
+    return `<div class="card" style="margin-bottom:8px">
+      <div class="row" style="margin-bottom:8px">
+        <div>
+          <div class="item-name">${esc(k.nama)}</div>
+          <div class="item-sub">${k.jabatan} · ${fRp(k.upahHarian)}/hr</div>
+        </div>
+        ${upahHariIni>0?`<span style="font-weight:700;color:#10b981;font-size:14px;flex-shrink:0">${fRp(upahHariIni)}</span>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
+      </div>
+      <!-- Status buttons -->
+      <div style="display:flex;gap:5px;margin-bottom:8px">${stsBtns}</div>
+      <!-- Proyek per karyawan -->
+      <div class="fg" style="margin-bottom:0">${projSel}</div>
+    </div>`;
+  }).join('');
+  
+  // Proyek default (untuk karyawan yang tidak pilih proyek spesifik)
+  const defProj=`<select class="fc" id="abs-prj">
+    <option value="">— Tidak ada default —</option>
+    ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('')}
+  </select>`;
+  
+  return `
+    <div class="card" style="margin-bottom:10px">
+      <div class="g2">
+        <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${today()}"></div>
+        <div class="fg"><label class="fl">Proyek Default</label>${defProj}</div>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:-4px">💡 Proyek default untuk karyawan yang belum pilih proyek sendiri</div>
+    </div>
+    ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':rows}
+    ${S.karyawan.length>0?`
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:10px;margin-bottom:10px;font-size:12px;color:#15803d">
+        ✅ Hadir: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Hadir').length}</strong> &nbsp;
+        🟡 Setengah: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Setengah Hari').length}</strong> &nbsp;
+        ❌ Tidak: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Tidak Hadir').length}</strong> &nbsp;
+        🔘 Libur: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Libur').length}</strong>
+      </div>
+      <button class="btn btn-p btn-w" onclick="submitAbsensi()">💾 Simpan Absensi</button>
+    `:''}`;
+}
+function setAbsRow(i,key,val){
+  if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};
+  S.absRows[i][key]=val;
+  // Re-render hanya saat status berubah (perlu update tombol + upah)
+  if(key==='status') go('absensi');
+}
+function submitAbsensi(){
+  const tgl=document.getElementById('abs-tgl')?.value||today();
+  const defProj=document.getElementById('abs-prj')?.value||'';
+  const active=S.karyawan.map((k,i)=>{
+    const r=S.absRows[i]||{};
+    return{k,r};
+  }).filter(({r})=>r.status&&r.status!=='Tidak Hadir'&&r.status!=='Libur');
+  if(!tgl){showToast('Pilih tanggal','err');return;}
+  if(active.length===0){showToast('Pilih status minimal 1 karyawan','err');return;}
+  const newAbs=active.map(({k,r})=>{
+    const upah=r.status==='Hadir'?k.upahHarian:r.status==='Setengah Hari'?k.upahHarian*0.5:0;
+    return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni:upah,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};
+  });
+  S.logAbsensi.push(...newAbs);
+  ss(KS.abs,S.logAbsensi);
+  showToast('✅ Absensi '+active.length+' karyawan tersimpan');
+  S.absRows=[];
+  setTab('absensi','log');
+  doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,status:a.status,kodeProj:a.kodeProj,upahHariIni:a.upahHariIni,ket:a.ket})));
+}
+function absLog(){
+  const list=[...S.logAbsensi].reverse().slice(0,80);
+  if(list.length===0) return '<div class="empty">Belum ada data</div>';
+  return list.map((a,idx)=>{
+    // Cari index asli di S.logAbsensi
+    const realIdx=S.logAbsensi.findIndex(x=>x.id===a.id);
+    const canDel=a.statusBayar!=='Sudah Dibayar';
+    return `<div class="card">
+      <div class="row" style="margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div class="item-name">${esc(a.nama)}</div>
+          <div class="item-sub">${fDate(a.tgl)} · ${esc(a.kodeProj||'')} · ${fRp(a.upahHariIni)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
+          ${bdg(a.status)}
+          ${canDel?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${realIdx})">🗑</button>`:''}
+        </div>
+      </div>
+      <div>${bdg(a.statusBayar)}</div>
+    </div>`;
+  }).join('');
+}
+function delAbsensi(idx){
+  const a=S.logAbsensi[idx];
+  if(!a)return;
+  if(a.statusBayar==='Sudah Dibayar'){showToast('Tidak bisa hapus — sudah di-closing','err');return;}
+  if(!confirm('Hapus absensi '+esc(a.nama)+' tgl '+fDate(a.tgl)+'?'))return;
+  S.logAbsensi.splice(idx,1);
+  ss(KS.abs,S.logAbsensi);
+  showToast('🗑 Absensi dihapus');
+  go('absensi');
+  // Sync delete ke GSheet
+  doSync('deleteAbsensi',{tgl:a.tgl,idKaryawan:a.idKaryawan});
+}
+
+// ── KASBON ─────────────────────────────────────────
+function pgKasbon(){
+  const tab=S.tab.kasbon||'input';
+  return `
+    <div class="row" style="margin-bottom:11px">
+      <div class="sec-title" style="margin:0">Kasbon</div>
+      <div class="tabs">
+        <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('kasbon','input')">Input</button>
+        <button class="tab ${tab==='rekap'?'tab-on':'tab-off'}" onclick="setTab('kasbon','rekap')">Rekap</button>
+        <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('kasbon','log')">Log</button>
+      </div>
+    </div>
+    ${tab==='input'?kasbonInput():tab==='rekap'?kasbonRekap():kasbonLog()}`;
+}
+function kasbonInput(){
+  const krOpts=`<option value="">— Pilih Karyawan —</option>`+S.karyawan.map(k=>`<option value="${esc(k.id)}">${esc(k.nama)}</option>`).join('');
+  return `<div class="card">
+    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="ksb-tgl" value="${today()}"></div>
+    <div class="fg"><label class="fl">Karyawan</label><select class="fc" id="ksb-kr">${krOpts}</select></div>
+    <div class="fg"><label class="fl">Tipe</label><select class="fc" id="ksb-tipe"><option>AMBIL</option><option>POTONG</option></select></div>
+    <div class="fg"><label class="fl">Nominal</label><input class="fc" type="number" id="ksb-nom" placeholder="0"></div>
+    <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="ksb-ket"></div>
+    <button class="btn btn-p btn-w" onclick="submitKasbon()">💾 Simpan Kasbon</button>
+  </div>`;
+}
+function submitKasbon(){
+  const id=document.getElementById('ksb-kr').value;
+  const nom=document.getElementById('ksb-nom').value;
+  if(!id||!nom){showToast('Lengkapi data','err');return;}
+  const nk={id:'KSB-'+Date.now(),tgl:document.getElementById('ksb-tgl').value,idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:document.getElementById('ksb-tipe').value,nominal:Number(nom),ket:document.getElementById('ksb-ket').value,noClosing:''};
+  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);
+  showToast('✅ Kasbon '+nk.tipe+' '+fRp(nk.nominal)+' disimpan lokal');
+  setTab('kasbon','log');
+  doSync('addKasbon',[{tgl:nk.tgl,idKaryawan:nk.idKaryawan,tipe:nk.tipe,nominal:nk.nominal,ket:nk.ket}]);
+}
+function kasbonRekap(){
+  return S.karyawan.map(k=>{
+    const am=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    const sisa=am-pt;
+    return `<div class="card"><div class="item-name" style="margin-bottom:8px">${esc(k.nama)}</div>
+      <div class="g3">
+        <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Ambil</div><div class="chip-val" style="color:#c2410c">${fRp(am)}</div></div>
+        <div class="chip" style="background:#faf5ff"><div class="chip-lbl">Potong</div><div class="chip-val" style="color:#7c3aed">${fRp(pt)}</div></div>
+        <div class="chip" style="background:${sisa>0?'#fef2f2':'#f0fdf4'}"><div class="chip-lbl">Sisa</div><div class="chip-val" style="color:${sisa>0?'#dc2626':'#16a34a'}">${fRp(sisa)}</div></div>
+      </div></div>`;
+  }).join('')||'<div class="empty">Belum ada karyawan</div>';
+}
+function kasbonLog(){
+  const list=[...S.logKasbon].reverse().slice(0,60);
+  return list.length===0?'<div class="empty">Belum ada data</div>':list.map(k=>`
+    <div class="card"><div class="row">
+      <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${fDate(k.tgl)}${k.ket?' · '+esc(k.ket):''}</div></div>
+      <div style="text-align:right;flex-shrink:0"><div style="font-weight:700;font-size:13px">${fRp(k.nominal)}</div>${bdg(k.tipe)}</div>
+    </div></div>`).join('');
+}
+
+// ── CLOSING GAJI ───────────────────────────────────
+let clsRekap=[],clsSel={};
+function pgClosing(){
+  return `
+    <div class="sec-title">Closing Gaji</div>
+    <div class="card">
+      <div class="g2"><div class="fg"><label class="fl">Dari</label><input class="fc" type="date" id="cls-dari"></div>
+      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" id="cls-smp" value="${today()}"></div></div>
+      <div class="g2"><div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${today()}"></div>
+      <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="CLO-${new Date().toISOString().slice(0,7).replace('-','')}-001"></div></div>
+      <button class="btn btn-o btn-w" onclick="genClosing()">📊 Generate Rekap</button>
+    </div>
+    <div id="cls-rekap">${clsRekap.length>0?buildClsRekap():''}</div>`;
+}
+function genClosing(){
+  const dari=document.getElementById('cls-dari').value;
+  const sampai=document.getElementById('cls-smp').value;
+  if(!dari||!sampai){showToast('Pilih periode','err');return;}
+  const dMs=new Date(dari).getTime(),sMs=new Date(sampai).getTime();
+  clsRekap=S.karyawan.map(k=>{
+    const abs=S.logAbsensi.filter(a=>a.idKaryawan===k.id&&a.statusBayar==='Belum Dibayar'&&new Date(a.tgl).getTime()>=dMs&&new Date(a.tgl).getTime()<=sMs);
+    const tu=abs.reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+    const am=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon:Math.max(0,am-pt),kasbonDipotong:0};
+  }).filter(r=>r.hari>0);
+  clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
+  if(clsRekap.length===0){showToast('Tidak ada absensi belum dibayar','err');return;}
+  showToast('✅ '+clsRekap.length+' karyawan ditemukan');
+  document.getElementById('cls-rekap').innerHTML=buildClsRekap();
+}
+function buildClsRekap(){
+  return clsRekap.map((r,i)=>{
+    const net=r.totalUpah-Number(r.kasbonDipotong||0);
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <input type="checkbox" id="cls-cb-${i}" ${clsSel[r.idKaryawan]?'checked':''} onchange="clsSel['${r.idKaryawan}']=this.checked" style="width:20px;height:20px">
+        <span class="item-name">${esc(r.nama)}</span>
+      </div>
+      <div class="g2" style="margin-bottom:8px">
+        <div class="chip"><div class="chip-lbl">Hari · Upah</div><div class="chip-val">${r.hari} hr · ${fRp(r.totalUpah)}</div></div>
+        <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:#c2410c">${fRp(r.sisaKasbon)}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:#64748b;white-space:nowrap">Kasbon potong:</label>
+        <input class="fc" type="number" value="${r.kasbonDipotong}" style="flex:1" oninput="clsRekap[${i}].kasbonDipotong=Number(this.value);document.getElementById('cls-net-${i}').textContent='${fRp(0)}'.replace('0',new Intl.NumberFormat('id-ID').format(clsRekap[${i}].totalUpah-clsRekap[${i}].kasbonDipotong))">
+        <span id="cls-net-${i}" style="font-weight:700;font-size:13px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
+      </div>
+    </div>`;
+  }).join('')+'<button class="btn btn-p btn-w" onclick="finalizeClosing()" style="margin-top:4px">🔒 Finalize Closing</button>';
+}
+function finalizeClosing(){
+  const dari=document.getElementById('cls-dari').value;
+  const sampai=document.getElementById('cls-smp').value;
+  const tglBayar=document.getElementById('cls-bayar').value;
+  const noC=document.getElementById('cls-noc').value;
+  if(!dari||!sampai||!tglBayar){showToast('Lengkapi data','err');return;}
+  const dMs=new Date(dari).getTime(),sMs=new Date(sampai).getTime();
+  const sIds=clsRekap.filter(r=>clsSel[r.idKaryawan]).map(r=>r.idKaryawan);
+  S.logAbsensi=S.logAbsensi.map(a=>{
+    if(!sIds.includes(a.idKaryawan)||a.statusBayar!=='Belum Dibayar')return a;
+    const tMs=new Date(a.tgl).getTime();if(tMs<dMs||tMs>sMs)return a;
+    return{...a,statusBayar:'Sudah Dibayar',noClosing:noC,tglBayar};
+  });
+  ss(KS.abs,S.logAbsensi);
+  const ksbItems=clsRekap.filter(r=>clsSel[r.idKaryawan]&&Number(r.kasbonDipotong)>0);
+  ksbItems.forEach(r=>{S.logKasbon.push({id:'KSB-CLO-'+Date.now()+'-'+r.idKaryawan,tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,tipe:'POTONG',nominal:Number(r.kasbonDipotong),noClosing:noC,ket:'Potong '+noC});});
+  ss(KS.ksb,S.logKasbon);
+  showToast('✅ Closing '+noC+' selesai (lokal)');
+  const clsPayload={dari,sampai,tglBayar,noClosing:noC,selectedIds:sIds,kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nominal:Number(r.kasbonDipotong)}))};
+  clsRekap=[];clsSel={};go('closing');
+  doSync('finalizeClosing',clsPayload);
+}
+
+// ── PEMBAYARAN KLIEN ───────────────────────────────
+function pgBayar(){
+  const tab=S.tab.bayar||'input';
+  return `
+    <div class="row" style="margin-bottom:11px">
+      <div class="sec-title" style="margin:0">Pembayaran Klien</div>
+      <div class="tabs"><button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('bayar','input')">Input</button><button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('bayar','log')">Log</button></div>
+    </div>
+    ${tab==='input'?bayarInput():bayarLog()}`;
+}
+function bayarInput(){
+  if(!S.payItems||S.payItems.length===0)S.payItems=[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}];
+  const prjOpts=`<option value="">— Pilih Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)} — ${esc(p.nama)}</option>`).join('');
+  const items=S.payItems.map((it,i)=>`
+    <div class="sub-card">
+      <div class="row" style="margin-bottom:8px">
+        <span style="font-size:11px;font-weight:600;color:#64748b">Pembayaran ${i+1}</span>
+        ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">✕</button>`:''}
+      </div>
+      <div class="fg"><label class="fl">Proyek</label><select class="fc" onchange="S.payItems[${i}].kodeProj=this.value">
+        ${prjOpts.replace(`value="${esc(it.kodeProj)}"`,`value="${esc(it.kodeProj)}" selected`)}
+      </select></div>
+      <div class="g2">
+        <div class="fg"><label class="fl">Nominal</label><input class="fc" type="number" value="${it.nominal}" oninput="S.payItems[${i}].nominal=this.value"></div>
+        <div class="fg"><label class="fl">Metode</label><select class="fc" onchange="S.payItems[${i}].metode=this.value"><option ${it.metode==='Transfer'?'selected':''}>Transfer</option><option ${it.metode==='Cash'?'selected':''}>Cash</option><option ${it.metode==='Cek'?'selected':''}>Cek</option><option ${it.metode==='Giro'?'selected':''}>Giro</option></select></div>
+      </div>
+      <div class="g2">
+        <div class="fg"><label class="fl">Bank</label><input class="fc" value="${esc(it.bank)}" placeholder="BCA/BRI…" oninput="S.payItems[${i}].bank=this.value"></div>
+        <div class="fg"><label class="fl">Referensi</label><input class="fc" value="${esc(it.ref)}" oninput="S.payItems[${i}].ref=this.value"></div>
+      </div>
+      <div class="fg"><label class="fl">Keterangan</label><input class="fc" value="${esc(it.ket)}" oninput="S.payItems[${i}].ket=this.value"></div>
+    </div>`).join('');
+  return `
+    <div class="card">
+      <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="pay-tgl" value="${today()}"></div>
+      ${items}
+      <div class="act-row">
+        <button class="btn btn-g" style="flex:1" onclick="addPayRow()">+ Baris</button>
+        <button class="btn btn-p" style="flex:1" onclick="submitPay()">💾 Simpan</button>
+      </div>
+    </div>`;
+}
+function addPayRow(){S.payItems.push({kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''});go('bayar');}
+function delPayRow(i){S.payItems.splice(i,1);go('bayar');}
+function submitPay(){
+  if(S.payItems.some(it=>!it.kodeProj||!it.nominal)){showToast('Lengkapi proyek & nominal','err');return;}
+  const tgl=document.getElementById('pay-tgl').value;
+  const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||''}));
+  S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);
+  showToast('✅ '+ni.length+' pembayaran dicatat lokal');
+  S.payItems=[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}];
+  setTab('bayar','log');
+  doSync('addPembayaran',ni.map(it=>({tgl,kodeProj:it.kodeProj,nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
+}
+function bayarLog(){
+  const list=[...S.logPembayaran].reverse().slice(0,60);
+  return list.length===0?'<div class="empty">Belum ada data</div>':list.map(p=>`
+    <div class="card"><div class="row">
+      <div><div class="item-name">${esc(p.namaProj||p.kodeProj)}</div><div class="item-sub">${fDate(p.tgl)} · ${esc(p.metode)}${p.bank?' · '+esc(p.bank):''}</div></div>
+      <div style="font-weight:700;color:#10b981;font-size:14px;flex-shrink:0;margin-left:8px">${fRp(p.nominal)}</div>
+    </div>${p.ket?`<div class="item-sub" style="margin-top:4px">${esc(p.ket)}</div>`:''}</div>`).join('');
+}
+
+// ── Tab helper ─────────────────────────────────────
+function setTab(page,tab){S.tab[page]=tab;go(page);}
+
+// ── Init ───────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',async()=>{
+  loadLocal();
+  S.webAppUrl=sg(KS.url,'');
+  S.pollInterval=Number(sg(KS.poll,60))||60;
+  go('dashboard');
+  document.getElementById('nav').innerHTML=buildNav();
+  // Hide splash
+  setTimeout(()=>{
+    const spl=document.getElementById('spl');
+    if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}
+  },300);
+  updateSyncBadge();
+  if(S.webAppUrl){await doFetch();startPoll();}
+});
+</script>
+</body>
+</html>
