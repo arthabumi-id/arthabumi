@@ -587,7 +587,7 @@ async function scanNota(){
     return;
   }
   const inp=document.createElement('input');
-  inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.type='file';inp.accept='image/*'; // iOS: muncul pilihan Kamera / Album / Files
   inp.onchange=async(e)=>{
     const file=e.target.files[0];if(!file)return;
     const btn=document.getElementById('btn-scan-nota');
