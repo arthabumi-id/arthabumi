@@ -579,7 +579,22 @@ function beliInput(){
     </div>`;
 }
 
-// ── SCAN NOTA (OCR.SPACE) GRATIS TANPA API KEY ─────────────────
+// ── SCAN NOTA (OCR.SPACE + TESSERACT.JS FALLBACK) GRATIS ─────────
+// Load Tesseract.js dari CDN (hanya saat scan pertama)
+let tessPromise = null;
+function loadTesseract() {
+  if (!tessPromise) {
+    tessPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      script.onload = () => resolve(window.Tesseract);
+      script.onerror = () => reject(new Error('Gagal load Tesseract.js'));
+      document.head.appendChild(script);
+    });
+  }
+  return tessPromise;
+}
+
 async function scanNota() {
   const btn = document.getElementById('btn-scan-nota');
   const inp = document.createElement('input');
@@ -589,124 +604,162 @@ async function scanNota() {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Validasi ukuran file (max 2MB untuk free tier lebih aman)
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('⚠️ Ukuran foto terlalu besar (max 2MB). Coba kompres atau foto ulang.', 'err');
+    if (btn) { btn.textContent = '🔍 Memproses...'; btn.disabled = true; btn.style.opacity = '0.6'; }
+    showToast('📸 Mencoba OCR.space...', 'info');
+    
+    let parsedText = '';
+    let method = '';
+    
+    // Percobaan 1: OCR.space
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('language', 'ind');
+      formData.append('isOverlayRequired', 'false');
+      formData.append('isTable', 'true');
+      formData.append('scale', 'true');
+      formData.append('OCREngine', '2');
+      
+      let response = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: formData });
+      let data = await response.json();
+      if (!data.IsErroredOnProcessing && data.ParsedResults?.[0]?.ParsedText) {
+        parsedText = data.ParsedResults[0].ParsedText;
+        method = 'OCR.space';
+      } else {
+        // coba engine 1
+        formData.set('OCREngine', '1');
+        response = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: formData });
+        data = await response.json();
+        if (!data.IsErroredOnProcessing && data.ParsedResults?.[0]?.ParsedText) {
+          parsedText = data.ParsedResults[0].ParsedText;
+          method = 'OCR.space (Engine 1)';
+        }
+      }
+    } catch (err) {
+      console.warn('OCR.space error:', err);
+    }
+    
+    // Jika OCR.space gagal atau hasil kosong, fallback ke Tesseract.js
+    if (!parsedText || parsedText.trim().length < 20) {
+      showToast('🔄 OCR.space gagal, mencoba Tesseract.js (offline)...', 'info');
+      try {
+        const Tesseract = await loadTesseract();
+        const { data: { text } } = await Tesseract.recognize(file, 'ind', {
+          logger: m => console.log(m)
+        });
+        parsedText = text;
+        method = 'Tesseract.js';
+      } catch (err) {
+        console.error('Tesseract error:', err);
+      }
+    }
+    
+    if (!parsedText || parsedText.trim().length < 10) {
+      showToast('❌ Gagal membaca nota. Coba foto lebih jelas dan terang.', 'err');
+      if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
       return;
     }
     
-    if (btn) { btn.textContent = '🔍 Memproses...'; btn.disabled = true; btn.style.opacity = '0.6'; }
-    showToast('📸 Mengirim ke OCR.space...', 'info');
+    console.log(`✅ ${method} berhasil membaca teks:\n`, parsedText);
     
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('language', 'ind');   // Indonesia
-    formData.append('isOverlayRequired', 'false');
-    formData.append('isTable', 'true');    // PENTING: untuk mendeteksi tabel struk
-    formData.append('scale', 'true');      // scaling otomatis
-    formData.append('OCREngine', '2');     // coba engine 2 dulu
+    // Parsing teks menjadi item
+    const items = parseOCRTextToItemsImproved(parsedText);
     
-    async function callOCR(engine) {
-      formData.set('OCREngine', engine);
-      const response = await fetch('https://api.ocr.space/parse/image', {
-        method: 'POST',
-        body: formData
-      });
-      return await response.json();
-    }
-    
-    try {
-      let data = await callOCR('2');
-      
-      // Jika gagal atau tidak ada teks, coba engine 1 (Tesseract)
-      if (data.IsErroredOnProcessing || !data.ParsedResults?.[0]?.ParsedText?.trim()) {
-        console.warn('Engine 2 gagal, fallback ke engine 1...');
-        data = await callOCR('1');
-      }
-      
-      if (data.IsErroredOnProcessing) {
-        const errMsg = data.ErrorMessage?.[0] || 'Gagal membaca nota';
-        throw new Error(errMsg);
-      }
-      
-      const parsedText = data.ParsedResults?.[0]?.ParsedText || '';
-      if (!parsedText.trim()) {
-        throw new Error('Tidak ada teks terdeteksi. Coba foto lebih terang dan fokus, atau gunakan scan dari aplikasi kamera.');
-      }
-      
-      // Debug: lihat teks hasil OCR di console
-      console.log('OCR hasil teks:', parsedText);
-      
-      const items = parseOCRTextToItems(parsedText);
-      
-      if (items.length === 0) {
-        throw new Error('Gagal mengekstrak item. Mungkin format nota tidak dikenali. Coba scan ulang dengan lebih rapi.');
-      }
-      
-      S.formItems = items;
-      // Ekstrak tanggal dari teks
-      const tglMatch = parsedText.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|(\d{4}-\d{2}-\d{2})/);
-      if (tglMatch) {
-        let tglRaw = tglMatch[0];
-        if (tglRaw.includes('/')) {
-          const parts = tglRaw.split('/');
-          if (parts[2].length === 2) parts[2] = '20' + parts[2];
-          S.notaTgl = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-        } else if (tglRaw.match(/^\d{4}-\d{2}-\d{2}/)) {
-          S.notaTgl = tglRaw.slice(0,10);
-        }
-      }
-      
-      showToast(`✅ ${items.length} item ditemukan — periksa & edit sebelum simpan`, 'ok');
-      go('beli');
-      
-    } catch (err) {
-      showToast('❌ ' + err.message, 'err');
-      console.error('OCR error detail:', err);
-    } finally {
+    if (items.length === 0) {
+      showToast('⚠️ Teks terbaca tapi tidak bisa ekstrak item. Coba foto lebih rapi.', 'err');
       if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
+      return;
     }
+    
+    S.formItems = items;
+    // Ekstrak tanggal
+    const tglMatch = parsedText.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|(\d{4}-\d{2}-\d{2})/);
+    if (tglMatch) {
+      let tglRaw = tglMatch[0];
+      if (tglRaw.includes('/')) {
+        const parts = tglRaw.split('/');
+        if (parts[2].length === 2) parts[2] = '20' + parts[2];
+        S.notaTgl = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      } else if (tglRaw.match(/^\d{4}-\d{2}-\d{2}/)) {
+        S.notaTgl = tglRaw.slice(0,10);
+      }
+    }
+    
+    showToast(`✅ ${items.length} item ditemukan (${method}) — periksa & edit`, 'ok');
+    go('beli');
+    
+    if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
   };
   inp.click();
 }
 
-// ========== PARSING TEKS DARI OCR MENJADI ITEM PEMBELIAN (VERSI LEBIH CERDAS) ==========
-function parseOCRTextToItems(rawText) {
-  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 3);
+// ========== PARSING TEKS NOTA YANG LEBIH CERDAS ==========
+function parseOCRTextToItemsImproved(rawText) {
+  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 2);
   const items = [];
   
-  // Pola regex untuk mencari baris yang mengandung angka dan kemungkinan nama barang
-  // Misal: "Semen 50kg   2   85.000   170.000"
+  // Pola umum: QTY di awal, lalu nama, lalu harga (bisa di kolom terakhir)
+  // Contoh: "166 AP Putih 166 80.000"  → qty=166, nama="AP Putih 166", harga=80000
+  // Contoh: "1 Foto foto 32.000" → qty=1, nama="Foto foto", harga=32000
+  // Contoh: "2 Kayo PVC 50 100.00" → qty=2, nama="Kayo PVC", harga=100? (50 adalah harga satuan? kita asumsikan angka terakhir harga total)
+  
   for (let line of lines) {
-    // Skip baris yang jelas bukan item (total, diskon, salam, dll)
-    if (/(total|jumlah|bayar|kembali|diskon|ppn|terima kasih|telp|website|www|@|harga satuan)/i.test(line)) continue;
+    // Skip baris yang bukan item (header, footer, rekening, dll)
+    if (/^(qty|nama|harga|jumlah|total|subtotal|diskon|ppn|terima kasih|rekening|bank|tanda terima|perhatian)/i.test(line)) continue;
+    if (line.length < 5) continue;
     
-    // Cari angka (termasuk desimal)
+    // Ekstrak semua angka (termasuk desimal)
     const numbers = line.match(/(\d+([.,]\d+)?)/g);
-    if (!numbers || numbers.length < 1) continue;
+    if (!numbers || numbers.length === 0) continue;
     
-    // Ambil angka terakhir sebagai harga (asumsi)
-    let harga = parseFloat(numbers[numbers.length-1].replace(',', '.'));
-    if (harga < 100 || harga > 100000000) continue; // filter aneh
+    // Bersihkan angka: ganti koma dengan titik, lalu parse
+    const cleanNumbers = numbers.map(n => parseFloat(n.replace(',', '.')));
+    
+    // Strategi: 
+    // - Jika ada 3 angka atau lebih, kemungkinan: qty, harga_satuan, total. Kita ambil qty=angka pertama, harga=angka terakhir (total)
+    // - Jika 2 angka: bisa (qty, total) atau (harga_satuan, total) -> asumsikan qty=1
+    // - Jika 1 angka: asumsikan qty=1, harga=angka tersebut
     
     let qty = 1;
-    // Jika ada lebih dari 1 angka, coba gunakan angka kedua terakhir sebagai qty (jika nilainya kecil)
-    if (numbers.length >= 2) {
-      const possibleQty = parseFloat(numbers[numbers.length-2].replace(',', '.'));
-      if (possibleQty >= 0.5 && possibleQty <= 1000 && possibleQty < harga) {
-        qty = possibleQty;
+    let harga = 0;
+    
+    if (cleanNumbers.length >= 3) {
+      qty = cleanNumbers[0];
+      harga = cleanNumbers[cleanNumbers.length-1]; // total
+      // jika harga terlalu besar dibanding qty, mungkin harga satuan ada di tengah, tapi kita abaikan
+    } else if (cleanNumbers.length === 2) {
+      // Mungkin format: "QTY   HargaTotal"
+      qty = cleanNumbers[0];
+      harga = cleanNumbers[1];
+      // jika qty > harga (misal 166 > 80000? tidak), tapi jika qty=2 dan harga=100, itu masuk akal
+    } else if (cleanNumbers.length === 1) {
+      qty = 1;
+      harga = cleanNumbers[0];
+    }
+    
+    // Filter harga yang tidak masuk akal
+    if (harga <= 0 || harga > 100000000) continue;
+    if (qty <= 0 || qty > 10000) continue;
+    
+    // Ekstrak nama barang: hapus semua angka dari line, lalu bersihkan
+    let namaBarang = line;
+    // Hapus angka (termasuk yang di tengah kata, misal "AP Putih 166" -> "AP Putih")
+    namaBarang = namaBarang.replace(/\d+([.,]\d+)?/g, '');
+    // Hapus karakter khusus yang tersisa
+    namaBarang = namaBarang.replace(/[^\w\s\-]/g, '');
+    namaBarang = namaBarang.replace(/\s+/g, ' ').trim();
+    
+    // Jika nama barang terlalu pendek, coba ambil teks sebelum angka terakhir
+    if (namaBarang.length < 3) {
+      // alternatif: ambil seluruh baris sebelum angka terakhir
+      const lastNumberMatch = line.match(/\d+([.,]\d+)?\s*$/);
+      if (lastNumberMatch) {
+        namaBarang = line.substring(0, lastNumberMatch.index).trim();
+        namaBarang = namaBarang.replace(/[^\w\s\-]/g, '').trim();
       }
     }
     
-    // Ekstrak nama barang: hapus semua angka dan simbol yang tidak perlu
-    let namaBarang = line.replace(/\d+([.,]\d+)?/g, '')           // hapus angka
-                         .replace(/[xX@*]/g, '')                 // hapus x, @, *
-                         .replace(/[^\w\s\-\/]/g, '')            // hapus karakter aneh
-                         .replace(/\s+/g, ' ')
-                         .trim();
-    
-    // Jika nama barang terlalu pendek atau hanya simbol, skip
-    if (namaBarang.length < 3) continue;
+    if (namaBarang.length < 2) continue;
     if (namaBarang.length > 50) namaBarang = namaBarang.substring(0, 50);
     
     items.push({
@@ -721,20 +774,32 @@ function parseOCRTextToItems(rawText) {
     });
   }
   
-  // Jika masih kosong, coba pendekatan berbeda: ambil seluruh baris yang mengandung huruf dan angka, tanpa filter qty rumit
-  if (items.length === 0) {
+  // Hapus duplikat berdasarkan nama
+  const unique = [];
+  const seen = new Set();
+  for (let it of items) {
+    const key = it.namaBarang.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(it);
+    }
+  }
+  
+  // Jika masih kosong, coba pendekatan super sederhana: ambil setiap baris yang memiliki huruf dan angka,
+  // asumsikan angka terakhir adalah harga, qty=1
+  if (unique.length === 0) {
     for (let line of lines) {
-      if (line.length < 6) continue;
+      if (line.length < 8) continue;
       const hasLetter = /[a-zA-Z]/i.test(line);
       const hasNumber = /\d/.test(line);
-      if (hasLetter && hasNumber && !/(total|bayar|kembali)/i.test(line)) {
+      if (hasLetter && hasNumber && !/(total|jumlah|bayar|kembali)/i.test(line)) {
         const angka = line.match(/(\d+([.,]\d+)?)/g);
         if (angka && angka.length) {
           let harga = parseFloat(angka[angka.length-1].replace(',', '.'));
-          if (harga > 500 && harga < 100000000) {
-            let nama = line.replace(/\d+([.,]\d+)?/g, '').replace(/[xX@*]/g, '').trim();
+          if (harga > 1000 && harga < 100000000) {
+            let nama = line.replace(/\d+([.,]\d+)?/g, '').trim();
             if (nama.length > 2) {
-              items.push({
+              unique.push({
                 namaBarang: nama,
                 kategori: 'Material',
                 satuan: 'pcs',
@@ -748,17 +813,6 @@ function parseOCRTextToItems(rawText) {
           }
         }
       }
-    }
-  }
-  
-  // Hapus duplikat kasar berdasarkan nama (case-insensitive)
-  const unique = [];
-  const seen = new Set();
-  for (let it of items) {
-    const key = it.namaBarang.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push(it);
     }
   }
   
