@@ -160,8 +160,7 @@ const S = {
   countdown:0, retryQ:[],
   // ── BARU ──
   beliFilter:{dari:'',sampai:''},
-  geminiKey:'AIzaSyC3pbDbmb4NfUdNqE6CeA0FeUu_0NG0uiY',
-  notaTgl:'',
+    notaTgl:'',
   // form temps
   formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}],
   payItems:[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}],
@@ -346,11 +345,6 @@ function openSettings(){
         ${[{v:30,l:'30 dtk'},{v:60,l:'1 mnt'},{v:120,l:'2 mnt'},{v:300,l:'5 mnt'},{v:0,l:'Manual'}].map(o=>`<button class="tab ${S.pollInterval===o.v?'tab-on':'tab-off'}" onclick="setPoll(${o.v})">${o.l}</button>`).join('')}
       </div>
     </div>
-    <div class="fg" style="border-top:1px solid #f1f5f9;padding-top:12px;margin-top:4px">
-      <label class="fl">🤖 Gemini API Key <span style="color:#94a3b8;font-weight:400">(untuk fitur Scan Foto Nota)</span></label>
-      <input class="fc" id="cfg-gk" type="password" placeholder="AIzaSy..." value="${esc(S.geminiKey)}" autocomplete="off">
-      <div style="font-size:10.5px;color:#94a3b8;margin-top:5px">Dapatkan gratis di <strong>aistudio.google.com</strong> → Get API Key</div>
-    </div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap">
       <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test GSheet</button>
@@ -374,9 +368,8 @@ async function testConn(){
 }
 async function saveSettings(){
   const url=document.getElementById('cfg-url').value.trim();
-  const gk=(document.getElementById('cfg-gk')?.value||'').trim();
-  S.webAppUrl=url;S.syncError=null;S.geminiKey=gk||'AIzaSyC3pbDbmb4NfUdNqE6CeA0FeUu_0NG0uiY';
-  ss(KS.url,url);ss(KS.poll,S.pollInterval);ss(KS.gk,S.geminiKey);
+  S.webAppUrl=url;S.syncError=null;
+  ss(KS.url,url);ss(KS.poll,S.pollInterval);
   closeModal();updateSyncBadge();
   if(url){showToast('🔗 Mengambil data dari GSheet…','info');await doFetch(url);startPoll();}
   else{showToast('Mode lokal aktif','info');}
@@ -525,7 +518,7 @@ function pgBeli(){
 }
 
 function beliInput(){
-  if(!S.formItems||S.formItems.length===0)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
+  if(!S.formItems||S.formItems.length===0) S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
   const prjOpts=`<option value="">— Pilih Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)}</option>`).join('');
@@ -541,7 +534,7 @@ function beliInput(){
       </div>
       <div class="g3">
         <div class="fg"><label class="fl">Qty</label><input class="fc" type="number" value="${it.qty}" oninput="S.formItems[${i}].qty=this.value"></div>
-        <div class="fg"><label class="fl">Harga</label><input class="fc" type="number" value="${it.harga}" oninput="S.formItems[${i}].harga=this.value"></div>
+        <div class="fg"><label class="fl">Harga Satuan</label><input class="fc" type="number" value="${it.harga}" oninput="S.formItems[${i}].harga=this.value"></div>
         <div class="fg"><label class="fl">Diskon%</label><input class="fc" type="number" value="${it.diskon}" oninput="S.formItems[${i}].diskon=this.value"></div>
       </div>
       <div class="g2">
@@ -552,273 +545,127 @@ function beliInput(){
         </div>
       </div>
     </div>`).join('');
-
-  // Banner kalau ada hasil scan nota
-  const hasScan=S.formItems.some(it=>it.namaBarang);
-  const scanHint=hasScan?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:9px 12px;font-size:11.5px;color:#1d4ed8;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
-    <span>📋 <strong>${S.formItems.length} item dari scan nota</strong> — periksa & edit dulu</span>
-    <button onclick="S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];S.notaTgl='';go('beli')" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:11px;font-weight:600">✕ Reset</button>
-  </div>`:'';
-
+  
   return `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:11px;color:#64748b">Input manual atau foto nota</span>
-        <button id="btn-scan-nota" class="btn btn-o btn-sm" onclick="scanNota()">📷 Scan Nota</button>
+    <div class="card" style="margin-bottom:12px; background:#fef9c3; border-color:#fde047">
+      <div style="font-weight:700;margin-bottom:8px;color:#854d0e">📋 Paste Daftar Belanja (Cepat)</div>
+      <div class="fg">
+        <label class="fl">Tempel daftar (satu baris satu item)</label>
+        <textarea id="quick-paste-text" rows="4" class="fc" placeholder="Cat Tembok 2 75000 Toko: Sumber Makmur&#10;Semen 50kg 3 85000&#10;Besi 10mm 5 120000"></textarea>
+        <div style="font-size:10px;color:#a16207;margin-top:4px">Format: <strong>nama jumlah harga</strong> (toko opsional, pakai "Toko: NamaToko" di akhir baris)</div>
       </div>
-      ${scanHint}
+      <div class="g2" style="margin-bottom:8px">
+        <div class="fg">
+          <label class="fl">Toko Default</label>
+          <input class="fc" id="quick-paste-toko" placeholder="Toko (akan dipakai jika tidak disebut per item)">
+        </div>
+        <div style="display:flex;align-items:flex-end"><button class="btn btn-p btn-sm" style="width:100%" onclick="processQuickPaste()">✨ Generate Item</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600">Input Manual</span>
+        <button class="btn btn-o btn-sm" onclick="addBeliRow()">+ Baris</button>
+      </div>
       <div class="g2">
         <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${S.notaTgl||today()}"></div>
         <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div>
       </div>
       ${items}
-      <div class="act-row">
-        <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
-        <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
-      </div>
-    </div>`;
+      <button class="btn btn-p btn-w" onclick="submitBeli()" style="margin-top:8px">💾 Simpan Semua Item</button>
+    </div>
+  `;
 }
 
-// ── SCAN NOTA (OCR.SPACE + TESSERACT.JS FALLBACK) GRATIS ─────────
-// Load Tesseract.js dari CDN (hanya saat scan pertama)
-let tessPromise = null;
-function loadTesseract() {
-  if (!tessPromise) {
-    tessPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-      script.onload = () => resolve(window.Tesseract);
-      script.onerror = () => reject(new Error('Gagal load Tesseract.js'));
-      document.head.appendChild(script);
-    });
-  }
-  return tessPromise;
-}
-
-async function scanNota() {
-  const btn = document.getElementById('btn-scan-nota');
-  const inp = document.createElement('input');
-  inp.type = 'file';
-  inp.accept = 'image/*';
-  inp.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    if (btn) { btn.textContent = '🔍 Memproses...'; btn.disabled = true; btn.style.opacity = '0.6'; }
-    showToast('📸 Mencoba OCR.space...', 'info');
-    
-    let parsedText = '';
-    let method = '';
-    
-    // Percobaan 1: OCR.space
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('language', 'ind');
-      formData.append('isOverlayRequired', 'false');
-      formData.append('isTable', 'true');
-      formData.append('scale', 'true');
-      formData.append('OCREngine', '2');
-      
-      let response = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: formData });
-      let data = await response.json();
-      if (!data.IsErroredOnProcessing && data.ParsedResults?.[0]?.ParsedText) {
-        parsedText = data.ParsedResults[0].ParsedText;
-        method = 'OCR.space';
-      } else {
-        // coba engine 1
-        formData.set('OCREngine', '1');
-        response = await fetch('https://api.ocr.space/parse/image', { method: 'POST', body: formData });
-        data = await response.json();
-        if (!data.IsErroredOnProcessing && data.ParsedResults?.[0]?.ParsedText) {
-          parsedText = data.ParsedResults[0].ParsedText;
-          method = 'OCR.space (Engine 1)';
-        }
-      }
-    } catch (err) {
-      console.warn('OCR.space error:', err);
-    }
-    
-    // Jika OCR.space gagal atau hasil kosong, fallback ke Tesseract.js
-    if (!parsedText || parsedText.trim().length < 20) {
-      showToast('🔄 OCR.space gagal, mencoba Tesseract.js (offline)...', 'info');
-      try {
-        const Tesseract = await loadTesseract();
-        const { data: { text } } = await Tesseract.recognize(file, 'ind', {
-          logger: m => console.log(m)
-        });
-        parsedText = text;
-        method = 'Tesseract.js';
-      } catch (err) {
-        console.error('Tesseract error:', err);
-      }
-    }
-    
-    if (!parsedText || parsedText.trim().length < 10) {
-      showToast('❌ Gagal membaca nota. Coba foto lebih jelas dan terang.', 'err');
-      if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
-      return;
-    }
-    
-    console.log(`✅ ${method} berhasil membaca teks:\n`, parsedText);
-    
-    // Parsing teks menjadi item
-    const items = parseOCRTextToItemsImproved(parsedText);
-    
-    if (items.length === 0) {
-      showToast('⚠️ Teks terbaca tapi tidak bisa ekstrak item. Coba foto lebih rapi.', 'err');
-      if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
-      return;
-    }
-    
-    S.formItems = items;
-    // Ekstrak tanggal
-    const tglMatch = parsedText.match(/(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|(\d{4}-\d{2}-\d{2})/);
-    if (tglMatch) {
-      let tglRaw = tglMatch[0];
-      if (tglRaw.includes('/')) {
-        const parts = tglRaw.split('/');
-        if (parts[2].length === 2) parts[2] = '20' + parts[2];
-        S.notaTgl = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-      } else if (tglRaw.match(/^\d{4}-\d{2}-\d{2}/)) {
-        S.notaTgl = tglRaw.slice(0,10);
-      }
-    }
-    
-    showToast(`✅ ${items.length} item ditemukan (${method}) — periksa & edit`, 'ok');
-    go('beli');
-    
-    if (btn) { btn.textContent = '📷 Scan Nota'; btn.disabled = false; btn.style.opacity = '1'; }
-  };
-  inp.click();
-}
-
-// ========== PARSING TEKS NOTA YANG LEBIH CERDAS ==========
-function parseOCRTextToItemsImproved(rawText) {
-  const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 2);
-  const items = [];
+// ── QUICK PASTE (COPY PASTE DAFTAR BELANJA) ─────────────────────
+function processQuickPaste() {
+  const raw = document.getElementById('quick-paste-text').value;
+  if (!raw.trim()) { showToast('Isi dulu daftar barang','err'); return; }
+  const defaultToko = document.getElementById('quick-paste-toko').value;
   
-  // Pola umum: QTY di awal, lalu nama, lalu harga (bisa di kolom terakhir)
-  // Contoh: "166 AP Putih 166 80.000"  → qty=166, nama="AP Putih 166", harga=80000
-  // Contoh: "1 Foto foto 32.000" → qty=1, nama="Foto foto", harga=32000
-  // Contoh: "2 Kayo PVC 50 100.00" → qty=2, nama="Kayo PVC", harga=100? (50 adalah harga satuan? kita asumsikan angka terakhir harga total)
+  const lines = raw.split(/\r?\n/);
+  const newItems = [];
   
   for (let line of lines) {
-    // Skip baris yang bukan item (header, footer, rekening, dll)
-    if (/^(qty|nama|harga|jumlah|total|subtotal|diskon|ppn|terima kasih|rekening|bank|tanda terima|perhatian)/i.test(line)) continue;
-    if (line.length < 5) continue;
+    line = line.trim();
+    if (line.length < 3) continue;
     
-    // Ekstrak semua angka (termasuk desimal)
-    const numbers = line.match(/(\d+([.,]\d+)?)/g);
-    if (!numbers || numbers.length === 0) continue;
+    // Bersihkan: hapus "Rp", hapus titik ribuan, ganti koma jadi titik
+    let cleaned = line.replace(/Rp\.?\s*/gi, '').replace(/\.(\d{3})/g, '$1').replace(/,/g, '.');
     
-    // Bersihkan angka: ganti koma dengan titik, lalu parse
-    const cleanNumbers = numbers.map(n => parseFloat(n.replace(',', '.')));
+    // Pisahkan berdasarkan spasi, tab, atau koma
+    let parts = cleaned.split(/[\s,]+/);
+    if (parts.length < 2) continue;
     
-    // Strategi: 
-    // - Jika ada 3 angka atau lebih, kemungkinan: qty, harga_satuan, total. Kita ambil qty=angka pertama, harga=angka terakhir (total)
-    // - Jika 2 angka: bisa (qty, total) atau (harga_satuan, total) -> asumsikan qty=1
-    // - Jika 1 angka: asumsikan qty=1, harga=angka tersebut
-    
+    // Ekstrak nama (bisa mengandung spasi) → cari angka dari belakang
     let qty = 1;
     let harga = 0;
+    let nama = '';
+    let toko = defaultToko;
     
-    if (cleanNumbers.length >= 3) {
-      qty = cleanNumbers[0];
-      harga = cleanNumbers[cleanNumbers.length-1]; // total
-      // jika harga terlalu besar dibanding qty, mungkin harga satuan ada di tengah, tapi kita abaikan
-    } else if (cleanNumbers.length === 2) {
-      // Mungkin format: "QTY   HargaTotal"
-      qty = cleanNumbers[0];
-      harga = cleanNumbers[1];
-      // jika qty > harga (misal 166 > 80000? tidak), tapi jika qty=2 dan harga=100, itu masuk akal
-    } else if (cleanNumbers.length === 1) {
-      qty = 1;
-      harga = cleanNumbers[0];
+    // Baca dari belakang: angka terakhir = harga satuan, angka sebelumnya = qty (jika ada)
+    let angka = [];
+    let idxAngka = [];
+    for (let i = 0; i < parts.length; i++) {
+      let num = parseFloat(parts[i].replace(/[^\d.-]/g, ''));
+      if (!isNaN(num)) {
+        angka.push(num);
+        idxAngka.push(i);
+      }
+    }
+    if (angka.length === 0) continue;
+    
+    harga = angka[angka.length-1];
+    if (angka.length >= 2) {
+      // Jika angka sebelumnya <= 1000 dan masuk akal sebagai qty
+      let calonQty = angka[angka.length-2];
+      if (calonQty >= 0.5 && calonQty <= 10000 && calonQty < harga) {
+        qty = calonQty;
+      }
     }
     
-    // Filter harga yang tidak masuk akal
+    // Nama adalah gabungan kata sebelum angka pertama yang ditemukan (atau semua non-angka)
+    let firstNumIdx = idxAngka.length > 0 ? idxAngka[0] : parts.length;
+    let namaParts = parts.slice(0, firstNumIdx);
+    if (namaParts.length === 0) namaParts = parts.slice(0, -angka.length);
+    nama = namaParts.join(' ').trim();
+    if (nama.length === 0) nama = parts[0]; // fallback
+    
+    // Cek apakah ada kata "toko:" di akhir baris (opsional override)
+    let tokoMatch = line.match(/toko[:]\s*(.+)$/i);
+    if (tokoMatch) {
+      toko = tokoMatch[1].trim();
+      // hapus kata "toko:xxx" dari nama agar tidak ikut
+      nama = nama.replace(/toko:.+$/i, '').trim();
+    }
+    
+    if (nama.length < 2) continue;
     if (harga <= 0 || harga > 100000000) continue;
     if (qty <= 0 || qty > 10000) continue;
     
-    // Ekstrak nama barang: hapus semua angka dari line, lalu bersihkan
-    let namaBarang = line;
-    // Hapus angka (termasuk yang di tengah kata, misal "AP Putih 166" -> "AP Putih")
-    namaBarang = namaBarang.replace(/\d+([.,]\d+)?/g, '');
-    // Hapus karakter khusus yang tersisa
-    namaBarang = namaBarang.replace(/[^\w\s\-]/g, '');
-    namaBarang = namaBarang.replace(/\s+/g, ' ').trim();
-    
-    // Jika nama barang terlalu pendek, coba ambil teks sebelum angka terakhir
-    if (namaBarang.length < 3) {
-      // alternatif: ambil seluruh baris sebelum angka terakhir
-      const lastNumberMatch = line.match(/\d+([.,]\d+)?\s*$/);
-      if (lastNumberMatch) {
-        namaBarang = line.substring(0, lastNumberMatch.index).trim();
-        namaBarang = namaBarang.replace(/[^\w\s\-]/g, '').trim();
-      }
-    }
-    
-    if (namaBarang.length < 2) continue;
-    if (namaBarang.length > 50) namaBarang = namaBarang.substring(0, 50);
-    
-    items.push({
-      namaBarang: namaBarang,
+    newItems.push({
+      namaBarang: nama,
       kategori: 'Material',
       satuan: 'pcs',
       qty: qty,
       harga: Math.round(harga),
       diskon: 0,
       status: 'HABIS',
-      toko: ''
+      toko: toko
     });
   }
   
-  // Hapus duplikat berdasarkan nama
-  const unique = [];
-  const seen = new Set();
-  for (let it of items) {
-    const key = it.namaBarang.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      unique.push(it);
-    }
+  if (newItems.length === 0) {
+    showToast('Tidak ada item valid. Cek format: nama jumlah harga (toko opsional)', 'err');
+    return;
   }
   
-  // Jika masih kosong, coba pendekatan super sederhana: ambil setiap baris yang memiliki huruf dan angka,
-  // asumsikan angka terakhir adalah harga, qty=1
-  if (unique.length === 0) {
-    for (let line of lines) {
-      if (line.length < 8) continue;
-      const hasLetter = /[a-zA-Z]/i.test(line);
-      const hasNumber = /\d/.test(line);
-      if (hasLetter && hasNumber && !/(total|jumlah|bayar|kembali)/i.test(line)) {
-        const angka = line.match(/(\d+([.,]\d+)?)/g);
-        if (angka && angka.length) {
-          let harga = parseFloat(angka[angka.length-1].replace(',', '.'));
-          if (harga > 1000 && harga < 100000000) {
-            let nama = line.replace(/\d+([.,]\d+)?/g, '').trim();
-            if (nama.length > 2) {
-              unique.push({
-                namaBarang: nama,
-                kategori: 'Material',
-                satuan: 'pcs',
-                qty: 1,
-                harga: Math.round(harga),
-                diskon: 0,
-                status: 'HABIS',
-                toko: ''
-              });
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  return unique.slice(0, 30);
+  // Gabungkan dengan item existing? Ganti total? Kita replace S.formItems
+  S.formItems = newItems;
+  go('beli');
+  showToast(`✅ ${newItems.length} item ditambahkan. Cek & edit jika perlu`, 'ok');
 }
-
+  
 function beliLog(){
   const {dari,sampai}=S.beliFilter;
   let list=[...S.pembelian].reverse();
