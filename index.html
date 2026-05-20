@@ -1149,7 +1149,6 @@ function saveBayarSubkon(idx){
   const ls=S.logSubkon[idx];
   const totalBayar=(ls.nominalBayar||0)+nom;
   const sisa=ls.nilaiKontrak-totalBayar;
-  // Status otomatis
   const sts=sisa<=0?'Lunas':totalBayar>0?'DP':'Belum Dibayar';
   S.logSubkon[idx].nominalBayar=totalBayar;
   S.logSubkon[idx].statusBayar=sts;
@@ -1159,6 +1158,7 @@ function saveBayarSubkon(idx){
   showToast(sts==='Lunas'?'✅ Lunas! Pembayaran selesai':'✅ Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
   go('subkon');
   doSync('updateLogSubkon',{
+    id:          ls.id,
     kodeProj:    ls.kodeProj,
     uraian:      ls.uraian,
     nominalBayar:totalBayar,
@@ -1166,16 +1166,28 @@ function saveBayarSubkon(idx){
     tglBayar:    tgl
   });
 }
-function delLogSubkon(idx){
+function saveBayarSubkon(idx){
+  const nom=Number(document.getElementById('sb-nom').value)||0;
+  const tgl=document.getElementById('sb-tgl').value;
+  if(!nom||nom<=0){showToast('Masukkan nominal pembayaran','err');return;}
   const ls=S.logSubkon[idx];
-  if(!confirm('Hapus pekerjaan "'+ls.uraian+'"?'))return;
-  S.logSubkon.splice(idx,1);
+  const totalBayar=(ls.nominalBayar||0)+nom;
+  const sisa=ls.nilaiKontrak-totalBayar;
+  const sts=sisa<=0?'Lunas':totalBayar>0?'DP':'Belum Dibayar';
+  S.logSubkon[idx].nominalBayar=totalBayar;
+  S.logSubkon[idx].statusBayar=sts;
+  S.logSubkon[idx].tglBayar=tgl;
   ss(KS.lsk,S.logSubkon);
-  showToast('🗑 Dihapus');
+  closeModal();
+  showToast(sts==='Lunas'?'✅ Lunas! Pembayaran selesai':'✅ Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
   go('subkon');
-  doSync('deleteLogSubkon',{
-    kodeProj: ls.kodeProj,
-    uraian:   ls.uraian
+  doSync('updateLogSubkon',{
+    id:          ls.id,
+    kodeProj:    ls.kodeProj,
+    uraian:      ls.uraian,
+    nominalBayar:totalBayar,
+    statusBayar: sts,
+    tglBayar:    tgl
   });
 }
 function subkonMaster(){
