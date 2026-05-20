@@ -1132,15 +1132,33 @@ function saveBayarSubkon(idx){
   const nom=Number(document.getElementById('sb-nom').value)||0;
   const tgl=document.getElementById('sb-tgl').value;
   const sts=document.getElementById('sb-sts').value;
-  S.logSubkon[idx].nominalBayar=(S.logSubkon[idx].nominalBayar||0)+nom;
-  S.logSubkon[idx].statusBayar=sts;S.logSubkon[idx].tglBayar=tgl;
-  ss(KS.lsk,S.logSubkon);closeModal();showToast('✅ Pembayaran dicatat');go('subkon');
-  doSync('updateLogSubkon',{id:S.logSubkon[idx].id,nominalBayar:S.logSubkon[idx].nominalBayar,statusBayar:sts,tglBayar:tgl});
+  const ls=S.logSubkon[idx];
+  S.logSubkon[idx].nominalBayar=(ls.nominalBayar||0)+nom;
+  S.logSubkon[idx].statusBayar=sts;
+  S.logSubkon[idx].tglBayar=tgl;
+  ss(KS.lsk,S.logSubkon);
+  closeModal();
+  showToast('✅ Pembayaran dicatat');
+  go('subkon');
+  doSync('updateLogSubkon',{
+    kodeProj:    ls.kodeProj,
+    uraian:      ls.uraian,
+    nominalBayar:S.logSubkon[idx].nominalBayar,
+    statusBayar: sts,
+    tglBayar:    tgl
+  });
 }
 function delLogSubkon(idx){
-  const ls=S.logSubkon[idx];if(!confirm('Hapus pekerjaan "'+ls.uraian+'"?'))return;
-  S.logSubkon.splice(idx,1);ss(KS.lsk,S.logSubkon);showToast('🗑 Dihapus');go('subkon');
-  doSync('deleteLogSubkon',{id:ls.id});
+  const ls=S.logSubkon[idx];
+  if(!confirm('Hapus pekerjaan "'+ls.uraian+'"?'))return;
+  S.logSubkon.splice(idx,1);
+  ss(KS.lsk,S.logSubkon);
+  showToast('🗑 Dihapus');
+  go('subkon');
+  doSync('deleteLogSubkon',{
+    kodeProj: ls.kodeProj,
+    uraian:   ls.uraian
+  });
 }
 function subkonMaster(){
   return `<div class="row" style="margin-bottom:11px"><div></div>
