@@ -1246,7 +1246,19 @@ function saveSubkon(isEdit){
   ss(KS.sk,S.masterSubkon);closeModal();showToast(isEdit?'✅ Subkon diperbarui':'✅ Subkon ditambahkan');go('subkon');
   doSync(isEdit?'updateSubkon':'addSubkon',d);
 }
-function delSubkon(id){if(!confirm('Hapus subkon '+id+'?'))return;S.masterSubkon=S.masterSubkon.filter(sk=>sk.id!==id);ss(KS.sk,S.masterSubkon);showToast('🗑 Dihapus');go('subkon');doSync('deleteSubkon',{id});}
+function delLogSubkon(idx){
+  const ls=S.logSubkon[idx];
+  if(!confirm('Hapus pekerjaan "'+ls.uraian+'"?'))return;
+  S.logSubkon.splice(idx,1);
+  ss(KS.lsk,S.logSubkon);
+  showToast('🗑 Dihapus');
+  go('subkon');
+  doSync('deleteLogSubkon',{
+    id:       ls.id,
+    kodeProj: ls.kodeProj,
+    uraian:   ls.uraian
+  });
+}
 function subkonRekap(){
   if(!S.masterSubkon.length)return '<div class="empty">Belum ada data subkontraktor</div>';
   const totalAll=S.logSubkon.reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
