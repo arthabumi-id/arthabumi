@@ -86,18 +86,19 @@ function doPost(e) {
 // ── Router ──────────────────────────────────────────────────────────────
 function _apiHandleAction(ss, action, data) {
   switch(action) {
-    case "addProject":      _apiAddProject(ss, data);      break;
-    case "updateProject":   _apiUpdateProject(ss, data);   break;
-    case "deleteProject":   _apiDeleteProject(ss, data);   break;
-    case "addPembelian":    _apiAddPembelian(ss, data);    break;
-    case "addKaryawan":     _apiAddKaryawan(ss, data);     break;
-    case "updateKaryawan":  _apiUpdateKaryawan(ss, data);  break;
-    case "deleteKaryawan":  _apiDeleteKaryawan(ss, data);  break;
-    case "addAbsensi":      _apiAddAbsensi(ss, data);      break;
-    case "addKasbon":       _apiAddKasbon(ss, data);       break;
-    case "addPembayaran":   _apiAddPembayaran(ss, data);   break;
-    case "finalizeClosing": _apiFinalizeClosing(ss, data); break;
-    case "deleteAbsensi":   _apiDeleteAbsensi(ss, data);   break;
+    case "addProject":        _apiAddProject(ss, data);        break;
+    case "updateProject":     _apiUpdateProject(ss, data);     break;
+    case "deleteProject":     _apiDeleteProject(ss, data);     break;
+    case "addPembelian":      _apiAddPembelian(ss, data);      break;
+    case "deletePembelian":   _apiDeletePembelian(ss, data);   break; // [NEW v1.6]
+    case "addKaryawan":       _apiAddKaryawan(ss, data);       break;
+    case "updateKaryawan":    _apiUpdateKaryawan(ss, data);    break;
+    case "deleteKaryawan":    _apiDeleteKaryawan(ss, data);    break;
+    case "addAbsensi":        _apiAddAbsensi(ss, data);        break;
+    case "addKasbon":         _apiAddKasbon(ss, data);         break;
+    case "addPembayaran":     _apiAddPembayaran(ss, data);     break;
+    case "finalizeClosing":   _apiFinalizeClosing(ss, data);   break;
+    case "deleteAbsensi":     _apiDeleteAbsensi(ss, data);     break;
     default: throw new Error("Unknown action: " + action);
   }
 }
@@ -117,6 +118,29 @@ function _apiDeleteAbsensi(ss, d) {
     var rowTgl = _apiSerDate(data[i][0]);
     var rowId  = String(data[i][1]).trim();
     if (rowTgl === tglTarget && rowId === idTarget) {
+      ws.getRange(i + 4, 1, 1, 12).clearContent();
+      return; // hapus match pertama saja
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// WRITE: DELETE PEMBELIAN [NEW v1.6]
+// ════════════════════════════════════════════════════════════════════════
+
+function _apiDeletePembelian(ss, d) {
+  var ws = ss.getSheetByName("PEMBELIAN");
+  if (!ws) return;
+  // Cari berdasarkan tgl + kodeProj + namaBarang (match pertama)
+  var data = ws.getRange("B4:D303").getValues(); // kolom B=tgl, C=kodeProj, D=namaBarang
+  var tglTarget  = String(d.tgl        || "").trim();
+  var projTarget = String(d.kodeProj   || "").trim();
+  var namaTarget = String(d.namaBarang || "").trim().toLowerCase();
+  for (var i = 0; i < data.length; i++) {
+    var rowTgl  = _apiSerDate(data[i][0]);
+    var rowProj = String(data[i][1]).trim();
+    var rowNama = String(data[i][2]).trim().toLowerCase();
+    if (rowTgl === tglTarget && rowProj === projTarget && rowNama === namaTarget) {
       ws.getRange(i + 4, 1, 1, 12).clearContent();
       return; // hapus match pertama saja
     }
@@ -367,7 +391,7 @@ function _apiAddProject(ss, d) {
   ws.getRange(r, 5).setValue(d.status || "Berjalan");
   ws.getRange(r, 6).setValue(d.nilaiKontrak || 0).setNumberFormat("#,##0");
   var tgl = _apiParseDate(d.tglMulai);
-  if (tgl) ws.getRange(r, 12).setValue(tgl).setNumberFormat("DD/MM/YYYY");
+  if (tgl) ws.getRange(r, 12).setValue(tgl).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
   // Pasang formulas
   ws.getRange(r, 7).setFormula('=IFERROR(SUMIF(PEMBELIAN!$C:$C,B'+r+',PEMBELIAN!$L:$L),0)').setNumberFormat("#,##0");
   ws.getRange(r, 8).setFormula('=IFERROR(SUMIFS(\'LOG ABSENSI\'!$H:$H,\'LOG ABSENSI\'!$F:$F,B'+r+'),0)').setNumberFormat("#,##0");
@@ -387,7 +411,7 @@ function _apiUpdateProject(ss, d) {
   ws.getRange(r, 5).setValue(d.status || "Berjalan");
   ws.getRange(r, 6).setValue(d.nilaiKontrak || 0).setNumberFormat("#,##0");
   var tgl = _apiParseDate(d.tglMulai);
-  if (tgl) ws.getRange(r, 12).setValue(tgl).setNumberFormat("DD/MM/YYYY");
+  if (tgl) ws.getRange(r, 12).setValue(tgl).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
 }
 
 function _apiDeleteProject(ss, d) {
@@ -411,7 +435,7 @@ function _apiAddPembelian(ss, items) {
     var r  = nextRow + i;
     ws.getRange(r, 1).setValue(r - 3);
     var tgl = _apiParseDate(it.tgl);
-    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("DD/MM/YYYY");
+    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
     ws.getRange(r, 3).setValue(it.kodeProj   || "");
     ws.getRange(r, 4).setValue(it.namaBarang || "");
     ws.getRange(r, 5).setValue(it.kategori   || "");
@@ -502,7 +526,7 @@ function _apiAddAbsensi(ss, items) {
     var r  = nextRow + i;
     ws.getRange(r, 1).setValue(r - 3);
     var tgl = _apiParseDate(it.tgl);
-    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("DD/MM/YYYY");
+    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
     ws.getRange(r, 3).setValue(it.idKaryawan || "");
     ws.getRange(r, 4).setFormula('=IFERROR(VLOOKUP(C'+r+',\'MASTER KARYAWAN\'!$B:$C,2,0),"")');
     ws.getRange(r, 5).setValue(it.status     || "");
@@ -528,7 +552,7 @@ function _apiAddKasbon(ss, items) {
     var r  = nextRow + i;
     ws.getRange(r, 1).setValue(r - 3);
     var tgl = _apiParseDate(it.tgl);
-    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("DD/MM/YYYY");
+    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
     ws.getRange(r, 3).setValue(it.idKaryawan || "");
     ws.getRange(r, 4).setValue(it.tipe       || "AMBIL");
     ws.getRange(r, 5).setValue(it.nominal    || 0).setNumberFormat("#,##0");
@@ -550,7 +574,7 @@ function _apiAddPembayaran(ss, items) {
     var r  = nextRow + i;
     ws.getRange(r, 1).setValue(r - 3);
     var tgl = _apiParseDate(it.tgl);
-    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("DD/MM/YYYY");
+    if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
     ws.getRange(r, 3).setValue(it.kodeProj || "");
     ws.getRange(r, 4).setFormula('=IFERROR(VLOOKUP(C'+r+',\'MASTER PROJECT\'!$B:$C,2,0),"")');
     ws.getRange(r, 5).setValue(it.nominal  || 0).setNumberFormat("#,##0");
@@ -597,7 +621,7 @@ function _apiFinalizeClosing(ss, d) {
     var rN = i + 4;
     wsAbs.getRange(rN, 9).setValue("Sudah Dibayar");
     wsAbs.getRange(rN, 10).setValue(noClosing);
-    if (tglBayarDate) wsAbs.getRange(rN, 11).setValue(tglBayarDate).setNumberFormat("DD/MM/YYYY");
+    if (tglBayarDate) wsAbs.getRange(rN, 11).setValue(tglBayarDate).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
   }
 
   // Tambah record POTONG di LOG KASBON
@@ -607,7 +631,7 @@ function _apiFinalizeClosing(ss, d) {
       var it = ksbItems[k];
       var r  = nextRow + k;
       wsKsb.getRange(r, 1).setValue(r - 3);
-      if (tglBayarDate) wsKsb.getRange(r, 2).setValue(tglBayarDate).setNumberFormat("DD/MM/YYYY");
+      if (tglBayarDate) wsKsb.getRange(r, 2).setValue(tglBayarDate).setNumberFormat("dd/MM/yyyy"); // [FIX v1.6]
       wsKsb.getRange(r, 3).setValue(it.idKaryawan || "");
       wsKsb.getRange(r, 4).setValue("POTONG");
       wsKsb.getRange(r, 5).setValue(it.nominal || 0).setNumberFormat("#,##0");

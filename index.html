@@ -147,6 +147,7 @@ button{-webkit-appearance:none;font-family:inherit}
 'use strict';
 // ═══════════════════════════════════════════════════
 // PURE VANILLA JS — ZERO DEPENDENCIES — WORKS OFFLINE
+// v1.6 — Hapus pembelian, fix tanggal GSheet, paste pembelian
 // ═══════════════════════════════════════════════════
 
 // ── State ──────────────────────────────────────────
@@ -158,9 +159,6 @@ const S = {
   webAppUrl:'', pollInterval:60,
   syncing:false, lastSync:null, syncError:null,
   countdown:0, retryQ:[],
-  // ── BARU ──
-  beliFilter:{dari:'',sampai:''},
-    notaTgl:'',
   // form temps
   formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}],
   payItems:[{kodeProj:'',nominal:'',metode:'Transfer',bank:'',ket:'',ref:''}],
@@ -168,20 +166,20 @@ const S = {
 };
 
 // ── Storage ────────────────────────────────────────
-const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',gk:'ab3-gk'};
+const KS = {p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll'};
 const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 function loadLocal(){
   S.projects=sg(KS.p,[]);S.pembelian=sg(KS.beli,[]);S.karyawan=sg(KS.kr,[]);
   S.logAbsensi=sg(KS.abs,[]);S.logKasbon=sg(KS.ksb,[]);S.logPembayaran=sg(KS.bayar,[]);
   S.masterBarang=sg(KS.brg,[]);S.masterToko=sg(KS.toko,[]);
-  S.geminiKey=sg(KS.gk,'AIzaSyC3pbDbmb4NfUdNqE6CeA0FeUu_0NG0uiY');
 }
 function saveKey(key,val){S[key]=val;ss(KS[key]||key,val);}
 
 // ── Utilities ──────────────────────────────────────
 const fRp=v=>'Rp '+(Number(v)||0).toLocaleString('id-ID');
 const fDate=d=>{if(!d)return'-';try{
+  // Parse as local date to avoid timezone shift
   if(typeof d==='string'&&d.match(/^\d{4}-\d{2}-\d{2}$/)){
     const[y,m,dy]=d.split('-').map(Number);
     return new Date(y,m-1,dy).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
@@ -203,6 +201,7 @@ async function gsFetch(url){
   const j=await r.json();if(!j.ok)throw new Error(j.error||'GSheet error');return j.data;
 }
 async function gsWrite(url,action,data){
+  // Kirim via GET — lebih reliable dengan Apps Script (tidak ada CORS redirect issue)
   const payloadStr = JSON.stringify(data);
   if(payloadStr.length > 7000){
     throw new Error('Data terlalu besar ('+payloadStr.length+' chars). Kurangi jumlah item.');
@@ -216,6 +215,7 @@ async function gsWrite(url,action,data){
   if(!j.ok) throw new Error(j.error||'Apps Script error');
   return j.data;
 }
+// Alias untuk kompatibilitas
 const gsPF = gsWrite;
 const gsPost = (url,action,data)=>gsWrite(url,action,data);
 function applyGS(d){
@@ -245,6 +245,7 @@ async function doSync(action,payload){
     const d=await gsWrite(S.webAppUrl,action,payload);
     applyGS(d);
     showToast('✅ GSheet berhasil diupdate!');
+    // Re-render halaman supaya data fresh dari GSheet
     go(S.page);
   }
   catch(e){
@@ -283,6 +284,7 @@ document.addEventListener('visibilitychange',()=>{
     if(gap>30000)doFetch();
   }
 });
+// Retry queue
 setInterval(async()=>{
   if(!S.webAppUrl||S.retryQ.length===0||S.syncing)return;
   const item=S.retryQ[0];if(!item)return;
@@ -327,7 +329,7 @@ function openModal(html){
 function closeModal(){document.getElementById('overlay').classList.remove('show');}
 function openSettings(){
   openModal(`
-    <div class="modal-title">⚙️ Pengaturan</div>
+    <div class="modal-title">⚙️ Pengaturan GSheet</div>
     <div class="info-box">
       <strong>Cara deploy Apps Script:</strong>
       <ol>
@@ -337,7 +339,7 @@ function openSettings(){
         <li>Execute as: Me | Access: Anyone → copy URL</li>
       </ol>
     </div>
-    <div class="fg"><label class="fl">Web App URL (GSheet)</label>
+    <div class="fg"><label class="fl">Web App URL</label>
       <input class="fc" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.webAppUrl)}">
     </div>
     <div class="fg"><label class="fl">Auto-Sync Interval</label>
@@ -347,14 +349,15 @@ function openSettings(){
     </div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap">
-      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test GSheet</button>
+      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test</button>
       <button class="btn btn-p btn-sm" onclick="saveSettings()">💾 Simpan</button>
-      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus GSheet</button>':''}
+      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus</button>':''}
     </div>
   `);
 }
 function setPoll(v){
   S.pollInterval=v;
+  // re-render poll buttons
   document.querySelectorAll('#overlay .tab').forEach((btn,i)=>{
     const vals=[30,60,120,300,0];btn.className='tab '+(vals[i]===v?'tab-on':'tab-off');
   });
@@ -371,7 +374,7 @@ async function saveSettings(){
   S.webAppUrl=url;S.syncError=null;
   ss(KS.url,url);ss(KS.poll,S.pollInterval);
   closeModal();updateSyncBadge();
-  if(url){showToast('🔗 Mengambil data dari GSheet…','info');await doFetch(url);startPoll();}
+  if(url){showToast('🔗 Mengambil data…','info');await doFetch(url);startPoll();}
   else{showToast('Mode lokal aktif','info');}
 }
 function clearGS(){S.webAppUrl='';S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
@@ -383,6 +386,7 @@ function buildPage(p){
 }
 
 // ── DASHBOARD ──────────────────────────────────────
+// Dashboard filter state
 if(!S.dashFilter) S.dashFilter='Berjalan';
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
 
@@ -508,17 +512,13 @@ function pgBeli(){
   return `
     <div class="row" style="margin-bottom:11px">
       <div class="sec-title" style="margin:0">Pembelian</div>
-      <div class="tabs">
-        <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button>
-        <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button>
-      </div>
+      <div class="tabs"><button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button><button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button></div>
     </div>
     ${tab==='input'?beliInput():beliLog()}
   `;
 }
-
 function beliInput(){
-  if(!S.formItems||S.formItems.length===0) S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
+  if(!S.formItems||S.formItems.length===0)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
   const prjOpts=`<option value="">— Pilih Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)}</option>`).join('');
@@ -534,7 +534,7 @@ function beliInput(){
       </div>
       <div class="g3">
         <div class="fg"><label class="fl">Qty</label><input class="fc" type="number" value="${it.qty}" oninput="S.formItems[${i}].qty=this.value"></div>
-        <div class="fg"><label class="fl">Harga Satuan</label><input class="fc" type="number" value="${it.harga}" oninput="S.formItems[${i}].harga=this.value"></div>
+        <div class="fg"><label class="fl">Harga</label><input class="fc" type="number" value="${it.harga}" oninput="S.formItems[${i}].harga=this.value"></div>
         <div class="fg"><label class="fl">Diskon%</label><input class="fc" type="number" value="${it.diskon}" oninput="S.formItems[${i}].diskon=this.value"></div>
       </div>
       <div class="g2">
@@ -545,195 +545,45 @@ function beliInput(){
         </div>
       </div>
     </div>`).join('');
-  
   return `
-    <div class="card" style="margin-bottom:12px; background:#fef9c3; border-color:#fde047">
-      <div style="font-weight:700;margin-bottom:8px;color:#854d0e">📋 Paste Daftar Belanja (Cepat)</div>
-      <div class="fg">
-        <label class="fl">Tempel daftar (satu baris satu item)</label>
-        <textarea id="quick-paste-text" rows="4" class="fc" placeholder="Cat Tembok, 2, 75000 Toko: Sumber Makmur&#10;Semen hitam, 50, 85000&#10;Besi 10mm tes, 5, 120000"></textarea>
-        <div style="font-size:10px;color:#a16207;margin-top:4px">Format: <strong>nama jumlah harga</strong> (toko opsional, pakai "Toko: NamaToko" di akhir baris)</div>
-      </div>
-      <div class="g2" style="margin-bottom:8px">
-        <div class="fg">
-          <label class="fl">Toko Default</label>
-          <input class="fc" id="quick-paste-toko" placeholder="Toko (akan dipakai jika tidak disebut per item)">
-        </div>
-        <div style="display:flex;align-items:flex-end"><button class="btn btn-p btn-sm" style="width:100%" onclick="processQuickPaste()">✨ Generate Item</button></div>
-      </div>
+    <!-- [v1.6] Tombol paste daftar -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn btn-o btn-sm" onclick="openPasteBeli()">📋 Paste Daftar</button>
     </div>
     <div class="card">
-      <div class="row" style="margin-bottom:8px">
-        <span style="font-size:13px;font-weight:600">Input Manual</span>
-        <button class="btn btn-o btn-sm" onclick="addBeliRow()">+ Baris</button>
-      </div>
-      <div class="g2">
-        <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${S.notaTgl||today()}"></div>
-        <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div>
-      </div>
+      <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${today()}"></div>
+      <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div></div>
       ${items}
-      <button class="btn btn-p btn-w" onclick="submitBeli()" style="margin-top:8px">💾 Simpan Semua Item</button>
-    </div>
-  `;
-}
-
-// ── QUICK PASTE (COPY PASTE DAFTAR BELANJA) ─────────────────────
-function processQuickPaste() {
-  const raw = document.getElementById('quick-paste-text').value;
-  if (!raw.trim()) { showToast('Isi dulu daftar barang','err'); return; }
-  const defaultToko = document.getElementById('quick-paste-toko').value;
-  
-  const lines = raw.split(/\r?\n/);
-  const newItems = [];
-  
-  for (let line of lines) {
-    line = line.trim();
-    if (line.length < 3) continue;
-    
-    // Ekstrak toko dari baris (format: "Toko: NamaToko")
-    let toko = defaultToko;
-    let tokoMatch = line.match(/toko[:]\s*(.+)$/i);
-    if (tokoMatch) {
-      toko = tokoMatch[1].trim();
-      line = line.replace(/toko[:].+$/i, '').trim();
-    }
-    
-    // Normalisasi: hapus "Rp", hapus titik ribuan (80.000 -> 80000), ganti koma desimal jadi titik
-    let cleaned = line.replace(/Rp\.?\s*/gi, '')
-                      .replace(/\.(\d{3})/g, '$1')
-                      .replace(/,/g, '.');
-    
-    // Ambil semua angka (termasuk desimal)
-    const numberMatches = [...cleaned.matchAll(/\b(\d+(?:\.\d+)?)\b/g)];
-    if (numberMatches.length === 0) continue;
-    
-    // Angka terakhir = harga satuan
-    let harga = parseFloat(numberMatches[numberMatches.length-1][1]);
-    let qty = 1;
-    let nama = '';
-    
-    // Jika ada lebih dari satu angka, coba ambil angka sebelumnya sebagai qty
-    if (numberMatches.length >= 2) {
-      let candidateQty = parseFloat(numberMatches[numberMatches.length-2][1]);
-      // Qty biasanya <= 1000 dan lebih kecil dari harga (atau harga barang murah < 1000)
-      if (candidateQty >= 0.5 && candidateQty <= 10000 && (candidateQty < harga || harga < 1000)) {
-        qty = candidateQty;
-      }
-    }
-    
-    // Tentukan posisi angka terakhir (harga) dalam string
-    let lastNumberIndex = numberMatches[numberMatches.length-1].index;
-    let namaRaw = cleaned.substring(0, lastNumberIndex).trim();
-    
-    // Jika kita pakai qty dari angka kedua terakhir, hapus qty dari akhir namaRaw
-    if (qty !== 1 && numberMatches.length >= 2) {
-      let qtyStr = numberMatches[numberMatches.length-2][1];
-      // Hapus qtyStr dari ujung namaRaw (bisa dengan spasi atau tanpa)
-      let qtyPattern = new RegExp('\\s*' + qtyStr + '\\s*$');
-      namaRaw = namaRaw.replace(qtyPattern, '').trim();
-    }
-    
-    // Bersihkan nama: hapus karakter aneh, ganti multiple spasi
-    nama = namaRaw.replace(/[^\w\s\-\/]/g, '').replace(/\s+/g, ' ').trim();
-    
-    // Fallback: jika nama kosong, ambil dari awal sampai koma/spasi sebelum angka pertama
-    if (nama.length === 0 && numberMatches.length > 0) {
-      let firstNumberIndex = numberMatches[0].index;
-      nama = cleaned.substring(0, firstNumberIndex).replace(/[^\w\s\-\/]/g, '').trim();
-    }
-    
-    // Hapus titik di akhir (sisa koma atau spasi)
-    nama = nama.replace(/\.+$/, '');
-    
-    // Validasi
-    if (nama.length < 2) continue;
-    if (harga <= 0 || harga > 100000000) continue;
-    if (qty <= 0 || qty > 10000) continue;
-    
-    newItems.push({
-      namaBarang: nama,
-      kategori: 'Material',
-      satuan: 'pcs',
-      qty: qty,
-      harga: Math.round(harga),
-      diskon: 0,
-      status: 'HABIS',
-      toko: toko
-    });
-  }
-  
-  if (newItems.length === 0) {
-    showToast('Tidak ada item valid. Contoh: "Cat Tembok, 2, 75000" atau "Besi 10mm tes, 5, 120000"', 'err');
-    return;
-  }
-  
-  S.formItems = newItems;
-  go('beli');
-  showToast(`✅ ${newItems.length} item ditambahkan. Cek & edit jika perlu`, 'ok');
-}
-  
-function beliLog(){
-  const {dari,sampai}=S.beliFilter;
-  let list=[...S.pembelian].reverse();
-
-  // Helper parse tanggal lokal
-  const parseTgl=tgl=>{
-    if(!tgl)return null;
-    const parts=String(tgl).split('-').map(Number);
-    if(parts.length===3&&!isNaN(parts[0]))return new Date(parts[0],parts[1]-1,parts[2]).getTime();
-    const d=new Date(tgl);return isNaN(d.getTime())?null:d.getTime();
-  };
-
-  // Filter tanggal
-  if(dari){
-    const dMs=parseTgl(dari);
-    if(dMs)list=list.filter(b=>{const t=parseTgl(b.tgl);return t===null||t>=dMs;});
-  }
-  if(sampai){
-    const sMs=parseTgl(sampai);
-    if(sMs)list=list.filter(b=>{const t=parseTgl(b.tgl);return t===null||t<=(sMs+86399999);});
-  }
-
-  const totalNominal=list.reduce((s,b)=>s+calcTotal(b),0);
-  const aktif=dari||sampai;
-
-  const filterUI=`
-    <div class="card" style="margin-bottom:10px">
-      <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px">🔍 Filter Tanggal</div>
-      <div class="g2" style="margin-bottom:8px">
-        <div class="fg" style="margin-bottom:0">
-          <label class="fl">Dari</label>
-          <input class="fc" type="date" value="${esc(dari)}" onchange="S.beliFilter.dari=this.value;setTab('beli','log')">
-        </div>
-        <div class="fg" style="margin-bottom:0">
-          <label class="fl">Sampai</label>
-          <input class="fc" type="date" value="${esc(sampai)}" onchange="S.beliFilter.sampai=this.value;setTab('beli','log')">
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-        <span style="font-size:11.5px;color:#64748b">
-          <strong>${list.length}</strong> item &nbsp;·&nbsp; Total: <strong style="color:#10b981">${fRp(totalNominal)}</strong>
-        </span>
-        ${aktif?`<button class="btn btn-g btn-sm" onclick="S.beliFilter={dari:'',sampai:''};setTab('beli','log')">✕ Reset Filter</button>`:''}
+      <div class="act-row">
+        <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
+        <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
       </div>
     </div>`;
+}
 
-  const rows=list.slice(0,100).map(b=>`
+// [v1.6] Log pembelian dengan tombol hapus
+function beliLog(){
+  const list=[...S.pembelian].reverse().slice(0,60);
+  return list.length===0?'<div class="empty">Belum ada data</div>':list.map(b=>{
+    const realIdx=S.pembelian.findIndex(x=>x.id===b.id);
+    return `
     <div class="card">
-      <div class="row">
-        <div>
+      <div class="row" style="margin-bottom:6px">
+        <div style="flex:1;min-width:0">
           <div class="item-name">${esc(b.namaBarang)}</div>
           <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div>
         </div>
-        <div style="text-align:right;flex-shrink:0;margin-left:8px">
-          <div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>
-          ${bdg(b.status)}
+        <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
+          <div style="text-align:right">
+            <div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>
+            ${bdg(b.status)}
+          </div>
+          <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${realIdx})">🗑</button>
         </div>
       </div>
-      <div class="item-sub" style="margin-top:4px">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div>
-    </div>`).join('');
-
-  return filterUI+(list.length===0?'<div class="empty">Tidak ada data untuk periode ini</div>':rows);
+      <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div>
+    </div>`;
+  }).join('');
 }
 
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''});go('beli');}
@@ -750,9 +600,108 @@ function submitBeli(){
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
   showToast('✅ '+newItems.length+' item disimpan lokal');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:'',diskon:0,status:'HABIS',toko:''}];
-  S.notaTgl=''; // reset tanggal dari scan
   setTab('beli','log');
   doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
+}
+
+// [v1.6] Hapus satu item pembelian
+function delPembelian(idx){
+  const b=S.pembelian[idx];
+  if(!b)return;
+  if(!confirm('Hapus "'+b.namaBarang+'" tgl '+fDate(b.tgl)+'?'))return;
+  S.pembelian.splice(idx,1);
+  ss(KS.beli,S.pembelian);
+  showToast('🗑 Pembelian dihapus');
+  go('beli');
+  doSync('deletePembelian',{tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
+}
+
+// ════════════════════════════════════════════════════
+// [v1.6] PASTE PEMBELIAN — input cepat dari copy-paste nota
+// Format: nama barang, jumlah, harga, nama toko
+// Harga boleh pakai titik (55.000 → 55000)
+// ════════════════════════════════════════════════════
+function openPasteBeli(){
+  openModal(`
+    <div class="modal-title">📋 Paste Daftar Pembelian</div>
+    <div class="info-box">
+      <strong>Format per baris:</strong><br>
+      <code style="background:#dbeafe;padding:2px 6px;border-radius:4px">nama barang, jumlah, harga, nama toko</code><br><br>
+      Contoh:<br>
+      <code>Semen hitam, 5, 55000, Toko Bangunan A<br>
+Besi hollow 4x4, 10, 45.000, Material Jaya<br>
+Pasir, 2, 120000</code><br><br>
+      <span style="color:#64748b;font-size:10.5px">💡 Kolom "nama toko" boleh dikosongkan. Harga boleh pakai titik (55.000).</span>
+    </div>
+    <div class="fg">
+      <label class="fl">Paste di sini — 1 item per baris</label>
+      <textarea class="fc" id="paste-txt" rows="7"
+        placeholder="Semen hitam, 5, 55000, Toko A&#10;Pasir, 3, 120000, Toko B&#10;Besi hollow, 6, 45000"
+        style="resize:vertical;font-family:monospace;font-size:13px;line-height:1.7"></textarea>
+    </div>
+    <div id="paste-preview" style="margin-bottom:8px"></div>
+    <div class="act-row" style="flex-wrap:wrap">
+      <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
+      <button class="btn btn-o btn-sm" onclick="previewPasteBeli()">👁 Preview</button>
+      <button class="btn btn-p btn-sm" onclick="applyPasteBeli()">✅ Tambah ke Form</button>
+    </div>
+  `);
+}
+
+// Parse angka Indonesia: 55.000 → 55000, 1.500.000 → 1500000
+function parseIdNum(s){
+  return Number(String(s).trim().replace(/\./g,'').replace(',','.'));
+}
+
+function parsePasteText(text){
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  const items=[],errors=[];
+  lines.forEach((line,i)=>{
+    const parts=line.split(',').map(p=>p.trim());
+    if(parts.length<3){errors.push(`Baris ${i+1}: kurang dari 3 kolom → "${esc(line)}"`);return;}
+    const nama=parts[0];
+    const qty=parseIdNum(parts[1]);
+    const harga=parseIdNum(parts[2]);
+    const toko=parts[3]||'';
+    if(!nama){errors.push(`Baris ${i+1}: nama barang kosong`);return;}
+    if(isNaN(qty)||qty<=0){errors.push(`Baris ${i+1}: jumlah tidak valid ("${esc(parts[1])}")`);return;}
+    if(isNaN(harga)||harga<=0){errors.push(`Baris ${i+1}: harga tidak valid ("${esc(parts[2])}")`);return;}
+    items.push({namaBarang:nama,kategori:'Material',satuan:'pcs',qty,harga,diskon:0,status:'HABIS',toko});
+  });
+  return{items,errors};
+}
+
+function previewPasteBeli(){
+  const text=document.getElementById('paste-txt').value;
+  if(!text.trim()){showToast('Textarea masih kosong','err');return;}
+  const{items,errors}=parsePasteText(text);
+  let html='';
+  if(errors.length>0){
+    html+=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:9px;padding:9px;margin-bottom:8px;font-size:12px;color:#b91c1c">⚠️ ${errors.join('<br>')}</div>`;
+  }
+  if(items.length>0){
+    const total=items.reduce((s,it)=>s+(it.qty*it.harga),0);
+    html+=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:9px;padding:9px;font-size:12px;color:#15803d">
+      ✅ <strong>${items.length} item valid</strong> — total ${fRp(total)}:<br><br>
+      ${items.map(it=>`• ${esc(it.namaBarang)} — ${it.qty}× ${fRp(it.harga)}${it.toko?' <span style="color:#64748b">('+esc(it.toko)+')</span>':''}`).join('<br>')}
+    </div>`;
+  }else if(errors.length===0){
+    html+='<div style="font-size:12px;color:#94a3b8;text-align:center">Tidak ada item valid</div>';
+  }
+  document.getElementById('paste-preview').innerHTML=html;
+}
+
+function applyPasteBeli(){
+  const text=document.getElementById('paste-txt').value;
+  if(!text.trim()){showToast('Textarea masih kosong','err');return;}
+  const{items,errors}=parsePasteText(text);
+  if(items.length===0){showToast('Tidak ada item valid untuk ditambahkan','err');return;}
+  // Ganti jika form masih default kosong, tambah jika sudah ada isi
+  const defaultOnly=S.formItems.length===1&&!S.formItems[0].namaBarang&&!S.formItems[0].harga;
+  S.formItems=defaultOnly?items:[...S.formItems,...items];
+  closeModal();
+  showToast('✅ '+items.length+' item ditambahkan ke form'+(errors.length>0?' ('+errors.length+' baris dilewati)':''));
+  setTab('beli','input');
 }
 
 // ── MASTER KARYAWAN ────────────────────────────────
@@ -828,25 +777,34 @@ function pgAbsensi(){
     ${tab==='input'?absInput():absLog()}`;
 }
 function absInput(){
+  // Status buttons style
   const STS=['Hadir','Setengah','Tidak Hadir','Libur'];
   const STS_FULL={'Hadir':'Hadir','Setengah':'Setengah Hari','Tidak Hadir':'Tidak Hadir','Libur':'Libur'};
   const STS_COLOR={'Hadir':'#10b981','Setengah':'#f59e0b','Tidak Hadir':'#ef4444','Libur':'#94a3b8'};
+  
+  // Proyek dropdown pakai NAMA
   const prjOptsNama=`<option value="">— Proyek Default —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  
   const rows=S.karyawan.map((k,i)=>{
     const r=S.absRows[i]||{status:'',kodeProj:'',ket:''};
     const curFull=r.status;
     const upahHariIni=curFull==='Hadir'?k.upahHarian:curFull==='Setengah Hari'?k.upahHarian*0.5:0;
+    
+    // Status tombol cepat — tap langsung pilih
     const stsBtns=STS.map(s=>{
       const full=STS_FULL[s];
       const active=curFull===full;
       const col=STS_COLOR[s];
       return `<button type="button" onclick="setAbsRow(${i},'status','${full}')" style="flex:1;padding:8px 2px;border-radius:9px;border:2px solid ${active?col:'#e2e8f0'};background:${active?col:'#fff'};color:${active?'#fff':'#64748b'};font-size:11px;font-weight:600;cursor:pointer;transition:all .15s">${s}</button>`;
     }).join('');
+    
+    // Nama proyek per karyawan
     const curProj=r.kodeProj||'';
     const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)">
       <option value="">— Default —</option>
       ${S.projects.map(p=>`<option value="${esc(p.kode)}" ${curProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}
     </select>`;
+    
     return `<div class="card" style="margin-bottom:8px">
       <div class="row" style="margin-bottom:8px">
         <div>
@@ -855,14 +813,19 @@ function absInput(){
         </div>
         ${upahHariIni>0?`<span style="font-weight:700;color:#10b981;font-size:14px;flex-shrink:0">${fRp(upahHariIni)}</span>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
       </div>
+      <!-- Status buttons -->
       <div style="display:flex;gap:5px;margin-bottom:8px">${stsBtns}</div>
+      <!-- Proyek per karyawan -->
       <div class="fg" style="margin-bottom:0">${projSel}</div>
     </div>`;
   }).join('');
+  
+  // Proyek default (untuk karyawan yang tidak pilih proyek spesifik)
   const defProj=`<select class="fc" id="abs-prj">
     <option value="">— Tidak ada default —</option>
     ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('')}
   </select>`;
+  
   return `
     <div class="card" style="margin-bottom:10px">
       <div class="g2">
@@ -885,6 +848,7 @@ function absInput(){
 function setAbsRow(i,key,val){
   if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};
   S.absRows[i][key]=val;
+  // Re-render hanya saat status berubah (perlu update tombol + upah)
   if(key==='status') go('absensi');
 }
 function submitAbsensi(){
@@ -910,7 +874,8 @@ function submitAbsensi(){
 function absLog(){
   const list=[...S.logAbsensi].reverse().slice(0,80);
   if(list.length===0) return '<div class="empty">Belum ada data</div>';
-  return list.map((a)=>{
+  return list.map((a,idx)=>{
+    // Cari index asli di S.logAbsensi
     const realIdx=S.logAbsensi.findIndex(x=>x.id===a.id);
     const canDel=a.statusBayar!=='Sudah Dibayar';
     return `<div class="card">
@@ -937,6 +902,7 @@ function delAbsensi(idx){
   ss(KS.abs,S.logAbsensi);
   showToast('🗑 Absensi dihapus');
   go('absensi');
+  // Sync delete ke GSheet
   doSync('deleteAbsensi',{tgl:a.tgl,idKaryawan:a.idKaryawan});
 }
 
@@ -1140,10 +1106,11 @@ function setTab(page,tab){S.tab[page]=tab;go(page);}
 // ── Init ───────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',async()=>{
   loadLocal();
-  S.webAppUrl=sg(KS.url,'https://script.google.com/macros/s/AKfycbw5QZMmOwxhAHK2pwSz8MfySKiB_fLmQ8memuuiY_RFSA5VrkBSvcY5oMTFpoYNiG3H/exec');
+  S.webAppUrl=sg(KS.url,'');
   S.pollInterval=Number(sg(KS.poll,60))||60;
   go('dashboard');
   document.getElementById('nav').innerHTML=buildNav();
+  // Hide splash
   setTimeout(()=>{
     const spl=document.getElementById('spl');
     if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}
