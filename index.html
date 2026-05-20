@@ -1108,21 +1108,24 @@ function subkonLog(){
   }).join('');
 }
 function openBayarSubkon(idx){
-  const ls=S.logSubkon[idx];const sisa=ls.nilaiKontrak-(ls.nominalBayar||0);
+  const ls=S.logSubkon[idx];
+  const sudahBayar=ls.nominalBayar||0;
+  const sisa=ls.nilaiKontrak-sudahBayar;
   openModal(`<div class="modal-title">💰 Catat Pembayaran Subkon</div>
-    <div style="margin-bottom:12px"><div class="item-name">${esc(ls.namaSubkon)}</div><div class="item-sub">${esc(ls.uraian)} · ${esc(ls.namaProj||ls.kodeProj)}</div></div>
+    <div style="margin-bottom:12px">
+      <div class="item-name">${esc(ls.namaSubkon)}</div>
+      <div class="item-sub">${esc(ls.uraian)} · ${esc(ls.namaProj||ls.kodeProj)}</div>
+    </div>
     <div class="g3" style="margin-bottom:12px">
-      <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(ls.nilaiKontrak)}</div></div>
-      <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(ls.nominalBayar||0)}</div></div>
-      <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa</div><div class="chip-val" style="color:#c2410c">${fRp(sisa)}</div></div>
+      <div class="chip"><div class="chip-lbl">Nilai Kontrak</div><div class="chip-val">${fRp(ls.nilaiKontrak)}</div></div>
+      <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Sudah Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(sudahBayar)}</div></div>
+      <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Hutang</div><div class="chip-val" style="color:#c2410c">${fRp(sisa)}</div></div>
     </div>
     <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="sb-tgl" value="${today()}"></div>
-    <div class="fg"><label class="fl">Nominal Bayar (sisa: ${fRp(sisa)})</label><input class="fc" type="number" id="sb-nom" value="${sisa}"></div>
-    <div class="fg"><label class="fl">Update Status</label><select class="fc" id="sb-sts">
-      <option ${ls.statusBayar==='Belum Dibayar'?'selected':''}>Belum Dibayar</option>
-      <option ${ls.statusBayar==='DP'?'selected':''}>DP</option>
-      <option ${ls.statusBayar==='Lunas'?'selected':''}>Lunas</option>
-    </select></div>
+    <div class="fg"><label class="fl">Nominal Bayar</label>
+      <input class="fc" type="number" id="sb-nom" value="${sisa}" max="${sisa}" placeholder="0">
+      <div style="font-size:10px;color:#94a3b8;margin-top:3px">Maksimal sisa hutang: ${fRp(sisa)}</div>
+    </div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveBayarSubkon(${idx})">💾 Simpan</button>
