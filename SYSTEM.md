@@ -1,45 +1,54 @@
-# 🤖 SYSTEM PROMPT — ARTHABUMI AI ASSISTANT
-
-> Dokumen ini adalah briefing untuk AI assistant (Claude / ChatGPT).
-> Paste isi file ini di awal conversation baru agar AI langsung paham sistem.
+# 🤖 SYSTEM.md — ARTHABUMI AI BRIEFING
+> Paste file ini di awal conversation Claude baru. Tidak perlu paste yang lain kecuali diminta.
 
 ---
 
 ## IDENTITAS PROYEK
-
-**Nama:** Arthabumi  
-**Pemilik:** Eddy Santoso (Pak Eddy)  
-**Bisnis:** Kontraktor — pekerjaan besi, interior, renovasi, waterproofing  
-**Tujuan sistem:** Manajemen keuangan proyek (pembelian, absensi, kasbon, closing gaji, pembayaran klien)
+- **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
+- **Versi aktif:** v1.6b
+- **App:** Single HTML file, pure vanilla JS, zero dependencies
+- **Backend:** Google Apps Script → Google Sheets
 
 ---
 
-## STRUKTUR FILE
-
+## FILE STRUKTUR
 ```
 arthabumi/
-├── index.html            ← Main app (Single HTML, pure vanilla JS, zero dependencies)
-├── arthabumi-webapi.gs   ← Google Apps Script API (backend GSheet)
-├── SYSTEM.md             ← Dokumen ini (briefing untuk AI)
-├── CHANGELOG.md          ← Riwayat perubahan
-└── TODO.md               ← Fitur yang akan dibuat
+├── index.html            ← App utama (upload ke GitHub Pages)
+├── arthabumi-webapi.gs   ← Backend GSheet (paste ke Apps Script)
+├── SYSTEM.md             ← File ini (briefing Claude)
+├── CHANGELOG.md          ← Riwayat versi
+├── DEPLOY.md             ← Checklist deploy
+└── TODO.md               ← Backlog fitur
 ```
 
-**GitHub Pages URL:** `https://[username].github.io/arthabumi/`  
-**Google Sheets:** File `Akuntansi_Kontraktor_GSheets` di Google Drive akun `arthabumi.id@gmail.com`
+---
+
+## CARA KASIH PERINTAH KE CLAUDE
+
+### ▶ Template Standar
+```
+Baca SYSTEM.md. [Upload: index.html + arthabumi-webapi.gs kalau perlu baca kode]
+Kerjakan: [deskripsi tugas]
+File yang diubah: [index.html / arthabumi-webapi.gs / keduanya]
+```
+
+### ▶ Shortcut per Jenis Tugas
+| Jenis | Upload file yang dibutuhkan |
+|---|---|
+| Bug fix kecil | SYSTEM.md saja + describe bug |
+| Fitur baru | SYSTEM.md + index.html + webapi.gs |
+| Fix GSheet/tanggal | SYSTEM.md + arthabumi-webapi.gs |
+| UI/tampilan saja | SYSTEM.md + index.html |
+| TODO item | "Baca SYSTEM.md, kerjakan TODO #[nomor]" |
+
+> 💡 **Tips:** Kalau Claude tidak punya konteks kode terbaru, upload file-nya. Kalau hanya tanya atau diskusi, SYSTEM.md saja sudah cukup.
 
 ---
 
 ## ARSITEKTUR TEKNIS
 
-### index.html
-- **Pure Vanilla JavaScript** — ZERO external dependencies (tidak ada React, Babel, Tailwind CDN)
-- **Single file** — semua CSS, JS, HTML dalam 1 file
-- **Storage:** `localStorage` untuk data offline
-- **GSheet sync:** via `fetch()` ke Apps Script Web App URL
-
-### State Management
-Semua state ada di object global `S`:
+### State Global `S`
 ```javascript
 S = {
   page, tab,
@@ -47,205 +56,131 @@ S = {
   logAbsensi, logKasbon, logPembayaran,
   masterBarang, masterToko,
   webAppUrl, pollInterval,
-  syncing, lastSync, syncError,
-  countdown, retryQ,
-  dashFilter,     // filter dashboard by status
-  absRows,        // temp absensi input rows
-  formItems,      // temp pembelian input rows
-  payItems,       // temp pembayaran input rows
+  syncing, lastSync, syncError, countdown, retryQ,
+  dashFilter,   // filter dashboard by status proyek
+  absRows,      // temp absensi input
+  formItems,    // temp pembelian input
+  payItems,     // temp pembayaran klien input
 }
 ```
 
 ### Storage Keys (localStorage)
 ```javascript
-KS = {
-  p:'ab3-p',          // projects
-  beli:'ab3-beli',    // pembelian
-  kr:'ab3-kr',        // karyawan
-  abs:'ab3-abs',      // logAbsensi
-  ksb:'ab3-ksb',      // logKasbon
-  bayar:'ab3-bayar',  // logPembayaran
-  brg:'ab3-brg',      // masterBarang
-  toko:'ab3-toko',    // masterToko
-  url:'ab3-url',      // webAppUrl
-  poll:'ab3-poll',    // pollInterval
-}
+KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
+// prefix: 'ab3-' + key
 ```
 
 ---
 
-## MODUL-MODUL APLIKASI
+## PETA FUNGSI — INDEX.HTML
 
-| ID Nav | Fungsi Page | Fungsi Sub |
+| Page | Render | Sub-fungsi penting |
 |---|---|---|
-| `dashboard` | `pgDashboard()` | Filter: `setDashFilter(status)` |
-| `project` | `pgProject()` | `openAddProject()`, `saveProject()`, `delProject()` |
-| `beli` | `pgBeli()` | `beliInput()`, `beliLog()`, `submitBeli()` |
-| `karyawan` | `pgKaryawan()` | `openAddKaryawan()`, `saveKaryawan()`, `delKaryawan()` |
-| `absensi` | `pgAbsensi()` | `absInput()`, `absLog()`, `submitAbsensi()`, `delAbsensi()` |
-| `kasbon` | `pgKasbon()` | `kasbonInput()`, `kasbonRekap()`, `kasbonLog()`, `submitKasbon()` |
-| `closing` | `pgClosing()` | `genClosing()`, `buildClsRekap()`, `finalizeClosing()` |
-| `bayar` | `pgBayar()` | `bayarInput()`, `bayarLog()`, `submitPay()` |
+| dashboard | `pgDashboard()` | `setDashFilter(v)` |
+| project | `pgProject()` | `openAddProject()`, `saveProject()`, `delProject()` |
+| beli | `pgBeli()` | `beliInput()`, `beliLog()`, `submitBeli()`, `delPembelian()`, `openPasteBeli()` |
+| karyawan | `pgKaryawan()` | `saveKaryawan()`, `delKaryawan()` |
+| absensi | `pgAbsensi()` | `absInput()`, `absLog()`, `submitAbsensi()`, `delAbsensi()` |
+| kasbon | `pgKasbon()` | `kasbonInput()`, `kasbonRekap()`, `submitKasbon()` |
+| closing | `pgClosing()` | `genClosing()`, `finalizeClosing()` |
+| bayar | `pgBayar()` | `bayarInput()`, `bayarLog()`, `submitPay()` |
+
+### Fungsi Utama Lainnya
+| Fungsi | Keterangan |
+|---|---|
+| `go(page)` | Navigasi + render page |
+| `setTab(page, tab)` | Pindah tab dalam page |
+| `openModal(html)` / `closeModal()` | Buka/tutup modal |
+| `doSync(action, payload)` | Kirim data ke GSheet (async) |
+| `doFetch(url?)` | Ambil data dari GSheet |
+| `applyGS(data)` | Apply data GSheet ke state + localStorage |
+| `showToast(msg, type)` | Notifikasi toast ('ok'/'err'/'info') |
 
 ---
 
-## GSHEET API (arthabumi-webapi.gs)
+## GSHEET API — WEBAPI.GS
 
-### Endpoint
-URL format: `https://script.google.com/macros/s/[ID]/exec`
-
-### Actions READ (doGet)
-- `getAllData` → return semua data (projects, pembelian, karyawan, dll)
-
-### Actions WRITE (doGet dengan payload)
-| Action | Data |
+### Actions yang tersedia
+| Action | Payload |
 |---|---|
-| `addProject` | `{kode, nama, jenis, status, nilaiKontrak, tglMulai}` |
-| `updateProject` | sama seperti addProject |
-| `deleteProject` | `{kode}` |
-| `addPembelian` | array `[{tgl, kodeProj, namaBarang, kategori, satuan, qty, harga, diskon, status, toko}]` |
-| `addKaryawan` | `{id, nama, jabatan, upahHarian, noHP}` |
-| `updateKaryawan` | sama seperti addKaryawan |
-| `deleteKaryawan` | `{id}` |
-| `addAbsensi` | array `[{tgl, idKaryawan, status, kodeProj, upahHariIni, ket}]` |
-| `addKasbon` | array `[{tgl, idKaryawan, tipe, nominal, ket}]` |
-| `addPembayaran` | array `[{tgl, kodeProj, nominal, metode, bank, ket, ref}]` |
-| `finalizeClosing` | `{dari, sampai, tglBayar, noClosing, selectedIds[], kasbonItems[]}` |
+| `addProject` / `updateProject` / `deleteProject` | `{kode, nama, jenis, status, nilaiKontrak, tglMulai}` |
+| `addPembelian` | `[{tgl, kodeProj, namaBarang, kategori, satuan, qty, harga, diskon, status, toko}]` |
+| `deletePembelian` | `{tgl, kodeProj, namaBarang}` |
+| `addKaryawan` / `updateKaryawan` / `deleteKaryawan` | `{id, nama, jabatan, upahHarian, noHP}` |
+| `addAbsensi` | `[{tgl, idKaryawan, status, kodeProj, upahHariIni, ket}]` |
 | `deleteAbsensi` | `{tgl, idKaryawan}` |
+| `addKasbon` | `[{tgl, idKaryawan, tipe, nominal, ket}]` |
+| `addPembayaran` | `[{tgl, kodeProj, nominal, metode, bank, ket, ref}]` |
+| `finalizeClosing` | `{dari, sampai, tglBayar, noClosing, selectedIds[], kasbonItems[]}` |
 
-### Sheet Structure (GSheet)
-| Sheet | Kolom Kunci |
+### Sheet → Kolom Kunci
+| Sheet | Kolom penting |
 |---|---|
-| MASTER PROJECT | B=kode, C=nama, F=nilaiKontrak, G=biayaMat(formula), H=biayaUpah(formula) |
-| PEMBELIAN | B=tgl, C=kodeProj, D=namaBarang, G=qty, H=harga, I=diskon%, J=status, L=total(formula) |
-| MASTER KARYAWAN | B=id, C=nama, E=upahHarian, I=kasbonAmbil(formula), K=sisaKasbon(formula) |
-| LOG ABSENSI | B=tgl, C=idKaryawan, E=status, F=kodeProj, H=upahHariIni, I=statusBayar |
-| LOG KASBON | B=tgl, C=idKaryawan, D=tipe(AMBIL/POTONG), E=nominal |
-| LOG PEMBAYARAN | B=tgl, C=kodeProj, E=nominal, F=metode, G=bank |
+| MASTER PROJECT | B=kode, C=nama, F=nilaiKontrak |
+| PEMBELIAN | B=tgl, C=kodeProj, D=namaBarang, G=qty, H=harga |
+| MASTER KARYAWAN | B=id, C=nama, E=upahHarian |
+| LOG ABSENSI | B=tgl, C=idKaryawan, E=status, I=statusBayar |
+| LOG KASBON | B=tgl, C=idKaryawan, D=tipe, E=nominal |
+| LOG PEMBAYARAN | B=tgl, C=kodeProj, E=nominal |
 
 ---
 
-## ATURAN CODING
+## ATURAN CODING — WAJIB DIIKUTI
 
-### Wajib diikuti
-1. **TIDAK BOLEH** tambah external CDN (React, Tailwind, Babel, dll)
-2. Semua UI pakai **innerHTML + template string** (bukan React/JSX)
-3. Semua style pakai **inline CSS** atau class CSS yang sudah ada di `<style>`
-4. Tanggal selalu pakai **local time** bukan UTC:
-   ```javascript
-   // BENAR:
-   const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-   // SALAH:
-   const today=()=>new Date().toISOString().split('T')[0]; // ← timezone bug!
-   ```
-5. Setelah save → panggil `doSync(action, payload)` untuk kirim ke GSheet
-6. Setelah `doSync` berhasil → panggil `go(S.page)` untuk re-render
+```
+✅ Pure vanilla JS — ZERO external CDN
+✅ Semua UI = innerHTML + template string
+✅ Tanggal: pakai today() bukan new Date().toISOString()
+✅ Setelah save lokal → doSync(action, payload)
+✅ Setelah doSync berhasil → go(S.page)
 
-### Pola navigasi
+❌ Jangan tambah React/Tailwind/Babel/jQuery
+❌ Jangan pakai new Date().toISOString() untuk tanggal
+```
+
+### Pola Tambah Data (ikuti urutan ini)
 ```javascript
-go('namaPage')           // navigasi + render
-setTab('namaPage','log') // pindah tab dalam page
+S.array.push(newItem);          // 1. update state
+ss(KS.key, S.array);            // 2. simpan localStorage
+showToast('✅ ...');             // 3. feedback
+go(S.page);                     // 4. re-render
+doSync('action', payload);      // 5. sync GSheet (background)
 ```
 
-### Pola tambah data
-```javascript
-S.dataArray.push(newItem);  // 1. update state
-ss(KS.key, S.dataArray);    // 2. simpan localStorage
-showToast('✅ ...');         // 3. feedback user
-go(S.page);                  // 4. re-render
-doSync('action', payload);   // 5. sync ke GSheet (async, background)
+### CSS Class Tersedia
 ```
-
-### Pola UI card
-```javascript
-// Semua page return HTML string
-function pgContoh(){
-  return `
-    <div class="sec-title">Judul</div>
-    <div class="card">
-      <div class="row">...</div>
-    </div>
-  `;
-}
-```
-
-### Class CSS yang tersedia
-```
-card, sub-card, sec-title, row, g2, g3, g4
-item-name, item-sub, chip, chip-lbl, chip-val
-btn btn-p, btn-d, btn-g, btn-o, btn-sm, btn-w
-bdg bdg-blue/green/yellow/red/gray/orange/purple
-kpi, kpi-grid, kpi-lbl, kpi-val
-tabs, tab tab-on/tab-off
-fg, fl, req, fc (form controls)
-empty (empty state)
+Layout:  card, sub-card, row, g2, g3, g4
+Text:    item-name, item-sub, sec-title, empty
+Chip:    chip, chip-lbl, chip-val
+Button:  btn btn-p/d/g/o, btn-sm, btn-w
+Badge:   bdg bdg-blue/green/yellow/red/gray/orange/purple
+KPI:     kpi, kpi-grid, kpi-lbl, kpi-val
+Form:    fg, fl, req, fc
+Tab:     tabs, tab tab-on/tab-off
 ```
 
 ---
 
-## CARA MEMBERIKAN PERINTAH KE AI
+## KNOWN BUGS & FIX
 
-### Template perintah yang efektif:
-
-**Tambah fitur baru:**
-```
-Baca SYSTEM.md dulu.
-Tambahkan fitur [nama fitur] di modul [nama modul].
-File yang dimodifikasi: index.html / arthabumi-webapi.gs
-Ikuti aturan coding di SYSTEM.md.
-```
-
-**Fix bug:**
-```
-Baca SYSTEM.md dulu.
-Bug: [deskripsi bug] di fungsi [nama fungsi].
-Fix dan berikan str_replace yang spesifik.
-```
-
-**Tambah field/kolom:**
-```
-Baca SYSTEM.md dulu.
-Tambahkan field [nama field] di:
-- Form input [nama modul]
-- Tampilan log/list
-- GSheet write (arthabumi-webapi.gs action [nama action])
-```
+| Issue | Root Cause | Fix |
+|---|---|---|
+| Tanggal shift + ada jam di GSheet | `new Date(yr,mo,dy)` pakai timezone Script bukan Spreadsheet | `Utilities.parseDate(s, sstz, "yyyy-MM-dd")` ✅ v1.6b |
+| POST ke Apps Script gagal | CORS redirect | Gunakan GET dengan `?action=X&payload=Y` ✅ |
+| Tanggal shift 1 hari di app | `toISOString()` pakai UTC | `today()` dengan local time ✅ |
 
 ---
 
-## KONVENSI NAMA
+## VERSI AKTIF: v1.6b
+Perubahan terakhir:
+- ✅ Hapus log pembelian (+ sync GSheet `deletePembelian`)
+- ✅ Paste pembelian cepat (format: `nama, qty, harga, toko`)
+- ✅ Fix tanggal bug — pakai `Utilities.parseDate` dengan spreadsheet timezone
+- ✅ Fix `_apiSerDate` — pakai spreadsheet timezone bukan script timezone
 
-| Prefix | Artinya |
-|---|---|
-| `pg` | Fungsi yang return HTML page (ex: `pgDashboard`) |
-| `abs` | Absensi (ex: `absInput`, `absLog`) |
-| `ksb` | Kasbon |
-| `cls` | Closing gaji |
-| `S.` | State global |
-| `KS.` | Storage keys |
-| `_api` | Fungsi internal Apps Script |
-| `doSync` | Kirim data ke GSheet |
-| `doFetch` | Ambil data dari GSheet |
-| `gsWrite` | HTTP GET ke Apps Script untuk write |
-| `gsFetch` | HTTP GET ke Apps Script untuk read |
+Lihat `CHANGELOG.md` untuk riwayat lengkap.
 
 ---
 
-## KNOWN ISSUES & SOLUSI
-
-| Issue | Solusi |
-|---|---|
-| Tanggal shift 1 hari | Parse dengan local time, bukan `toISOString()` |
-| POST ke Apps Script gagal | Gunakan GET dengan `?action=X&payload=Y` |
-| Script error saat buka | Biasanya CDN tidak load, pastikan zero dependency |
-| Data tidak masuk GSheet | Cek Apps Script deployment version (harus New version) |
-
----
-
-## CHANGELOG TERAKHIR
-
-Lihat file `CHANGELOG.md` untuk riwayat lengkap.
-
----
-
-*File ini dibuat otomatis oleh Claude. Update setiap ada perubahan arsitektur besar.*
+*Update file ini setiap ada perubahan arsitektur atau fungsi baru.*
+*Arthabumi © 2026 — Eddy Santoso*

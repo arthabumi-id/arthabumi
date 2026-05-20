@@ -4,6 +4,38 @@ Format: `[YYYY-MM-DD] Versi X.X — Deskripsi`
 
 ---
 
+## [2026-05-20] v1.6b — Fix Tanggal GSheet (Root Fix)
+
+### Fix
+- 🐛 **Tanggal ada jam di GSheet** — `5/19/2026 10:00:00` → `20/05/2026` ✅
+  - Root cause: `new Date(yr,mo,dy)` pakai timezone Apps Script project (bukan WIB)
+  - Fix: ganti ke `Utilities.parseDate(s, sstz, "yyyy-MM-dd")` dengan timezone Spreadsheet
+- 🐛 **`_apiSerDate` baca tanggal salah** — ganti ke `formatDate(..., sstz, ...)` (timezone Spreadsheet)
+
+### File yang diubah
+- `arthabumi-webapi.gs` — fungsi `_apiParseDate` dan `_apiSerDate`
+
+---
+
+## [2026-05-20] v1.6 — Hapus Pembelian + Paste Input + Fix Format Tanggal
+
+### Fitur Baru
+- ✨ **Hapus log pembelian** — tombol 🗑 per baris di log pembelian, sync ke GSheet
+- ✨ **Paste pembelian** — input cepat dari copy-paste nota
+  - Format: `nama barang, jumlah, harga, nama toko`
+  - Harga bisa pakai titik Indonesia (`55.000` → 55000)
+  - Preview sebelum apply, validasi per baris
+- ✨ **GSheet action baru: `deletePembelian`** — hapus baris berdasarkan tgl+kodeProj+namaBarang
+
+### Fix
+- 🐛 **Format tanggal GSheet** — `setNumberFormat("DD/MM/YYYY")` → `"dd/MM/yyyy"` (format benar Apps Script)
+
+### File yang diubah
+- `index.html` — fungsi `beliLog()`, `delPembelian()`, `openPasteBeli()`, `parsePasteText()`, `applyPasteBeli()`
+- `arthabumi-webapi.gs` — tambah `_apiDeletePembelian()`, fix semua `setNumberFormat`
+
+---
+
 ## [2026-05-19] v1.5 — Bug Fix + UI Improvement
 
 ### Fix
