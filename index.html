@@ -794,7 +794,8 @@ function kasbonInput(){
     <div class="fg"><label class="fl">Nominal (Rp)</label>
       ${numInp('ksb-nom',0,'500.000')}
       <div class="num-hint">Contoh: 500.000</div></div>
-    <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="ksb-ket"></div>
+    <div class="fg"><label class="fl">Keterangan <span style="color:#94a3b8;font-weight:400">(keperluan kasbon)</span></label>
+      <input class="fc" id="ksb-ket" placeholder="Contoh: Beli material cat, Ongkos transport, Kebutuhan keluarga…"></div>
     <button class="btn btn-p btn-w" onclick="submitKasbon()">💾 Simpan Kasbon</button></div>`;
 }
 function submitKasbon(){
@@ -844,70 +845,218 @@ function delKasbon(idx){
 }
 // ── CLOSING
 let clsRekap=[],clsSel={};
-function pgClosing(){
-  return `<div class="sec-title">Closing Gaji</div>
-    <div class="card">
-      <div class="g2">
-        <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" id="cls-dari"></div>
-        <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" id="cls-smp" value="${today()}"></div></div>
-      <div class="g2">
-        <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${today()}"></div>
-        <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="CLO-${new Date().toISOString().slice(0,7).replace('-','')}-001"></div></div>
-      <button class="btn btn-o btn-w" onclick="genClosing()">📊 Generate Rekap</button>
-    </div>
-    <div id="cls-rekap">${clsRekap.length>0?buildClsRekap():''}</div>`;
+
+// [v1.8] Helper: bandingkan tanggal sebagai string YYYY-MM-DD (aman timezone)
+function dateInRange(tgl, dari, sampai){
+  if(!tgl)return false;
+  const d=typeof tgl==='string'?tgl.substring(0,10):tgl;
+  return d>=dari&&d<=sampai;
 }
+
+// [v1.8] Ambil daftar closing unik dari logAbsensi
+function getClosingList(){
+  const map={};
+  S.logAbsensi.forEach(a=>{
+    if(!a.noClosing||a.noClosing.trim()==='')return;
+    if(!map[a.noClosing]){
+      map[a.noClosing]={noClosing:a.noClosing,tglBayar:a.tglBayar||'',karyawan:[],totalUpah:0,jmlRecord:0};
+    }
+    const c=map[a.noClosing];
+    if(!c.karyawan.includes(a.idKaryawan))c.karyawan.push(a.idKaryawan);
+    c.totalUpah+=Number(a.upahHariIni)||0;
+    c.jmlRecord++;
+  });
+  return Object.values(map).sort((a,b)=>b.noClosing.localeCompare(a.noClosing));
+}
+
+function pgClosing(){
+  const tab=S.tab.closing||'baru';
+  const closingList=getClosingList();
+  return `<div class="row" style="margin-bottom:11px">
+    <div class="sec-title" style="margin:0">Closing Gaji</div>
+    <div class="tabs">
+      <button class="tab ${tab==='baru'?'tab-on':'tab-off'}" onclick="setTab('closing','baru')">+ Baru</button>
+      <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('closing','log')">Log${closingList.length>0?' ('+closingList.length+')':''}</button>
+    </div></div>
+  ${tab==='baru'?closingBaru():closingLog()}`;
+}
+
+function closingBaru(){
+  const autoNo='CLO-'+new Date().toISOString().slice(0,7).replace('-','')+'-'+String(getClosingList().length+1).padStart(3,'0');
+  return `<div class="card">
+    <div class="g2">
+      <div class="fg"><label class="fl">Dari Tanggal</label><input class="fc" type="date" id="cls-dari"></div>
+      <div class="fg"><label class="fl">Sampai Tanggal</label><input class="fc" type="date" id="cls-smp" value="${today()}"></div></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${today()}"></div>
+      <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="${autoNo}"></div></div>
+    <button class="btn btn-o btn-w" onclick="genClosing()">📊 Generate Rekap</button>
+  </div>
+  <div id="cls-rekap">${clsRekap.length>0?buildClsRekap():''}</div>`;
+}
+
+function closingLog(){
+  const list=getClosingList();
+  if(!list.length)return '<div class="empty">Belum ada data closing</div>';
+  return list.map(c=>{
+    const ksbPotong=S.logKasbon.filter(x=>x.noClosing===c.noClosing&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    return `<div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <div>
+          <div class="item-name">🔒 ${esc(c.noClosing)}</div>
+          <div class="item-sub">Tgl Bayar: ${fDate(c.tglBayar)} · ${c.karyawan.length} karyawan · ${c.jmlRecord} hari kerja</div>
+        </div>
+        <button style="background:#fee2e2;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:#b91c1c;flex-shrink:0" onclick="confirmDeleteClosing('${esc(c.noClosing)}')">🗑 Batal</button>
+      </div>
+      <div class="g2">
+        <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(c.totalUpah)}</div></div>
+        <div class="chip" style="background:#faf5ff"><div class="chip-lbl">Kasbon Dipotong</div><div class="chip-val" style="color:#7c3aed">${fRp(ksbPotong)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function genClosing(){
-  const dari=document.getElementById('cls-dari').value,sampai=document.getElementById('cls-smp').value;
+  const dari=document.getElementById('cls-dari').value;
+  const sampai=document.getElementById('cls-smp').value;
   if(!dari||!sampai){showToast('Pilih periode','err');return;}
-  const dMs=new Date(dari).getTime(),sMs=new Date(sampai).getTime();
+  if(dari>sampai){showToast('Tanggal dari harus sebelum sampai','err');return;}
+  // Gunakan string comparison — aman dari timezone issue
   clsRekap=S.karyawan.map(k=>{
-    const abs=S.logAbsensi.filter(a=>a.idKaryawan===k.id&&a.statusBayar==='Belum Dibayar'&&new Date(a.tgl).getTime()>=dMs&&new Date(a.tgl).getTime()<=sMs);
+    const abs=S.logAbsensi.filter(a=>
+      a.idKaryawan===k.id &&
+      a.statusBayar==='Belum Dibayar' &&
+      dateInRange(a.tgl,dari,sampai)
+    );
+    if(!abs.length)return null;
     const tu=abs.reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
     const am=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
-    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon:Math.max(0,am-pt),kasbonDipotong:0};
-  }).filter(r=>r.hari>0);
+    const sisaKasbon=Math.max(0,am-pt);
+    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon,kasbonDipotong:0};
+  }).filter(r=>r!==null);
   clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
-  if(!clsRekap.length){showToast('Tidak ada absensi belum dibayar','err');return;}
+  if(!clsRekap.length){showToast('Tidak ada absensi "Belum Dibayar" di periode ini','err');return;}
   showToast('✅ '+clsRekap.length+' karyawan ditemukan');
   document.getElementById('cls-rekap').innerHTML=buildClsRekap();
 }
+
 function buildClsRekap(){
-  return clsRekap.map((r,i)=>{
+  const rows=clsRekap.map((r,i)=>{
     const net=r.totalUpah-Number(r.kasbonDipotong||0);
-    return `<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <input type="checkbox" ${clsSel[r.idKaryawan]?'checked':''} onchange="clsSel['${r.idKaryawan}']=this.checked" style="width:20px;height:20px">
-      <span class="item-name">${esc(r.nama)}</span></div>
+    return `<div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <input type="checkbox" id="cls-chk-${i}" ${clsSel[r.idKaryawan]?'checked':''}
+          onchange="clsSel['${r.idKaryawan}']=this.checked" style="width:20px;height:20px;cursor:pointer">
+        <span class="item-name">${esc(r.nama)}</span>
+        <span style="font-size:11px;color:#64748b">${r.hari} hr</span>
+      </div>
       <div class="g2" style="margin-bottom:8px">
-        <div class="chip"><div class="chip-lbl">Hari · Upah</div><div class="chip-val">${r.hari} hr · ${fRp(r.totalUpah)}</div></div>
+        <div class="chip"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(r.totalUpah)}</div></div>
         <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:#c2410c">${fRp(r.sisaKasbon)}</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-size:11px;color:#64748b;white-space:nowrap">Kasbon potong:</label>
-        <input class="fc" type="text" inputmode="numeric" value="${r.kasbonDipotong?Number(r.kasbonDipotong).toLocaleString('id-ID'):''}" style="flex:1" placeholder="0"
-          oninput="let rv=this.value.replace(/[^0-9]/g,'');clsRekap[${i}].kasbonDipotong=parseInt(rv||'0');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';document.getElementById('cls-net-${i}').textContent=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(clsRekap[${i}].totalUpah-clsRekap[${i}].kasbonDipotong)">
-        <span id="cls-net-${i}" style="font-weight:700;font-size:13px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
-      </div></div>`;
-  }).join('')+'<button class="btn btn-p btn-w" onclick="finalizeClosing()" style="margin-top:4px">🔒 Finalize Closing</button>';
+        <label style="font-size:11px;color:#64748b;white-space:nowrap">Potong kasbon:</label>
+        <input class="fc" type="text" inputmode="numeric" id="cls-ksb-${i}"
+          value="${r.kasbonDipotong?Number(r.kasbonDipotong).toLocaleString('id-ID'):''}"
+          style="flex:1" placeholder="0 (kosongkan jika tidak ada)"
+          oninput="let rv=this.value.replace(/[^0-9]/g,'');clsRekap[${i}].kasbonDipotong=parseInt(rv||'0')||0;this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';document.getElementById('cls-net-${i}').textContent='Rp '+((clsRekap[${i}].totalUpah-(clsRekap[${i}].kasbonDipotong||0))).toLocaleString('id-ID')">
+        <span id="cls-net-${i}" style="font-weight:800;font-size:14px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
+      </div>
+    </div>`;
+  }).join('');
+  const totalUpahAll=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+r.totalUpah,0);
+  return rows+`
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:11px;padding:11px;margin-bottom:10px">
+      <div style="font-size:12px;color:#15803d;font-weight:600">
+        Total dibayar: <strong>${fRp(totalUpahAll)}</strong>
+        &nbsp;·&nbsp; ${clsRekap.length} karyawan
+      </div>
+    </div>
+    <button class="btn btn-p btn-w" onclick="finalizeClosing()">🔒 Finalize & Simpan Closing</button>`;
 }
+
 function finalizeClosing(){
-  const dari=document.getElementById('cls-dari').value,sampai=document.getElementById('cls-smp').value;
-  const tglBayar=document.getElementById('cls-bayar').value,noC=document.getElementById('cls-noc').value;
-  if(!dari||!sampai||!tglBayar){showToast('Lengkapi data','err');return;}
-  const dMs=new Date(dari).getTime(),sMs=new Date(sampai).getTime();
+  const dari=document.getElementById('cls-dari').value;
+  const sampai=document.getElementById('cls-smp').value;
+  const tglBayar=document.getElementById('cls-bayar').value;
+  const noC=document.getElementById('cls-noc').value.trim();
+  if(!dari||!sampai||!tglBayar||!noC){showToast('Lengkapi semua data','err');return;}
+
+  // Cek noClosing tidak duplikat
+  const existing=getClosingList().find(c=>c.noClosing===noC);
+  if(existing){showToast('No Closing "'+noC+'" sudah dipakai! Ganti nomor.','err');return;}
+
   const sIds=clsRekap.filter(r=>clsSel[r.idKaryawan]).map(r=>r.idKaryawan);
+  if(!sIds.length){showToast('Pilih minimal 1 karyawan','err');return;}
+
+  // Baca ulang nilai kasbon dipotong dari input (pastikan sinkron)
+  clsRekap.forEach((r,i)=>{
+    const inp=document.getElementById('cls-ksb-'+i);
+    if(inp){r.kasbonDipotong=parseInt((inp.value||'').replace(/[^0-9]/g,''))||0;}
+  });
+
+  let updated=0;
+  // Update status absensi — gunakan string comparison (fix bug timezone)
   S.logAbsensi=S.logAbsensi.map(a=>{
-    if(!sIds.includes(a.idKaryawan)||a.statusBayar!=='Belum Dibayar')return a;
-    const tMs=new Date(a.tgl).getTime();if(tMs<dMs||tMs>sMs)return a;
+    if(!sIds.includes(a.idKaryawan))return a;
+    if(a.statusBayar!=='Belum Dibayar')return a;
+    if(!dateInRange(a.tgl,dari,sampai))return a;
+    updated++;
     return{...a,statusBayar:'Sudah Dibayar',noClosing:noC,tglBayar};
   });
   ss(KS.abs,S.logAbsensi);
+
+  // Tambah POTONG kasbon
   const ksbItems=clsRekap.filter(r=>clsSel[r.idKaryawan]&&Number(r.kasbonDipotong)>0);
-  ksbItems.forEach(r=>{S.logKasbon.push({id:'KSB-CLO-'+Date.now()+'-'+r.idKaryawan,tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,tipe:'POTONG',nominal:Number(r.kasbonDipotong),noClosing:noC,ket:'Potong '+noC});});
-  ss(KS.ksb,S.logKasbon);showToast('✅ Closing '+noC+' selesai');
-  doSync('finalizeClosing',{dari,sampai,tglBayar,noClosing:noC,selectedIds:sIds,kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nominal:Number(r.kasbonDipotong)}))});
-  clsRekap=[];clsSel={};go('closing');
+  ksbItems.forEach(r=>{
+    S.logKasbon.push({
+      id:'KSB-CLO-'+Date.now()+'-'+r.idKaryawan,
+      tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,
+      tipe:'POTONG',nominal:Number(r.kasbonDipotong),
+      noClosing:noC,ket:'Potong kasbon — '+noC
+    });
+  });
+  ss(KS.ksb,S.logKasbon);
+
+  showToast('✅ Closing '+noC+' selesai — '+updated+' absensi diupdate');
+  doSync('finalizeClosing',{
+    dari,sampai,tglBayar,noClosing:noC,
+    selectedIds:sIds,
+    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nominal:Number(r.kasbonDipotong)}))
+  });
+  clsRekap=[];clsSel={};
+  setTab('closing','log');
+}
+
+// [v1.8] Hapus / batalkan closing
+function confirmDeleteClosing(noClosing){
+  const list=getClosingList();
+  const c=list.find(x=>x.noClosing===noClosing);
+  if(!c)return;
+  if(!confirm('⚠️ BATALKAN CLOSING "'+noClosing+'"?\n\nIni akan:\n• Reset '+c.jmlRecord+' absensi kembali ke "Belum Dibayar"\n• Hapus kasbon POTONG terkait closing ini\n\nLanjutkan?'))return;
+  deleteClosing(noClosing);
+}
+
+function deleteClosing(noClosing){
+  let resetCount=0;
+  // Reset status absensi
+  S.logAbsensi=S.logAbsensi.map(a=>{
+    if(a.noClosing!==noClosing)return a;
+    resetCount++;
+    return{...a,statusBayar:'Belum Dibayar',noClosing:'',tglBayar:''};
+  });
+  ss(KS.abs,S.logAbsensi);
+
+  // Hapus kasbon POTONG terkait closing ini
+  const before=S.logKasbon.length;
+  S.logKasbon=S.logKasbon.filter(k=>k.noClosing!==noClosing||k.tipe!=='POTONG');
+  ss(KS.ksb,S.logKasbon);
+  const removedKsb=before-S.logKasbon.length;
+
+  showToast('✅ Closing "'+noClosing+'" dibatalkan — '+resetCount+' absensi direset, '+removedKsb+' kasbon dihapus');
+  doSync('deleteClosing',{noClosing});
+  go('closing');
 }
 // ── BAYAR [v1.8 + tombol hapus di log]
 function pgBayar(){
