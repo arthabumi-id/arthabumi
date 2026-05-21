@@ -95,18 +95,18 @@ button{-webkit-appearance:none;font-family:inherit}
 <div id="spl">
   <div class="spl-logo" id="spl-name">Arthabumi</div>
   <div class="spin"></div>
-  <div class="spl-sub">Memuat aplikasi\u2026</div>
+  <div class="spl-sub">Memuat aplikasi…</div>
 </div>
 <div id="app">
   <div id="hdr">
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
-      <div class="hdr-sync" id="sync-badge">\u26aa Lokal</div>
+      <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
-      <button class="hdr-btn" id="btn-sync" style="display:none;background:rgba(16,185,129,.25);color:#6ee7b7" onclick="manualSync()">\u21bb GSheet</button>
-      <button class="hdr-btn" onclick="openSettings()">\u2699\ufe0f</button>
+      <button class="hdr-btn" id="btn-sync" style="display:none;background:rgba(16,185,129,.25);color:#6ee7b7" onclick="manualSync()">↻ GSheet</button>
+      <button class="hdr-btn" onclick="openSettings()">⚙️</button>
     </div>
   </div>
   <div id="content"></div>
@@ -115,7 +115,7 @@ button{-webkit-appearance:none;font-family:inherit}
 <div id="toast"></div>
 <div id="overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <button class="modal-x" onclick="closeModal()">\u2715</button>
+    <button class="modal-x" onclick="closeModal()">✕</button>
     <div id="modal-body"></div>
   </div>
 </div>
@@ -208,24 +208,24 @@ function applyGS(d){
 async function doFetch(url){
   const u=url||S.webAppUrl;if(!u)return;S.syncing=true;updateSyncBadge();
   try{const d=await gsFetch(u);applyGS(d);}
-  catch(e){S.syncError=e.message;showToast('\u26a0\ufe0f GSheet gagal','err');}
+  catch(e){S.syncError=e.message;showToast('⚠️ GSheet gagal','err');}
   finally{S.syncing=false;updateSyncBadge();}
 }
 async function doSync(action,payload){
   if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();
-  showToast('\U0001f504 Menyimpan ke GSheet\u2026','info');
-  try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('\u2705 GSheet berhasil diupdate!');go(S.page);}
-  catch(e){S.syncError=e.message;S.retryQ.push({action,payload,retries:0});showToast('\u274c Gagal: '+e.message,'err');}
+  showToast('🔄 Menyimpan ke GSheet…','info');
+  try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('✅ GSheet berhasil diupdate!');go(S.page);}
+  catch(e){S.syncError=e.message;S.retryQ.push({action,payload,retries:0});showToast('❌ Gagal: '+e.message,'err');}
   finally{S.syncing=false;updateSyncBadge();}
 }
 function updateSyncBadge(){
   const el=document.getElementById('sync-badge');if(!el)return;
-  if(!S.webAppUrl){el.textContent='\u26aa Lokal';el.style.color='#64748b';}
-  else if(S.syncing){el.textContent='\U0001f504 Sync\u2026';el.style.color='#60a5fa';}
-  else if(S.syncError){el.textContent='\u26a0\ufe0f Gagal';el.style.color='#f87171';}
-  else if(S.lastSync){el.textContent='\u2705 '+S.lastSync.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+(S.countdown>0?' \xb7'+S.countdown+'d':'');el.style.color='#34d399';}
-  else{el.textContent='\u26a1 GSheet';el.style.color='#fbbf24';}
-  const rb=document.getElementById('retry-badge');if(rb){rb.style.display=S.retryQ.length>0?'inline':'none';rb.textContent='\u23f3'+S.retryQ.length;}
+  if(!S.webAppUrl){el.textContent='⚪ Lokal';el.style.color='#64748b';}
+  else if(S.syncing){el.textContent='🔄 Sync…';el.style.color='#60a5fa';}
+  else if(S.syncError){el.textContent='⚠️ Gagal';el.style.color='#f87171';}
+  else if(S.lastSync){el.textContent='✅ '+S.lastSync.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+(S.countdown>0?' ·'+S.countdown+'d':'');el.style.color='#34d399';}
+  else{el.textContent='⚡ GSheet';el.style.color='#fbbf24';}
+  const rb=document.getElementById('retry-badge');if(rb){rb.style.display=S.retryQ.length>0?'inline':'none';rb.textContent='⏳'+S.retryQ.length;}
   const sb=document.getElementById('btn-sync');if(sb)sb.style.display=S.webAppUrl?'block':'none';
 }
 function manualSync(){S.countdown=S.pollInterval;doFetch();}
@@ -245,24 +245,24 @@ document.addEventListener('visibilitychange',()=>{
 setInterval(async()=>{
   if(!S.webAppUrl||S.retryQ.length===0||S.syncing)return;
   const item=S.retryQ[0];if(!item)return;
-  if(item.retries>=3){S.retryQ.shift();showToast('\u274c Retry gagal 3x','err');return;}
+  if(item.retries>=3){S.retryQ.shift();showToast('❌ Retry gagal 3x','err');return;}
   S.syncing=true;
-  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('\u2705 Retry OK');}
+  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('✅ Retry OK');}
   catch{item.retries++;}
   finally{S.syncing=false;updateSyncBadge();}
 },30000);
 // ── Navigation
 const NAV=[
-  {id:'dashboard',label:'Dashboard',icon:'\U0001f4ca'},
-  {id:'project',label:'Proyek',icon:'\U0001f3d7\ufe0f'},
-  {id:'beli',label:'Pembelian',icon:'\U0001f6d2'},
-  {id:'karyawan',label:'Karyawan',icon:'\U0001f477'},
-  {id:'absensi',label:'Absensi',icon:'\U0001f4cb'},
-  {id:'kasbon',label:'Kasbon',icon:'\U0001f4b8'},
-  {id:'closing',label:'Closing',icon:'\U0001f512'},
-  {id:'bayar',label:'Bayar',icon:'\U0001f4b0'},
-  {id:'rab',label:'RAB',icon:'\U0001f4d0'},
-  {id:'subkon',label:'Subkon',icon:'\U0001f528'},
+  {id:'dashboard',label:'Dashboard',icon:'📊'},
+  {id:'project',label:'Proyek',icon:'🏗️'},
+  {id:'beli',label:'Pembelian',icon:'🛒'},
+  {id:'karyawan',label:'Karyawan',icon:'👷'},
+  {id:'absensi',label:'Absensi',icon:'📋'},
+  {id:'kasbon',label:'Kasbon',icon:'💸'},
+  {id:'closing',label:'Closing',icon:'🔒'},
+  {id:'bayar',label:'Bayar',icon:'💰'},
+  {id:'rab',label:'RAB',icon:'📐'},
+  {id:'subkon',label:'Subkon',icon:'🔨'},
 ];
 function buildNav(){
   return NAV.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
@@ -282,19 +282,19 @@ function closeModal(){document.getElementById('overlay').classList.remove('show'
 // ── Settings + Backup + PWA
 function openSettings(){
   openModal(`
-    <div class="modal-title">\u2699\ufe0f Pengaturan</div>
-    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">\U0001f3e2 Profil Perusahaan</div>
+    <div class="modal-title">⚙️ Pengaturan</div>
+    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏢 Profil Perusahaan</div>
     <div class="fg"><label class="fl">Nama Perusahaan</label>
       <input class="fc" id="cfg-co-name" value="${esc(S.companyName)}" placeholder="Arthabumi"></div>
     <div class="fg"><label class="fl">Tagline</label>
       <input class="fc" id="cfg-co-tag" value="${esc(S.companyTagline)}" placeholder="Jasa Kontraktor & Renovasi"></div>
     <div style="height:1px;background:#f1f5f9;margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">\U0001f517 Koneksi GSheet</div>
+    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🔗 Koneksi GSheet</div>
     <div class="info-box" style="margin-bottom:10px"><strong>Cara deploy:</strong><ol>
-      <li>Google Sheets \u2192 Extensions \u2192 Apps Script</li>
+      <li>Google Sheets → Extensions → Apps Script</li>
       <li>Buat 3 file: config.gs + read.gs + write.gs</li>
-      <li>Deploy \u2192 New deployment \u2192 Web app</li>
-      <li>Execute as: Me | Access: Anyone \u2192 copy URL</li>
+      <li>Deploy → New deployment → Web app</li>
+      <li>Execute as: Me | Access: Anyone → copy URL</li>
     </ol></div>
     <div class="fg"><label class="fl">Web App URL</label>
       <input class="fc" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.webAppUrl)}"></div>
@@ -304,30 +304,30 @@ function openSettings(){
       </div></div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap;margin-bottom:12px">
-      <button class="btn btn-o btn-sm" onclick="testConn()">\U0001f50d Test</button>
-      <button class="btn btn-p btn-sm" onclick="saveSettings()">\U0001f4be Simpan</button>
-      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">\U0001f50c Putus</button>':''}
+      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test</button>
+      <button class="btn btn-p btn-sm" onclick="saveSettings()">💾 Simpan</button>
+      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus</button>':''}
     </div>
     <div style="height:1px;background:#f1f5f9;margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">\U0001f4be Backup & Restore</div>
+    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">💾 Backup & Restore</div>
     <div style="font-size:12px;color:#64748b;margin-bottom:10px;line-height:1.6">Simpan semua data ke file JSON. Restore bila data hilang atau ganti HP.</div>
     <div class="act-row" style="flex-wrap:wrap">
-      <button class="btn btn-o btn-sm" onclick="backupData()">\U0001f4e5 Download Backup</button>
-      <button class="btn btn-g btn-sm" onclick="importData()">\U0001f4e4 Restore Backup</button>
-      <button class="btn btn-d btn-sm" onclick="confirmClearAll()">\U0001f5d1 Reset Semua</button>
+      <button class="btn btn-o btn-sm" onclick="backupData()">📥 Download Backup</button>
+      <button class="btn btn-g btn-sm" onclick="importData()">📤 Restore Backup</button>
+      <button class="btn btn-d btn-sm" onclick="confirmClearAll()">🗑 Reset Semua</button>
     </div>
     <div style="height:1px;background:#f1f5f9;margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">\U0001f4f1 Pasang Sebagai App</div>
+    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📱 Pasang Sebagai App</div>
     <div style="font-size:12px;color:#64748b;line-height:1.6;margin-bottom:8px">App ini bisa dipasang di HP/Desktop tanpa install dari store (PWA).</div>
-    <button class="btn btn-p btn-sm" id="pwa-install-btn" style="display:none" onclick="installPWA()">\U0001f4f2 Pasang di HP</button>
-    <div style="font-size:11px;color:#94a3b8;margin-top:6px">Safari: Share \u2192 Add to Home Screen<br>Chrome: \u22ee \u2192 Add to Home Screen</div>`);
+    <button class="btn btn-p btn-sm" id="pwa-install-btn" style="display:none" onclick="installPWA()">📲 Pasang di HP</button>
+    <div style="font-size:11px;color:#94a3b8;margin-top:6px">Safari: Share → Add to Home Screen<br>Chrome: ⋮ → Add to Home Screen</div>`);
 }
 function setPoll(v){S.pollInterval=v;document.querySelectorAll('#overlay .tab').forEach((btn,i)=>{const vals=[30,60,120,300,0];btn.className='tab '+(vals[i]===v?'tab-on':'tab-off');});}
 async function testConn(){
   const url=document.getElementById('cfg-url').value.trim();if(!url)return;
-  const el=document.getElementById('cfg-res');el.textContent='\U0001f504 Testing\u2026';
-  try{const d=await gsFetch(url);el.textContent=`\u2705 OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='#15803d';}
-  catch(e){el.textContent='\u274c '+e.message;el.style.color='#b91c1c';}
+  const el=document.getElementById('cfg-res');el.textContent='🔄 Testing…';
+  try{const d=await gsFetch(url);el.textContent=`✅ OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='#15803d';}
+  catch(e){el.textContent='❌ '+e.message;el.style.color='#b91c1c';}
 }
 async function saveSettings(){
   const coName=(document.getElementById('cfg-co-name')?.value||'').trim()||'Arthabumi';
@@ -338,8 +338,8 @@ async function saveSettings(){
   const url=document.getElementById('cfg-url')?.value?.trim()||'';
   S.webAppUrl=url;S.syncError=null;ss(KS.url,url);ss(KS.poll,S.pollInterval);
   closeModal();updateSyncBadge();
-  if(url){showToast('\U0001f517 Mengambil data GSheet\u2026','info');await doFetch(url);startPoll();}
-  else showToast('\u2705 Pengaturan disimpan','info');
+  if(url){showToast('🔗 Mengambil data GSheet…','info');await doFetch(url);startPoll();}
+  else showToast('✅ Pengaturan disimpan','info');
 }
 function clearGS(){S.webAppUrl='';S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
 // ── Backup & Restore
@@ -353,7 +353,7 @@ function backupData(){
   const a=document.createElement('a');a.href=url;
   a.download='backup-'+S.companyName.replace(/\s/g,'_')+'-'+today()+'.json';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  showToast('\u2705 Backup '+cnt+' record berhasil');closeModal();
+  showToast('✅ Backup '+cnt+' record berhasil');closeModal();
 }
 function importData(){
   const input=document.createElement('input');input.type='file';input.accept='.json';
@@ -375,14 +375,14 @@ function importData(){
       if(d.masterSubkon){S.masterSubkon=d.masterSubkon;ss(KS.sk,d.masterSubkon);}
       if(d.logSubkon){S.logSubkon=d.logSubkon;ss(KS.lsk,d.logSubkon);}
       if(bk.companyName){S.companyName=bk.companyName;ss(KS.co,{name:bk.companyName,tagline:S.companyTagline});}
-      closeModal();showToast('\u2705 Data berhasil di-restore dari '+file.name);go(S.page);
-    }catch(err){showToast('\u274c Gagal import: '+err.message,'err');}
+      closeModal();showToast('✅ Data berhasil di-restore dari '+file.name);go(S.page);
+    }catch(err){showToast('❌ Gagal import: '+err.message,'err');}
   };input.click();
 }
 function confirmClearAll(){
-  if(!confirm('\u26a0\ufe0f HAPUS SEMUA DATA LOKAL?\n\nPastikan sudah backup dulu!\n\nLanjutkan?'))return;
+  if(!confirm('⚠️ HAPUS SEMUA DATA LOKAL?\n\nPastikan sudah backup dulu!\n\nLanjutkan?'))return;
   [KS.p,KS.beli,KS.kr,KS.abs,KS.ksb,KS.bayar,KS.brg,KS.toko,KS.rab,KS.sk,KS.lsk].forEach(k=>localStorage.removeItem(k));
-  loadLocal();closeModal();showToast('\U0001f5d1 Data lokal dihapus');go('dashboard');
+  loadLocal();closeModal();showToast('🗑 Data lokal dihapus');go('dashboard');
 }
 // ── PWA
 let deferredPrompt=null;
@@ -393,7 +393,7 @@ window.addEventListener('beforeinstallprompt',e=>{
 async function installPWA(){
   if(!deferredPrompt){showToast('Ikuti petunjuk di bawah untuk pasang app','info');return;}
   deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;
-  if(outcome==='accepted')showToast('\u2705 App berhasil dipasang!');deferredPrompt=null;
+  if(outcome==='accepted')showToast('✅ App berhasil dipasang!');deferredPrompt=null;
 }
 // ── Page Builder
 function buildPage(p){
@@ -423,7 +423,7 @@ function pgDashboard(){
     const pct=rabT>0?Math.min(100,Math.round(biaya/rabT*100)):0;
     return `<div class="card">
       <div class="row" style="margin-bottom:8px">
-        <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} \xb7 ${esc(p.jenis)}</div></div>
+        <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}</div></div>
         ${bdg(p.status)}</div>
       <div class="g3">
         <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
@@ -458,11 +458,11 @@ function pgProject(){
   ${S.projects.length===0?'<div class="empty">Belum ada proyek</div>':S.projects.map((p,i)=>`
   <div class="card"><div class="row">
     <div style="flex:1;min-width:0"><div class="item-name">${esc(p.nama)}</div>
-      <div class="item-sub">${esc(p.kode)} \xb7 ${esc(p.jenis)} \xb7 ${fRp(p.nilaiKontrak)}</div></div>
+      <div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
       ${bdg(p.status)}
-      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${i})">\u270f\ufe0f</button>
-      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">\U0001f5d1</button>
+      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${i})">✏️</button>
+      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">🗑</button>
     </div></div></div>`).join('')}`;
 }
 function openAddProject(){
@@ -480,7 +480,7 @@ function openAddProject(){
     <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveProject()">\U0001f4be Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveProject()">💾 Simpan</button></div>`);
 }
 function openEditProject(i){
   const p=S.projects[i];
@@ -497,7 +497,7 @@ function openEditProject(i){
     <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date" value="${p.tglMulai||''}"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveProject(true)">\U0001f4be Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveProject(true)">💾 Simpan</button></div>`);
 }
 function saveProject(isEdit){
   const kode=document.getElementById('p-kode').value.trim();
@@ -507,13 +507,13 @@ function saveProject(isEdit){
   const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value};
   if(isEdit){const i=Number(document.getElementById('p-idx').value);S.projects[i]=d;}else S.projects.push(d);
   ss(KS.p,S.projects);closeModal();go('project');
-  showToast(isEdit?'\u2705 Proyek diperbarui':'\u2705 Proyek ditambahkan');
+  showToast(isEdit?'✅ Proyek diperbarui':'✅ Proyek ditambahkan');
   doSync(isEdit?'updateProject':'addProject',d);
 }
 function delProject(kode){
   if(!confirm('Hapus proyek '+kode+'?'))return;
   S.projects=S.projects.filter(p=>p.kode!==kode);ss(KS.p,S.projects);go('project');
-  showToast('\U0001f5d1 Dihapus');doSync('deleteProject',{kode});
+  showToast('🗑 Dihapus');doSync('deleteProject',{kode});
 }
 // ── PEMBELIAN
 function pgBeli(){
@@ -531,7 +531,7 @@ function beliInput(){
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px">
       <span style="font-size:11px;font-weight:600;color:#64748b">Item ${i+1}</span>
-      ${S.formItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delBeliRow(${i})">\u2715 Hapus</button>`:''}
+      ${S.formItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delBeliRow(${i})">✕ Hapus</button>`:''}
     </div>
     <div class="fg"><label class="fl">Nama Barang</label>
       <input class="fc" list="brg-dl" value="${esc(it.namaBarang)}" placeholder="Nama barang" oninput="S.formItems[${i}].namaBarang=this.value">
@@ -551,14 +551,14 @@ function beliInput(){
     </div>
   </div>`).join('');
   return `<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-    <button class="btn btn-o btn-sm" onclick="openPasteBeli()">\U0001f4cb Paste Daftar</button></div>
+    <button class="btn btn-o btn-sm" onclick="openPasteBeli()">📋 Paste Daftar</button></div>
   <div class="card">
     <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${today()}"></div>
     <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div></div>
     ${items}
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
-      <button class="btn btn-p" style="flex:1" onclick="submitBeli()">\U0001f4be Simpan</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
     </div></div>`;
 }
 function beliLog(){
@@ -567,12 +567,12 @@ function beliLog(){
     const ri=S.pembelian.findIndex(x=>x.id===b.id);
     return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(b.namaBarang)}</div>
-        <div class="item-sub">${fDate(b.tgl)} \xb7 ${esc(b.kodeProj)} \xb7 ${esc(b.toko||'')}</div></div>
+        <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div></div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
-        <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">\U0001f5d1</button>
+        <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
       </div></div>
-      <div class="item-sub">${b.qty} ${esc(b.satuan)} \xd7 ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div></div>`;
+      <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div></div>`;
   }).join('');
 }
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
@@ -587,7 +587,7 @@ function submitBeli(){
   const brg=[...S.masterBarang],tk=[...S.masterToko];
   newItems.forEach(it=>{if(!brg.find(b=>b.nama.toLowerCase()===it.namaBarang.toLowerCase()))brg.push({id:padId('BRG',brg,'id'),nama:it.namaBarang,kategori:it.kategori,satuan:it.satuan,hargaTerakhir:it.harga});if(it.toko&&!tk.includes(it.toko))tk.push(it.toko);});
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
-  showToast('\u2705 '+newItems.length+' item disimpan');
+  showToast('✅ '+newItems.length+' item disimpan');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   setTab('beli','log');
   doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
@@ -595,11 +595,11 @@ function submitBeli(){
 function delPembelian(idx){
   const b=S.pembelian[idx];if(!b)return;
   if(!confirm('Hapus "'+b.namaBarang+'"?'))return;
-  S.pembelian.splice(idx,1);ss(KS.beli,S.pembelian);showToast('\U0001f5d1 Dihapus');go('beli');
+  S.pembelian.splice(idx,1);ss(KS.beli,S.pembelian);showToast('🗑 Dihapus');go('beli');
   doSync('deletePembelian',{tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
 }
 function openPasteBeli(){
-  openModal(`<div class="modal-title">\U0001f4cb Paste Daftar Pembelian</div>
+  openModal(`<div class="modal-title">📋 Paste Daftar Pembelian</div>
     <div class="info-box"><strong>Format per baris:</strong><br>
       <code style="background:#dbeafe;padding:2px 6px;border-radius:4px">nama barang, jumlah, harga, toko</code><br><br>
       Contoh:<br><code>Semen hitam, 5, 55000, Toko A<br>Besi hollow, 10, 45.000</code></div>
@@ -608,8 +608,8 @@ function openPasteBeli(){
     <div id="paste-preview" style="margin-bottom:8px"></div>
     <div class="act-row" style="flex-wrap:wrap">
       <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
-      <button class="btn btn-o btn-sm" onclick="previewPasteBeli()">\U0001f441 Preview</button>
-      <button class="btn btn-p btn-sm" onclick="applyPasteBeli()">\u2705 Tambah ke Form</button>
+      <button class="btn btn-o btn-sm" onclick="previewPasteBeli()">👁 Preview</button>
+      <button class="btn btn-p btn-sm" onclick="applyPasteBeli()">✅ Tambah ke Form</button>
     </div>`);
 }
 function parseIdNum(s){return Number(String(s).trim().replace(/\./g,'').replace(',','.'));}
@@ -630,8 +630,8 @@ function parsePasteText(text){
 function previewPasteBeli(){
   const text=document.getElementById('paste-txt').value;if(!text.trim()){showToast('Textarea masih kosong','err');return;}
   const{items,errors}=parsePasteText(text);let html='';
-  if(errors.length)html+=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:9px;padding:9px;margin-bottom:8px;font-size:12px;color:#b91c1c">\u26a0\ufe0f ${errors.join('<br>')}</div>`;
-  if(items.length){const total=items.reduce((s,it)=>s+(it.qty*it.harga),0);html+=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:9px;padding:9px;font-size:12px;color:#15803d">\u2705 <strong>${items.length} item valid</strong> \u2014 total ${fRp(total)}:<br><br>${items.map(it=>`\u2022 ${esc(it.namaBarang)} \u2014 ${it.qty}\xd7 ${fRp(it.harga)}${it.toko?' ('+esc(it.toko)+')':''}`).join('<br>')}</div>`;}
+  if(errors.length)html+=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:9px;padding:9px;margin-bottom:8px;font-size:12px;color:#b91c1c">⚠️ ${errors.join('<br>')}</div>`;
+  if(items.length){const total=items.reduce((s,it)=>s+(it.qty*it.harga),0);html+=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:9px;padding:9px;font-size:12px;color:#15803d">✅ <strong>${items.length} item valid</strong> — total ${fRp(total)}:<br><br>${items.map(it=>`• ${esc(it.namaBarang)} — ${it.qty}× ${fRp(it.harga)}${it.toko?' ('+esc(it.toko)+')':''}`).join('<br>')}</div>`;}
   document.getElementById('paste-preview').innerHTML=html;
 }
 function applyPasteBeli(){
@@ -639,7 +639,7 @@ function applyPasteBeli(){
   const{items,errors}=parsePasteText(text);if(!items.length){showToast('Tidak ada item valid','err');return;}
   const defaultOnly=S.formItems.length===1&&!S.formItems[0].namaBarang&&!S.formItems[0].harga;
   S.formItems=defaultOnly?items:[...S.formItems,...items];
-  closeModal();showToast('\u2705 '+items.length+' item ditambahkan'+(errors.length?' ('+errors.length+' dilewati)':''));setTab('beli','input');
+  closeModal();showToast('✅ '+items.length+' item ditambahkan'+(errors.length?' ('+errors.length+' dilewati)':''));setTab('beli','input');
 }
 // ── KARYAWAN
 function pgKaryawan(){
@@ -654,10 +654,10 @@ function pgKaryawan(){
     const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const sisa=am-pt;
     return `<div class="card"><div class="row" style="margin-bottom:8px">
-      <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${esc(k.jabatan)} \xb7 ${esc(k.id)}</div></div>
+      <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${esc(k.jabatan)} · ${esc(k.id)}</div></div>
       <div style="display:flex;gap:8px">
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditKaryawan(${i})">\u270f\ufe0f</button>
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delKaryawan('${esc(k.id)}')">\U0001f5d1</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditKaryawan(${i})">✏️</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delKaryawan('${esc(k.id)}')">🗑</button>
       </div></div>
       <div class="g4">
         <div class="chip"><div class="chip-lbl">Upah/Hr</div><div class="chip-val">${fRp(k.upahHarian)}</div></div>
@@ -682,7 +682,7 @@ function krModal(k,i){
       <div class="fg"><label class="fl">No HP</label><input class="fc" id="k-hp" type="tel" value="${isEdit?esc(k.noHP||''):''}"></div></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveKaryawan(${isEdit})">\U0001f4be Simpan</button></div>`;
+      <button class="btn btn-p" onclick="saveKaryawan(${isEdit})">💾 Simpan</button></div>`;
 }
 function openAddKaryawan(){openModal(krModal(null,null));}
 function openEditKaryawan(i){openModal(krModal(S.karyawan[i],i));}
@@ -694,10 +694,10 @@ function saveKaryawan(isEdit){
   const d={id,nama,jabatan:document.getElementById('k-jab').value,upahHarian:upah,noHP:document.getElementById('k-hp').value};
   if(isEdit){const idx=Number(document.getElementById('k-idx').value);S.karyawan[idx]=d;}else S.karyawan.push(d);
   ss(KS.kr,S.karyawan);closeModal();go('karyawan');
-  showToast(isEdit?'\u2705 '+d.nama+' diperbarui':'\u2705 '+d.nama+' ditambahkan');
+  showToast(isEdit?'✅ '+d.nama+' diperbarui':'✅ '+d.nama+' ditambahkan');
   doSync(isEdit?'updateKaryawan':'addKaryawan',d);
 }
-function delKaryawan(id){if(!confirm('Hapus '+id+'?'))return;S.karyawan=S.karyawan.filter(k=>k.id!==id);ss(KS.kr,S.karyawan);go('karyawan');showToast('\U0001f5d1 Dihapus');doSync('deleteKaryawan',{id});}
+function delKaryawan(id){if(!confirm('Hapus '+id+'?'))return;S.karyawan=S.karyawan.filter(k=>k.id!==id);ss(KS.kr,S.karyawan);go('karyawan');showToast('🗑 Dihapus');doSync('deleteKaryawan',{id});}
 // ── ABSENSI
 function pgAbsensi(){
   const tab=S.tab.absensi||'input';
@@ -719,7 +719,7 @@ function absInput(){
     const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)"><option value="">-- Default --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.kodeProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}</select>`;
     return `<div class="card" style="margin-bottom:8px">
       <div class="row" style="margin-bottom:8px">
-        <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${k.jabatan} \xb7 ${fRp(k.upahHarian)}/hr</div></div>
+        <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${k.jabatan} · ${fRp(k.upahHarian)}/hr</div></div>
         ${upahHariIni>0?`<span style="font-weight:700;color:#10b981;font-size:14px;flex-shrink:0">${fRp(upahHariIni)}</span>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
       </div>
       <div style="display:flex;gap:5px;margin-bottom:8px">${stsBtns}</div>
@@ -730,15 +730,15 @@ function absInput(){
     <div class="g2">
       <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${today()}"></div>
       <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('')}</select></div></div>
-    <div style="font-size:11px;color:#94a3b8;margin-top:-4px">\U0001f4a1 Proyek default untuk karyawan yang belum pilih</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:-4px">💡 Proyek default untuk karyawan yang belum pilih</div>
   </div>
   ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':rows}
   ${S.karyawan.length>0?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:10px;margin-bottom:10px;font-size:12px;color:#15803d">
-    \u2705 Hadir: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Hadir').length}</strong> &nbsp;
-    \U0001f7e1 Setengah: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Setengah Hari').length}</strong> &nbsp;
-    \u274c Tidak: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Tidak Hadir').length}</strong>
+    ✅ Hadir: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Hadir').length}</strong> &nbsp;
+    🟡 Setengah: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Setengah Hari').length}</strong> &nbsp;
+    ❌ Tidak: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Tidak Hadir').length}</strong>
   </div>
-  <button class="btn btn-p btn-w" onclick="submitAbsensi()">\U0001f4be Simpan Absensi</button>`:''}`;
+  <button class="btn btn-p btn-w" onclick="submitAbsensi()">💾 Simpan Absensi</button>`:''}`;
 }
 function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};S.absRows[i][key]=val;if(key==='status')go('absensi');}
 function submitAbsensi(){
@@ -749,7 +749,7 @@ function submitAbsensi(){
   const newAbs=active.map(({k,r})=>{const upah=r.status==='Hadir'?k.upahHarian:r.status==='Setengah Hari'?k.upahHarian*0.5:0;
     return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni:upah,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};});
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
-  showToast('\u2705 Absensi '+active.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
+  showToast('✅ Absensi '+active.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
   doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,status:a.status,kodeProj:a.kodeProj,upahHariIni:a.upahHariIni,ket:a.ket})));
 }
 function absLog(){
@@ -759,10 +759,10 @@ function absLog(){
     const ri=S.logAbsensi.findIndex(x=>x.id===a.id);
     return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(a.nama)}</div>
-        <div class="item-sub">${fDate(a.tgl)} \xb7 ${esc(a.kodeProj||'')} \xb7 ${fRp(a.upahHariIni)}</div></div>
+        <div class="item-sub">${fDate(a.tgl)} · ${esc(a.kodeProj||'')} · ${fRp(a.upahHariIni)}</div></div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
         ${bdg(a.status)}
-        ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${ri})">\U0001f5d1</button>`:''}
+        ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${ri})">🗑</button>`:''}
       </div></div>
       <div>${bdg(a.statusBayar)}</div></div>`;
   }).join('');
@@ -771,7 +771,7 @@ function delAbsensi(idx){
   const a=S.logAbsensi[idx];if(!a)return;
   if(a.statusBayar==='Sudah Dibayar'){showToast('Tidak bisa hapus -- sudah di-closing','err');return;}
   if(!confirm('Hapus absensi '+esc(a.nama)+'?'))return;
-  S.logAbsensi.splice(idx,1);ss(KS.abs,S.logAbsensi);showToast('\U0001f5d1 Dihapus');go('absensi');
+  S.logAbsensi.splice(idx,1);ss(KS.abs,S.logAbsensi);showToast('🗑 Dihapus');go('absensi');
   doSync('deleteAbsensi',{tgl:a.tgl,idKaryawan:a.idKaryawan});
 }
 // ── KASBON [v1.8 + tombol hapus di log]
@@ -795,14 +795,14 @@ function kasbonInput(){
       ${numInp('ksb-nom',0,'500.000')}
       <div class="num-hint">Contoh: 500.000</div></div>
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="ksb-ket"></div>
-    <button class="btn btn-p btn-w" onclick="submitKasbon()">\U0001f4be Simpan Kasbon</button></div>`;
+    <button class="btn btn-p btn-w" onclick="submitKasbon()">💾 Simpan Kasbon</button></div>`;
 }
 function submitKasbon(){
   const id=document.getElementById('ksb-kr').value;
   const nom=getNum('ksb-nom');
   if(!id||!nom){showToast('Lengkapi karyawan & nominal','err');return;}
   const nk={id:'KSB-'+Date.now(),tgl:document.getElementById('ksb-tgl').value,idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:document.getElementById('ksb-tipe').value,nominal:nom,ket:document.getElementById('ksb-ket').value,noClosing:''};
-  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('\u2705 Kasbon disimpan');setTab('kasbon','log');
+  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('✅ Kasbon disimpan');setTab('kasbon','log');
   doSync('addKasbon',[{tgl:nk.tgl,idKaryawan:nk.idKaryawan,tipe:nk.tipe,nominal:nk.nominal,ket:nk.ket}]);
 }
 function kasbonRekap(){
@@ -826,12 +826,12 @@ function kasbonLog(){
     return `<div class="card"><div class="row">
       <div style="flex:1;min-width:0">
         <div class="item-name">${esc(k.nama)}</div>
-        <div class="item-sub">${fDate(k.tgl)}${k.ket?' \xb7 '+esc(k.ket):''}${k.noClosing?' \xb7 <span style="color:#7c3aed;font-size:10px">\U0001f512'+esc(k.noClosing)+'</span>':''}</div>
+        <div class="item-sub">${fDate(k.tgl)}${k.ket?' · '+esc(k.ket):''}${k.noClosing?' · <span style="color:#7c3aed;font-size:10px">🔒'+esc(k.noClosing)+'</span>':''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px">${fRp(k.nominal)}</div>${bdg(k.tipe)}</div>
-        ${canDel?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delKasbon(${ri})">\U0001f5d1</button>`
-          :'<span title="Sudah closing" style="font-size:14px;opacity:.4">\U0001f512</span>'}
+        ${canDel?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delKasbon(${ri})">🗑</button>`
+          :'<span title="Sudah closing" style="font-size:14px;opacity:.4">🔒</span>'}
       </div></div></div>`;
   }).join('');
 }
@@ -839,7 +839,7 @@ function delKasbon(idx){
   const k=S.logKasbon[idx];if(!k)return;
   if(k.noClosing&&k.noClosing.trim()!==''){showToast('Tidak bisa hapus -- terkait closing '+k.noClosing,'err');return;}
   if(!confirm('Hapus kasbon '+fRp(k.nominal)+' ('+k.tipe+') untuk '+k.nama+'?'))return;
-  S.logKasbon.splice(idx,1);ss(KS.ksb,S.logKasbon);showToast('\U0001f5d1 Kasbon dihapus');go('kasbon');
+  S.logKasbon.splice(idx,1);ss(KS.ksb,S.logKasbon);showToast('🗑 Kasbon dihapus');go('kasbon');
   doSync('deleteKasbon',{tgl:k.tgl,idKaryawan:k.idKaryawan,tipe:k.tipe,nominal:k.nominal});
 }
 // ── CLOSING
@@ -853,7 +853,7 @@ function pgClosing(){
       <div class="g2">
         <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${today()}"></div>
         <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="CLO-${new Date().toISOString().slice(0,7).replace('-','')}-001"></div></div>
-      <button class="btn btn-o btn-w" onclick="genClosing()">\U0001f4ca Generate Rekap</button>
+      <button class="btn btn-o btn-w" onclick="genClosing()">📊 Generate Rekap</button>
     </div>
     <div id="cls-rekap">${clsRekap.length>0?buildClsRekap():''}</div>`;
 }
@@ -870,7 +870,7 @@ function genClosing(){
   }).filter(r=>r.hari>0);
   clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
   if(!clsRekap.length){showToast('Tidak ada absensi belum dibayar','err');return;}
-  showToast('\u2705 '+clsRekap.length+' karyawan ditemukan');
+  showToast('✅ '+clsRekap.length+' karyawan ditemukan');
   document.getElementById('cls-rekap').innerHTML=buildClsRekap();
 }
 function buildClsRekap(){
@@ -880,7 +880,7 @@ function buildClsRekap(){
       <input type="checkbox" ${clsSel[r.idKaryawan]?'checked':''} onchange="clsSel['${r.idKaryawan}']=this.checked" style="width:20px;height:20px">
       <span class="item-name">${esc(r.nama)}</span></div>
       <div class="g2" style="margin-bottom:8px">
-        <div class="chip"><div class="chip-lbl">Hari \xb7 Upah</div><div class="chip-val">${r.hari} hr \xb7 ${fRp(r.totalUpah)}</div></div>
+        <div class="chip"><div class="chip-lbl">Hari · Upah</div><div class="chip-val">${r.hari} hr · ${fRp(r.totalUpah)}</div></div>
         <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:#c2410c">${fRp(r.sisaKasbon)}</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -889,7 +889,7 @@ function buildClsRekap(){
           oninput="let rv=this.value.replace(/[^0-9]/g,'');clsRekap[${i}].kasbonDipotong=parseInt(rv||'0');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';document.getElementById('cls-net-${i}').textContent=new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(clsRekap[${i}].totalUpah-clsRekap[${i}].kasbonDipotong)">
         <span id="cls-net-${i}" style="font-weight:700;font-size:13px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
       </div></div>`;
-  }).join('')+'<button class="btn btn-p btn-w" onclick="finalizeClosing()" style="margin-top:4px">\U0001f512 Finalize Closing</button>';
+  }).join('')+'<button class="btn btn-p btn-w" onclick="finalizeClosing()" style="margin-top:4px">🔒 Finalize Closing</button>';
 }
 function finalizeClosing(){
   const dari=document.getElementById('cls-dari').value,sampai=document.getElementById('cls-smp').value;
@@ -905,7 +905,7 @@ function finalizeClosing(){
   ss(KS.abs,S.logAbsensi);
   const ksbItems=clsRekap.filter(r=>clsSel[r.idKaryawan]&&Number(r.kasbonDipotong)>0);
   ksbItems.forEach(r=>{S.logKasbon.push({id:'KSB-CLO-'+Date.now()+'-'+r.idKaryawan,tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,tipe:'POTONG',nominal:Number(r.kasbonDipotong),noClosing:noC,ket:'Potong '+noC});});
-  ss(KS.ksb,S.logKasbon);showToast('\u2705 Closing '+noC+' selesai');
+  ss(KS.ksb,S.logKasbon);showToast('✅ Closing '+noC+' selesai');
   doSync('finalizeClosing',{dari,sampai,tglBayar,noClosing:noC,selectedIds:sIds,kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nominal:Number(r.kasbonDipotong)}))});
   clsRekap=[];clsSel={};go('closing');
 }
@@ -922,7 +922,7 @@ function bayarInput(){
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
   const items=S.payItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:#64748b">Pembayaran ${i+1}</span>
-      ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">\u2715</button>`:''}</div>
+      ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">✕</button>`:''}</div>
     <div class="fg"><label class="fl">Proyek</label><select class="fc" onchange="S.payItems[${i}].kodeProj=this.value">${prjOpts.replace(`value="${esc(it.kodeProj)}"`,`value="${esc(it.kodeProj)}" selected`)}</select></div>
     <div class="g2">
       <div class="fg"><label class="fl">Nominal (Rp)</label>
@@ -931,7 +931,7 @@ function bayarInput(){
         <div class="num-hint">Contoh: 10.000.000</div></div>
       <div class="fg"><label class="fl">Metode</label><select class="fc" onchange="S.payItems[${i}].metode=this.value"><option ${it.metode==='Transfer'?'selected':''}>Transfer</option><option ${it.metode==='Cash'?'selected':''}>Cash</option><option ${it.metode==='Cek'?'selected':''}>Cek</option><option ${it.metode==='Giro'?'selected':''}>Giro</option></select></div></div>
     <div class="g2">
-      <div class="fg"><label class="fl">Bank</label><input class="fc" value="${esc(it.bank)}" placeholder="BCA/BRI\u2026" oninput="S.payItems[${i}].bank=this.value"></div>
+      <div class="fg"><label class="fl">Bank</label><input class="fc" value="${esc(it.bank)}" placeholder="BCA/BRI…" oninput="S.payItems[${i}].bank=this.value"></div>
       <div class="fg"><label class="fl">Referensi</label><input class="fc" value="${esc(it.ref)}" oninput="S.payItems[${i}].ref=this.value"></div></div>
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" value="${esc(it.ket)}" oninput="S.payItems[${i}].ket=this.value"></div>
   </div>`).join('');
@@ -940,7 +940,7 @@ function bayarInput(){
     ${items}
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addPayRow()">+ Baris</button>
-      <button class="btn btn-p" style="flex:1" onclick="submitPay()">\U0001f4be Simpan</button></div></div>`;
+      <button class="btn btn-p" style="flex:1" onclick="submitPay()">💾 Simpan</button></div></div>`;
 }
 function addPayRow(){S.payItems.push({kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''});go('bayar');}
 function delPayRow(i){S.payItems.splice(i,1);go('bayar');}
@@ -948,7 +948,7 @@ function submitPay(){
   if(S.payItems.some(it=>!it.kodeProj||!it.nominal)){showToast('Lengkapi proyek & nominal','err');return;}
   const tgl=document.getElementById('pay-tgl').value;
   const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||''}));
-  S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast('\u2705 '+ni.length+' pembayaran dicatat');
+  S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast('✅ '+ni.length+' pembayaran dicatat');
   S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];setTab('bayar','log');
   doSync('addPembayaran',ni.map(it=>({tgl,kodeProj:it.kodeProj,nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
 }
@@ -959,11 +959,11 @@ function bayarLog(){
     return `<div class="card"><div class="row">
       <div style="flex:1;min-width:0">
         <div class="item-name">${esc(p.namaProj||p.kodeProj)}</div>
-        <div class="item-sub">${fDate(p.tgl)} \xb7 ${esc(p.metode)}${p.bank?' \xb7 '+esc(p.bank):''}</div>
+        <div class="item-sub">${fDate(p.tgl)} · ${esc(p.metode)}${p.bank?' · '+esc(p.bank):''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="font-weight:700;color:#10b981;font-size:14px">${fRp(p.nominal)}</div>
-        <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembayaran(${ri})">\U0001f5d1</button>
+        <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembayaran(${ri})">🗑</button>
       </div></div>
       ${p.ket?`<div class="item-sub" style="margin-top:4px">${esc(p.ket)}</div>`:''}</div>`;
   }).join('');
@@ -971,14 +971,14 @@ function bayarLog(){
 function delPembayaran(idx){
   const p=S.logPembayaran[idx];if(!p)return;
   if(!confirm('Hapus pembayaran '+fRp(p.nominal)+' dari proyek '+p.kodeProj+'?'))return;
-  S.logPembayaran.splice(idx,1);ss(KS.bayar,S.logPembayaran);showToast('\U0001f5d1 Pembayaran dihapus');go('bayar');
+  S.logPembayaran.splice(idx,1);ss(KS.bayar,S.logPembayaran);showToast('🗑 Pembayaran dihapus');go('bayar');
   doSync('deletePembayaran',{tgl:p.tgl,kodeProj:p.kodeProj,nominal:p.nominal});
 }
 // ── RAB
 function pgRAB(){
   const tab=S.tab.rab||'input';
   return `<div class="row" style="margin-bottom:11px">
-    <div class="sec-title" style="margin:0">\U0001f4d0 RAB Proyek</div>
+    <div class="sec-title" style="margin:0">📐 RAB Proyek</div>
     <div class="tabs">
       <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('rab','input')">Input</button>
       <button class="tab ${tab==='perband'?'tab-on':'tab-off'}" onclick="setTab('rab','perband')">Vs Realisasi</button>
@@ -995,21 +995,21 @@ function rabInput(){
   return `<div class="card" style="margin-bottom:10px">
     <div class="fg"><label class="fl">Proyek<span class="req">*</span></label>
       <select class="fc" onchange="loadRabForProj(this.value)">${prjOpts}</select></div>
-    ${existing?`<div style="font-size:11px;color:#16a34a;margin-top:-4px">\u2705 RAB tersimpan \xb7 Update: ${fDate(existing.tglUpdate)}</div>`:''}
+    ${existing?`<div style="font-size:11px;color:#16a34a;margin-top:-4px">✅ RAB tersimpan · Update: ${fDate(existing.tglUpdate)}</div>`:''}
   </div>
   ${S.rabKodeProj?`<div class="card">
     <div class="sec-title" style="font-size:13px;margin-bottom:4px">Estimasi Anggaran</div>
-    <div class="fg"><label class="fl">\U0001f9f1 Material</label>
-      ${numInp('rab-mat',nom.material,'0','oninput="S.rabNominal.material=parseInt(this.value.replace(/[^0-9]/g,\\'\\'))||0;applyNiFmt(this)"')}
+    <div class="fg"><label class="fl">🧱 Material</label>
+      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-mat\" value=\"${nom.material?Number(nom.material).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.material||0}\" oninput=\"applyNiFmt(this);S.rabNominal.material=parseInt(this.dataset.raw)||0\">
       <div class="num-hint">Cat, keramik, semen, besi, dll</div></div>
-    <div class="fg"><label class="fl">\U0001f477 Upah Tenaga</label>
-      ${numInp('rab-upah',nom.upah,'0','oninput="S.rabNominal.upah=parseInt(this.value.replace(/[^0-9]/g,\\'\\'))||0;applyNiFmt(this)"')}
+    <div class="fg"><label class="fl">👷 Upah Tenaga</label>
+      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-upah\" value=\"${nom.upah?Number(nom.upah).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.upah||0}\" oninput=\"applyNiFmt(this);S.rabNominal.upah=parseInt(this.dataset.raw)||0\">
       <div class="num-hint">Upah harian tim sendiri</div></div>
-    <div class="fg"><label class="fl">\U0001f528 Subkontraktor</label>
-      ${numInp('rab-sub',nom.subkon,'0','oninput="S.rabNominal.subkon=parseInt(this.value.replace(/[^0-9]/g,\\'\\'))||0;applyNiFmt(this)"')}
+    <div class="fg"><label class="fl">🔨 Subkontraktor</label>
+      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-sub\" value=\"${nom.subkon?Number(nom.subkon).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.subkon||0}\" oninput=\"applyNiFmt(this);S.rabNominal.subkon=parseInt(this.dataset.raw)||0\">
       <div class="num-hint">Borongan / tim luar</div></div>
-    <div class="fg"><label class="fl">\U0001f4e6 Overhead / Lain-lain</label>
-      ${numInp('rab-ovh',nom.overhead,'0','oninput="S.rabNominal.overhead=parseInt(this.value.replace(/[^0-9]/g,\\'\\'))||0;applyNiFmt(this)"')}
+    <div class="fg"><label class="fl">📦 Overhead / Lain-lain</label>
+      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-ovh\" value=\"${nom.overhead?Number(nom.overhead).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.overhead||0}\" oninput=\"applyNiFmt(this);S.rabNominal.overhead=parseInt(this.dataset.raw)||0\">
       <div class="num-hint">Transport, konsumsi, biaya tak terduga</div></div>
     ${total>0?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:12px;margin-top:4px;margin-bottom:12px">
       <div class="row" style="margin-bottom:8px">
@@ -1024,14 +1024,14 @@ function rabInput(){
         <span style="color:#64748b">Margin</span>
         <span style="font-weight:700;color:${laba>=0?'#16a34a':'#dc2626'}">${nilaiKontrak>0?Math.round(laba/nilaiKontrak*100):0}%</span></div>`:''}
     </div>`:''}
-    <button class="btn btn-p btn-w" onclick="saveRAB()">\U0001f4be Simpan RAB</button>
+    <button class="btn btn-p btn-w" onclick="saveRAB()">💾 Simpan RAB</button>
   </div>`:'<div class="empty">Pilih proyek dulu untuk input RAB</div>'}`;
 }
 function loadRabForProj(kodeProj){
   S.rabKodeProj=kodeProj;
   const ex=S.rab.find(r=>r.kodeProj===kodeProj);
   S.rabNominal=ex?{material:ex.material||0,upah:ex.upah||0,subkon:ex.subkon||0,overhead:ex.overhead||0}:{material:0,upah:0,subkon:0,overhead:0};
-  if(ex)showToast('\U0001f4c2 RAB dimuat','info');
+  if(ex)showToast('📂 RAB dimuat','info');
   go('rab');
 }
 function saveRAB(){
@@ -1042,7 +1042,7 @@ function saveRAB(){
   const rabData={kodeProj:S.rabKodeProj,tglUpdate:today(),material:Number(nom.material)||0,upah:Number(nom.upah)||0,subkon:Number(nom.subkon)||0,overhead:Number(nom.overhead)||0};
   const idx=S.rab.findIndex(r=>r.kodeProj===S.rabKodeProj);
   if(idx>=0)S.rab[idx]=rabData;else S.rab.push(rabData);
-  ss(KS.rab,S.rab);showToast('\u2705 RAB disimpan');go('rab');
+  ss(KS.rab,S.rab);showToast('✅ RAB disimpan');go('rab');
   doSync('saveRAB',rabData);
 }
 function rabPerbandingan(){
@@ -1063,7 +1063,7 @@ function rabPerbandingan(){
     return `<div class="card" style="margin-bottom:8px">
       <div class="row" style="margin-bottom:10px">
         <span style="font-weight:600;font-size:13px">${icon} ${lbl}</span>
-        ${rabVal>0?`<span class="bdg ${isOver?'bdg-red':'bdg-green'}">${isOver?'\u25b2 Over':'\u2713 OK'}</span>`:'<span class="bdg bdg-gray">Belum ada RAB</span>'}
+        ${rabVal>0?`<span class="bdg ${isOver?'bdg-red':'bdg-green'}">${isOver?'▲ Over':'✓ OK'}</span>`:'<span class="bdg bdg-gray">Belum ada RAB</span>'}
       </div>
       <div class="g2" style="margin-bottom:8px">
         <div class="chip"><div class="chip-lbl">RAB</div><div class="chip-val">${fRp(rabVal)}</div></div>
@@ -1072,7 +1072,7 @@ function rabPerbandingan(){
           <div class="chip-val" style="color:${isOver?'#dc2626':'#16a34a'}">${fRp(realVal)}</div>
         </div></div>
       ${rabVal>0?`<div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,pct)}%;background:${pct>100?'#ef4444':pct>80?'#f59e0b':'#10b981'}"></div></div>`:''}
-      ${sel!==0&&rabVal>0?`<div style="font-size:11px;margin-top:5px;color:${isOver?'#dc2626':'#16a34a'}">${isOver?'\u26a0\ufe0f Melebihi RAB':'\u2705 Hemat'}: ${fRp(Math.abs(sel))}</div>`:''}
+      ${sel!==0&&rabVal>0?`<div style="font-size:11px;margin-top:5px;color:${isOver?'#dc2626':'#16a34a'}">${isOver?'⚠️ Melebihi RAB':'✅ Hemat'}: ${fRp(Math.abs(sel))}</div>`:''}
     </div>`;
   };
   return `<div class="card" style="margin-bottom:10px">
@@ -1084,10 +1084,10 @@ function rabPerbandingan(){
       <div class="kpi"><div class="kpi-lbl">Total RAB</div><div class="kpi-val" style="color:#ea580c;font-size:11px">${fRp(rabT)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Realisasi</div><div class="kpi-val" style="color:${realT>rabT?'#dc2626':'#16a34a'};font-size:11px">${fRp(realT)}</div></div>
     </div></div>
-  ${rowComp('Material','\U0001f9f1',rab.material||0,realMat)}
-  ${rowComp('Upah Tenaga','\U0001f477',rab.upah||0,realUpah)}
-  ${rowComp('Subkontraktor','\U0001f528',rab.subkon||0,realSub)}
-  ${rab.overhead>0?rowComp('Overhead','\U0001f4e6',rab.overhead||0,0):''}
+  ${rowComp('Material','🧱',rab.material||0,realMat)}
+  ${rowComp('Upah Tenaga','👷',rab.upah||0,realUpah)}
+  ${rowComp('Subkontraktor','🔨',rab.subkon||0,realSub)}
+  ${rab.overhead>0?rowComp('Overhead','📦',rab.overhead||0,0):''}
   <div class="card" style="margin-top:4px">
     <div class="row" style="margin-bottom:10px"><span style="font-weight:700">Total Keseluruhan</span></div>
     <div class="g2">
@@ -1098,15 +1098,15 @@ function rabPerbandingan(){
       </div></div>
     ${rabT>0?`<div class="prog-bar" style="margin-top:10px"><div class="prog-fill" style="width:${Math.min(100,Math.round(realT/rabT*100))}%;background:${realT>rabT?'#ef4444':'#10b981'}"></div></div>
     <div style="font-size:12px;margin-top:6px"><span style="color:#64748b">Selisih: </span>
-    <span style="font-weight:700;color:${realT>rabT?'#dc2626':'#16a34a'}">${realT>rabT?'\u26a0\ufe0f Over':'\u2705 Hemat'} ${fRp(Math.abs(realT-rabT))}</span></div>`:''}
-    <div style="text-align:center;margin-top:12px"><button class="btn btn-o btn-sm" onclick="loadRabForProj('${esc(S.rabKodeProj)}');setTab('rab','input')">\u270f\ufe0f Edit RAB</button></div>
+    <span style="font-weight:700;color:${realT>rabT?'#dc2626':'#16a34a'}">${realT>rabT?'⚠️ Over':'✅ Hemat'} ${fRp(Math.abs(realT-rabT))}</span></div>`:''}
+    <div style="text-align:center;margin-top:12px"><button class="btn btn-o btn-sm" onclick="loadRabForProj('${esc(S.rabKodeProj)}');setTab('rab','input')">✏️ Edit RAB</button></div>
   </div>`;
 }
 // ── SUBKON
 function pgSubkon(){
   const tab=S.tab.subkon||'input';
   return `<div class="row" style="margin-bottom:11px">
-    <div class="sec-title" style="margin:0">\U0001f528 Subkontraktor</div>
+    <div class="sec-title" style="margin:0">🔨 Subkontraktor</div>
     <div class="tabs">
       <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('subkon','input')">Input</button>
       <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('subkon','log')">Log</button>
@@ -1115,7 +1115,7 @@ function pgSubkon(){
     </div></div>${tab==='input'?subkonInput():tab==='log'?subkonLog():tab==='master'?subkonMaster():subkonRekap()}`;
 }
 function subkonInput(){
-  if(!S.masterSubkon.length)return `<div class="info-box">\U0001f4a1 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">\u2192 Ke Master Subkon</button>`;
+  if(!S.masterSubkon.length)return `<div class="info-box">💡 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}">${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
   return `<div class="card">
@@ -1129,7 +1129,7 @@ function subkonInput(){
         <div class="num-hint">Contoh: 5.000.000</div></div>
       <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" type="date" id="sk-start" value="${today()}"></div></div>
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="sk-ket"></div>
-    <button class="btn btn-p btn-w" onclick="submitSubkon()">\U0001f4be Simpan Pekerjaan Subkon</button></div>`;
+    <button class="btn btn-p btn-w" onclick="submitSubkon()">💾 Simpan Pekerjaan Subkon</button></div>`;
 }
 function submitSubkon(){
   const tgl=document.getElementById('sk-tgl').value;
@@ -1141,7 +1141,7 @@ function submitSubkon(){
   const skData=S.masterSubkon.find(sk=>sk.id===idSubkon);
   const projData=S.projects.find(p=>p.kode===kodeProj);
   const newLS={id:'LSK-'+Date.now(),tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,tglMulai:document.getElementById('sk-start').value,statusBayar:'Belum Dibayar',nominalBayar:0,tglBayar:'',ket:document.getElementById('sk-ket').value};
-  S.logSubkon.push(newLS);ss(KS.lsk,S.logSubkon);showToast('\u2705 Pekerjaan subkon dicatat');setTab('subkon','log');
+  S.logSubkon.push(newLS);ss(KS.lsk,S.logSubkon);showToast('✅ Pekerjaan subkon dicatat');setTab('subkon','log');
   doSync('addLogSubkon',newLS);
 }
 function subkonLog(){
@@ -1157,7 +1157,7 @@ function subkonLog(){
         <div style="flex:1;min-width:0">
           <div class="item-name">${esc(ls.namaSubkon)}</div>
           <div class="item-sub">${esc(ls.uraian)}</div>
-          <div class="item-sub">${fDate(ls.tgl)} \xb7 ${esc(ls.namaProj||ls.kodeProj)}</div>
+          <div class="item-sub">${fDate(ls.tgl)} · ${esc(ls.namaProj||ls.kodeProj)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:8px">
           <div style="font-weight:700;font-size:13px">${fRp(ls.nilaiKontrak)}</div>
@@ -1165,24 +1165,24 @@ function subkonLog(){
         </div></div>
       ${sudahBayar>0?`<div style="font-size:12px;color:#64748b;margin-bottom:8px">
         Dibayar: <strong style="color:#16a34a">${fRp(sudahBayar)}</strong>
-        ${!isLunas?` \xb7 Sisa: <strong style="color:#dc2626">${fRp(sisa)}</strong>`:' \xb7 <span style="color:#16a34a;font-weight:600">\u2713 Lunas</span>'}
+        ${!isLunas?` · Sisa: <strong style="color:#dc2626">${fRp(sisa)}</strong>`:' · <span style="color:#16a34a;font-weight:600">✓ Lunas</span>'}
       </div>`:''}
       ${!isLunas?`<div style="margin-bottom:6px">
         <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(sudahBayar/ls.nilaiKontrak*100)}%;background:#10b981"></div></div>
         <div style="font-size:10px;color:#94a3b8;margin-top:2px">${Math.round(sudahBayar/ls.nilaiKontrak*100)}% terbayar</div>
       </div>`:''}
       <div class="act-row">
-        ${!isLunas?`<button class="btn btn-o btn-sm" onclick="openBayarSubkon(${ri})">\U0001f4b0 Bayar (sisa ${fRp(sisa)})</button>`:''}
-        <button class="btn btn-d btn-sm" onclick="delLogSubkon(${ri})">\U0001f5d1 Hapus</button>
+        ${!isLunas?`<button class="btn btn-o btn-sm" onclick="openBayarSubkon(${ri})">💰 Bayar (sisa ${fRp(sisa)})</button>`:''}
+        <button class="btn btn-d btn-sm" onclick="delLogSubkon(${ri})">🗑 Hapus</button>
       </div></div>`;
   }).join('');
 }
 function openBayarSubkon(idx){
   const ls=S.logSubkon[idx];
   const sudahBayar=ls.nominalBayar||0;const sisa=ls.nilaiKontrak-sudahBayar;
-  openModal(`<div class="modal-title">\U0001f4b0 Catat Pembayaran Subkon</div>
+  openModal(`<div class="modal-title">💰 Catat Pembayaran Subkon</div>
     <div style="margin-bottom:12px"><div class="item-name">${esc(ls.namaSubkon)}</div>
-      <div class="item-sub">${esc(ls.uraian)} \xb7 ${esc(ls.namaProj||ls.kodeProj)}</div></div>
+      <div class="item-sub">${esc(ls.uraian)} · ${esc(ls.namaProj||ls.kodeProj)}</div></div>
     <div class="g3" style="margin-bottom:12px">
       <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(ls.nilaiKontrak)}</div></div>
       <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Sudah Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(sudahBayar)}</div></div>
@@ -1194,7 +1194,7 @@ function openBayarSubkon(idx){
       <div class="num-hint">Maks sisa hutang: ${fRp(sisa)}</div></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveBayarSubkon(${idx})">\U0001f4be Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveBayarSubkon(${idx})">💾 Simpan</button></div>`);
 }
 function saveBayarSubkon(idx){
   const nom=getNum('sb-nom');const tgl=document.getElementById('sb-tgl').value;
@@ -1205,7 +1205,7 @@ function saveBayarSubkon(idx){
   const sts=sisa<=0?'Lunas':totalBayar>0?'DP':'Belum Dibayar';
   S.logSubkon[idx].nominalBayar=totalBayar;S.logSubkon[idx].statusBayar=sts;S.logSubkon[idx].tglBayar=tgl;
   ss(KS.lsk,S.logSubkon);closeModal();
-  showToast(sts==='Lunas'?'\u2705 Lunas! Pembayaran selesai':'\u2705 Pembayaran dicatat \xb7 Sisa: '+fRp(Math.max(0,sisa)));
+  showToast(sts==='Lunas'?'✅ Lunas! Pembayaran selesai':'✅ Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
   go('subkon');
   doSync('updateLogSubkon',{id:ls.id,kodeProj:ls.kodeProj,uraian:ls.uraian,nominalBayar:totalBayar,statusBayar:sts,tglBayar:tgl});
 }
@@ -1219,12 +1219,12 @@ function subkonMaster(){
     return `<div class="card"><div class="row">
       <div style="flex:1;min-width:0">
         <div class="item-name">${esc(sk.nama)}</div>
-        <div class="item-sub">${esc(sk.spesialisasi)}${sk.noHP?' \xb7 '+esc(sk.noHP):''}</div>
-        ${totalK>0?`<div class="item-sub" style="margin-top:4px">Total: ${fRp(totalK)}${sisa>0?' \xb7 <strong style="color:#dc2626">Hutang: '+fRp(sisa)+'</strong>':''}</div>`:''}
+        <div class="item-sub">${esc(sk.spesialisasi)}${sk.noHP?' · '+esc(sk.noHP):''}</div>
+        ${totalK>0?`<div class="item-sub" style="margin-top:4px">Total: ${fRp(totalK)}${sisa>0?' · <strong style="color:#dc2626">Hutang: '+fRp(sisa)+'</strong>':''}</div>`:''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;margin-left:8px">
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditSubkon(${i})">\u270f\ufe0f</button>
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delSubkon('${esc(sk.id)}')">\U0001f5d1</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditSubkon(${i})">✏️</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delSubkon('${esc(sk.id)}')">🗑</button>
       </div></div></div>`;
   }).join('')}`;
 }
@@ -1239,7 +1239,7 @@ function openAddSubkon(){
     <div class="fg"><label class="fl">Alamat / Catatan</label><input class="fc" id="sk2-alm"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveSubkon(false)">\U0001f4be Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveSubkon(false)">💾 Simpan</button></div>`);
 }
 function openEditSubkon(i){
   const sk=S.masterSubkon[i];
@@ -1253,23 +1253,23 @@ function openEditSubkon(i){
     <div class="fg"><label class="fl">Alamat / Catatan</label><input class="fc" id="sk2-alm" value="${esc(sk.alamat||'')}"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveSubkon(true)">\U0001f4be Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveSubkon(true)">💾 Simpan</button></div>`);
 }
 function saveSubkon(isEdit){
   const nama=document.getElementById('sk2-nama').value.trim();if(!nama){showToast('Nama wajib diisi','err');return;}
   const id=document.getElementById('sk2-id').value;
   const d={id,nama,spesialisasi:document.getElementById('sk2-spes').value,noHP:document.getElementById('sk2-hp').value,alamat:document.getElementById('sk2-alm').value};
   if(isEdit){const idx=Number(document.getElementById('sk2-idx').value);S.masterSubkon[idx]=d;}else S.masterSubkon.push(d);
-  ss(KS.sk,S.masterSubkon);closeModal();showToast(isEdit?'\u2705 Subkon diperbarui':'\u2705 Subkon ditambahkan');go('subkon');
+  ss(KS.sk,S.masterSubkon);closeModal();showToast(isEdit?'✅ Subkon diperbarui':'✅ Subkon ditambahkan');go('subkon');
   doSync(isEdit?'updateSubkon':'addSubkon',d);
 }
 function delSubkon(id){
   if(!confirm('Hapus subkon '+id+'?'))return;
-  S.masterSubkon=S.masterSubkon.filter(sk=>sk.id!==id);ss(KS.sk,S.masterSubkon);go('subkon');showToast('\U0001f5d1 Dihapus');doSync('deleteSubkon',{id});
+  S.masterSubkon=S.masterSubkon.filter(sk=>sk.id!==id);ss(KS.sk,S.masterSubkon);go('subkon');showToast('🗑 Dihapus');doSync('deleteSubkon',{id});
 }
 function delLogSubkon(idx){
   const ls=S.logSubkon[idx];if(!confirm('Hapus pekerjaan "'+ls.uraian+'"?'))return;
-  S.logSubkon.splice(idx,1);ss(KS.lsk,S.logSubkon);showToast('\U0001f5d1 Dihapus');go('subkon');
+  S.logSubkon.splice(idx,1);ss(KS.lsk,S.logSubkon);showToast('🗑 Dihapus');go('subkon');
   doSync('deleteLogSubkon',{id:ls.id,kodeProj:ls.kodeProj,uraian:ls.uraian});
 }
 function subkonRekap(){
@@ -1292,7 +1292,7 @@ function subkonRekap(){
     return `<div class="card">
       <div class="row" style="margin-bottom:10px">
         <div><div class="item-name">${esc(sk.nama)}</div><div class="item-sub">${esc(sk.spesialisasi)}</div></div>
-        ${sisa>0?bdg('Belum Dibayar'):'<span class="bdg bdg-green">\u2713 Lunas</span>'}
+        ${sisa>0?bdg('Belum Dibayar'):'<span class="bdg bdg-green">✓ Lunas</span>'}
       </div>
       <div class="g3" style="margin-bottom:10px">
         <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(totalK)}</div></div>
@@ -1301,7 +1301,7 @@ function subkonRekap(){
       </div>
       ${logs.map(ls=>`<div class="sub-card" style="margin-bottom:6px"><div class="row">
         <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(ls.uraian)}</div>
-          <div class="item-sub">${esc(ls.namaProj||ls.kodeProj)} \xb7 ${fDate(ls.tgl)}</div></div>
+          <div class="item-sub">${esc(ls.namaProj||ls.kodeProj)} · ${fDate(ls.tgl)}</div></div>
         <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-size:12px;font-weight:700">${fRp(ls.nilaiKontrak)}</div>${bdg(ls.statusBayar)}</div>
       </div></div>`).join('')}
     </div>`;
