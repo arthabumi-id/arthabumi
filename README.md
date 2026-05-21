@@ -6,7 +6,7 @@ Dibangun sebagai **single HTML file**, berjalan di browser tanpa instalasi.
 ## 🔗 Links
 
 - **App:** [GitHub Pages URL]
-- **GSheet:** Akuntansi_Kontraktor_GSheets (Google Drive arthabumi.id@gmail.com)
+- **GSheet:** Akuntansi_Kontraktor_GSheets
 - **Apps Script URL:** [isi setelah deploy]
 
 ## 📱 Fitur
