@@ -897,23 +897,132 @@ function closingBaru(){
 
 function closingLog(){
   const list=getClosingList();
-  if(!list.length)return '<div class="empty">Belum ada data closing</div>';
+  if(!list.length)return '<div class="empty">Belum ada data closing<br><br><button class="btn btn-o btn-sm" onclick="setTab(this.dataset.p,this.dataset.t)" data-p="closing" data-t="baru">+ Buat Closing</button></div>';
   return list.map(c=>{
     const ksbPotong=S.logKasbon.filter(x=>x.noClosing===c.noClosing&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
-    return `<div class="card">
-      <div class="row" style="margin-bottom:8px">
-        <div>
-          <div class="item-name">🔒 ${esc(c.noClosing)}</div>
-          <div class="item-sub">Tgl Bayar: ${fDate(c.tglBayar)} · ${c.karyawan.length} karyawan · ${c.jmlRecord} hari kerja</div>
+    const netBayar=c.totalUpah-ksbPotong;
+    return `<div class="card" style="cursor:pointer" onclick="openClosingDetail('${esc(c.noClosing)}')">
+      <div class="row" style="margin-bottom:10px">
+        <div style="flex:1;min-width:0">
+          <div class="item-name" style="color:#1d4ed8">🔒 ${esc(c.noClosing)}</div>
+          <div class="item-sub" style="margin-top:3px">📅 ${fDate(c.tglBayar)} &nbsp;·&nbsp; 👷 ${c.karyawan.length} karyawan &nbsp;·&nbsp; ${c.jmlRecord} hari kerja</div>
         </div>
-        <button style="background:#fee2e2;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;color:#b91c1c;flex-shrink:0" onclick="confirmDeleteClosing('${esc(c.noClosing)}')">🗑 Batal</button>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+          <span style="font-size:11px;color:#64748b">Lihat detail →</span>
+          <button style="background:#fee2e2;border:none;border-radius:8px;padding:6px 9px;font-size:13px;cursor:pointer;color:#b91c1c" onclick="event.stopPropagation();confirmDeleteClosing('${esc(c.noClosing)}')">🗑</button>
+        </div>
       </div>
-      <div class="g2">
-        <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(c.totalUpah)}</div></div>
-        <div class="chip" style="background:#faf5ff"><div class="chip-lbl">Kasbon Dipotong</div><div class="chip-val" style="color:#7c3aed">${fRp(ksbPotong)}</div></div>
+      <div class="g3">
+        <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(c.totalUpah)}</div></div>
+        <div class="chip" style="background:#faf5ff"><div class="chip-lbl">Potong Kasbon</div><div class="chip-val" style="color:#7c3aed">${fRp(ksbPotong)}</div></div>
+        <div class="chip" style="background:#eff6ff"><div class="chip-lbl">Net Dibayar</div><div class="chip-val" style="color:#1d4ed8;font-weight:800">${fRp(netBayar)}</div></div>
       </div>
     </div>`;
   }).join('');
+}
+
+// ── Detail Closing — modal rincian per karyawan
+function openClosingDetail(noClosing){
+  const c=getClosingList().find(x=>x.noClosing===noClosing);
+  if(!c)return;
+
+  // Kumpulkan semua absensi terkait closing ini, group per karyawan
+  const absClosing=S.logAbsensi.filter(a=>a.noClosing===noClosing);
+  const ksbClosing=S.logKasbon.filter(k=>k.noClosing===noClosing&&k.tipe==='POTONG');
+
+  // Group absensi per karyawan
+  const byKaryawan={};
+  absClosing.forEach(a=>{
+    if(!byKaryawan[a.idKaryawan]){
+      byKaryawan[a.idKaryawan]={
+        id:a.idKaryawan,nama:a.nama||a.idKaryawan,
+        records:[],totalUpah:0,
+      };
+    }
+    byKaryawan[a.idKaryawan].records.push(a);
+    byKaryawan[a.idKaryawan].totalUpah+=Number(a.upahHariIni)||0;
+  });
+
+  const totalUpah=Object.values(byKaryawan).reduce((s,k)=>s+k.totalUpah,0);
+  const totalPotong=ksbClosing.reduce((s,k)=>s+(Number(k.nominal)||0),0);
+  const netTotal=totalUpah-totalPotong;
+
+  // Build rows per karyawan
+  const krRows=Object.values(byKaryawan).map(kr=>{
+    const potong=ksbClosing.filter(k=>k.idKaryawan===kr.id).reduce((s,k)=>s+(Number(k.nominal)||0),0);
+    const net=kr.totalUpah-potong;
+    // Sort records by date
+    const sorted=[...kr.records].sort((a,b)=>String(a.tgl||'').localeCompare(String(b.tgl||'')));
+    const hariHadir=sorted.filter(r=>r.status==='Hadir').length;
+    const hariSetengah=sorted.filter(r=>r.status==='Setengah Hari').length;
+    // Absensi detail rows
+    const absRows=sorted.map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9">
+        <div>
+          <span style="font-size:11px;color:#475569">${fDate(r.tgl)}</span>
+          <span style="margin-left:6px;font-size:10px;padding:1px 6px;border-radius:9px;font-weight:600;background:${r.status==='Hadir'?'#dcfce7':r.status==='Setengah Hari'?'#fef9c3':'#f1f5f9'};color:${r.status==='Hadir'?'#15803d':r.status==='Setengah Hari'?'#854d0e':'#475569'}">${r.status}</span>
+          ${r.kodeProj?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">${esc(r.kodeProj)}</span>`:''}
+        </div>
+        <span style="font-size:12px;font-weight:600;color:#16a34a">${fRp(r.upahHariIni)}</span>
+      </div>`).join('');
+
+    return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:11px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div>
+          <div style="font-weight:700;font-size:13px;color:#1e293b">${esc(kr.nama)}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px">${kr.records.length} hari · ${hariHadir}× Hadir${hariSetengah>0?' · '+hariSetengah+'× Setengah':''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:#64748b">Upah: <strong style="color:#16a34a">${fRp(kr.totalUpah)}</strong></div>
+          ${potong>0?`<div style="font-size:11px;color:#7c3aed">Potong: -${fRp(potong)}</div>`:''}
+          <div style="font-size:13px;font-weight:800;color:${net>=0?'#1d4ed8':'#dc2626'}">Net: ${fRp(net)}</div>
+        </div>
+      </div>
+      <div style="max-height:200px;overflow-y:auto;padding-top:4px">
+        ${absRows}
+      </div>
+    </div>`;
+  }).join('');
+
+  openModal(`
+    <div class="modal-title">🔒 ${esc(noClosing)}</div>
+
+    <!-- Summary header -->
+    <div style="background:#0f172a;border-radius:12px;padding:12px;margin-bottom:14px">
+      <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ringkasan Closing</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="color:#cbd5e1;font-size:12px">📅 Tgl Bayar</span>
+        <span style="color:#fff;font-weight:600;font-size:12px">${fDate(c.tglBayar)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="color:#cbd5e1;font-size:12px">👷 Karyawan</span>
+        <span style="color:#fff;font-weight:600;font-size:12px">${c.karyawan.length} orang · ${c.jmlRecord} hari kerja</span>
+      </div>
+      <div style="height:1px;background:#334155;margin:8px 0"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="color:#94a3b8;font-size:11px">Total Upah</span>
+        <span style="color:#34d399;font-weight:700">${fRp(totalUpah)}</span>
+      </div>
+      ${totalPotong>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="color:#94a3b8;font-size:11px">Kasbon Dipotong</span>
+        <span style="color:#c084fc;font-weight:600">- ${fRp(totalPotong)}</span>
+      </div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid #334155;margin-top:4px">
+        <span style="color:#fff;font-size:13px;font-weight:700">💵 Net Dibayar</span>
+        <span style="color:#60a5fa;font-size:16px;font-weight:800">${fRp(netTotal)}</span>
+      </div>
+    </div>
+
+    <!-- Per karyawan -->
+    <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Rincian per Karyawan</div>
+    <div style="max-height:50vh;overflow-y:auto">
+      ${krRows||'<div class="empty">Tidak ada data absensi</div>'}
+    </div>
+
+    <div class="act-row" style="margin-top:12px">
+      <button class="btn btn-g" style="flex:1" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-d btn-sm" onclick="closeModal();confirmDeleteClosing('${esc(noClosing)}')">🗑 Batalkan Closing</button>
+    </div>`);
 }
 
 function genClosing(){
@@ -941,37 +1050,67 @@ function genClosing(){
   document.getElementById('cls-rekap').innerHTML=buildClsRekap();
 }
 
+function toggleAllCls(pilih){
+  clsRekap.forEach(r=>clsSel[r.idKaryawan]=pilih);
+  // Re-render rekap
+  document.getElementById('cls-rekap').innerHTML=buildClsRekap();
+}
+function toggleSatuCls(idKaryawan,checked){
+  clsSel[idKaryawan]=checked;
+  // Update total tanpa re-render penuh
+  const total=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah-(r.kasbonDipotong||0)),0);
+  const el=document.getElementById('cls-total');
+  if(el)el.textContent=fRp(total);
+  const selCount=clsRekap.filter(r=>clsSel[r.idKaryawan]).length;
+  const elCnt=document.getElementById('cls-sel-count');
+  if(elCnt)elCnt.textContent=selCount+' / '+clsRekap.length+' karyawan dipilih';
+}
 function buildClsRekap(){
+  const totalAll=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah-(r.kasbonDipotong||0)),0);
+  const selCount=clsRekap.filter(r=>clsSel[r.idKaryawan]).length;
   const rows=clsRekap.map((r,i)=>{
+    const isSel=!!clsSel[r.idKaryawan];
     const net=r.totalUpah-Number(r.kasbonDipotong||0);
-    return `<div class="card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <input type="checkbox" id="cls-chk-${i}" ${clsSel[r.idKaryawan]?'checked':''}
-          onchange="clsSel['${r.idKaryawan}']=this.checked" style="width:20px;height:20px;cursor:pointer">
-        <span class="item-name">${esc(r.nama)}</span>
-        <span style="font-size:11px;color:#64748b">${r.hari} hr</span>
+    return `<div class="card" id="cls-card-${i}" style="border:2px solid ${isSel?'#10b981':'#e2e8f0'};opacity:${isSel?'1':'0.55'};transition:all .15s">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer" onclick="toggleSatuCls('${r.idKaryawan}',!clsSel['${r.idKaryawan}']);document.getElementById('cls-card-${i}').style.border='2px solid '+(clsSel['${r.idKaryawan}']?'#10b981':'#e2e8f0');document.getElementById('cls-card-${i}').style.opacity=clsSel['${r.idKaryawan}']?'1':'0.55';document.getElementById('cls-chk-${i}').checked=!!clsSel['${r.idKaryawan}']">
+        <input type="checkbox" id="cls-chk-${i}" ${isSel?'checked':''}
+          onclick="event.stopPropagation();toggleSatuCls('${r.idKaryawan}',this.checked);document.getElementById('cls-card-${i}').style.border='2px solid '+(this.checked?'#10b981':'#e2e8f0');document.getElementById('cls-card-${i}').style.opacity=this.checked?'1':'0.55'"
+          style="width:22px;height:22px;cursor:pointer;accent-color:#10b981">
+        <div style="flex:1">
+          <div class="item-name">${esc(r.nama)}</div>
+          <div class="item-sub">${r.hari} hari kerja · ${fRp(r.totalUpah/r.hari)}/hari</div>
+        </div>
+        <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;background:${isSel?'#dcfce7':'#f1f5f9'};color:${isSel?'#15803d':'#94a3b8'}">${isSel?'✓ Dibayar':'— Skip'}</span>
       </div>
       <div class="g2" style="margin-bottom:8px">
-        <div class="chip"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(r.totalUpah)}</div></div>
+        <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(r.totalUpah)}</div></div>
         <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:#c2410c">${fRp(r.sisaKasbon)}</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <label style="font-size:11px;color:#64748b;white-space:nowrap">Potong kasbon:</label>
         <input class="fc" type="text" inputmode="numeric" id="cls-ksb-${i}"
           value="${r.kasbonDipotong?Number(r.kasbonDipotong).toLocaleString('id-ID'):''}"
-          style="flex:1" placeholder="0 (kosongkan jika tidak ada)"
-          oninput="let rv=this.value.replace(/[^0-9]/g,'');clsRekap[${i}].kasbonDipotong=parseInt(rv||'0')||0;this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';document.getElementById('cls-net-${i}').textContent='Rp '+((clsRekap[${i}].totalUpah-(clsRekap[${i}].kasbonDipotong||0))).toLocaleString('id-ID')">
+          style="flex:1" placeholder="0"
+          oninput="let rv=this.value.replace(/[^0-9]/g,'');clsRekap[${i}].kasbonDipotong=parseInt(rv||'0')||0;this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';const net=clsRekap[${i}].totalUpah-(clsRekap[${i}].kasbonDipotong||0);document.getElementById('cls-net-${i}').textContent=fRp(net);if(clsSel[clsRekap[${i}].idKaryawan]){const tot=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah-(r.kasbonDipotong||0)),0);const el=document.getElementById('cls-total');if(el)el.textContent=fRp(tot);}">
         <span id="cls-net-${i}" style="font-weight:800;font-size:14px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
       </div>
     </div>`;
   }).join('');
-  const totalUpahAll=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+r.totalUpah,0);
-  return rows+`
-    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:11px;padding:11px;margin-bottom:10px">
-      <div style="font-size:12px;color:#15803d;font-weight:600">
-        Total dibayar: <strong>${fRp(totalUpahAll)}</strong>
-        &nbsp;·&nbsp; ${clsRekap.length} karyawan
+  return `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:10px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span id="cls-sel-count" style="font-size:12px;font-weight:600;color:#334155">${selCount} / ${clsRekap.length} karyawan dipilih</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-o btn-sm" style="padding:5px 10px;font-size:11px" onclick="toggleAllCls(true)">Pilih Semua</button>
+          <button class="btn btn-g btn-sm" style="padding:5px 10px;font-size:11px" onclick="toggleAllCls(false)">Batal Semua</button>
+        </div>
       </div>
+      <div style="font-size:11px;color:#94a3b8">💡 Klik kartu atau centang untuk pilih siapa yang dibayar sekarang. Yg tidak dipilih tetap &quot;Belum Dibayar&quot;.</div>
+    </div>
+    ${rows}
+    <div style="background:#0f172a;border-radius:12px;padding:12px;margin-bottom:10px">
+      <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total Net Dibayar (${selCount} karyawan)</div>
+      <div id="cls-total" style="color:#34d399;font-size:20px;font-weight:800">${fRp(totalAll)}</div>
     </div>
     <button class="btn btn-p btn-w" onclick="finalizeClosing()">🔒 Finalize & Simpan Closing</button>`;
 }
