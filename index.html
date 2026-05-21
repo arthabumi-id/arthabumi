@@ -190,6 +190,20 @@ async function gsWrite(url,action,data){
   let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
   if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
 }
+// gsPost — POST request, tidak ada batas ukuran, untuk data besar (restore backup)
+async function gsPost(url,action,data){
+  const body=JSON.stringify({action,data});
+  const r=await fetch(url,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body,
+    redirect:'follow',
+    cache:'no-cache'
+  });
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
+  if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
+}
 function applyGS(d){
   if(!d)return;
   if(d.projects){S.projects=d.projects;ss(KS.p,d.projects);}
@@ -444,34 +458,92 @@ async function pushAllToGSheet(){
 
 async function doPushAllToGSheet(){
   if(!S.webAppUrl){showToast('Belum ada URL GSheet','err');return;}
-  showToast('📤 Mengirim data ke GSheet… Mohon tunggu','info');
-  S.syncing=true;updateSyncBadge();
+  S.syncing=true;S.syncError=null;updateSyncBadge();
 
-  const total=S.projects.length+S.pembelian.length+S.karyawan.length+
-    S.logAbsensi.length+S.logKasbon.length+S.logPembayaran.length+
-    S.masterSubkon.length+S.logSubkon.length+S.rab.length;
+  // Kirim per-kategori pakai POST (tidak ada batas ukuran)
+  // Setiap kategori = 1 request POST ke GSheet
+  const steps=[
+    {label:'Master Proyek',    key:'projects',      data:S.projects},
+    {label:'Master Karyawan',  key:'karyawan',      data:S.karyawan},
+    {label:'Master Toko',      key:'masterToko',    data:S.masterToko},
+    {label:'Master Subkon',    key:'masterSubkon',  data:S.masterSubkon},
+    {label:'Pembelian',        key:'pembelian',     data:S.pembelian},
+    {label:'Log Absensi',      key:'logAbsensi',    data:S.logAbsensi},
+    {label:'Log Kasbon',       key:'logKasbon',     data:S.logKasbon},
+    {label:'Log Pembayaran',   key:'logPembayaran', data:S.logPembayaran},
+    {label:'Log Subkon',       key:'logSubkon',     data:S.logSubkon},
+    {label:'RAB',              key:'rab',           data:S.rab},
+  ];
 
-  try{
-    const payload={
-      projects:    S.projects,
-      pembelian:   S.pembelian,
-      karyawan:    S.karyawan,
-      logAbsensi:  S.logAbsensi,
-      logKasbon:   S.logKasbon,
-      logPembayaran:S.logPembayaran,
-      masterToko:  S.masterToko,
-      masterSubkon:S.masterSubkon,
-      logSubkon:   S.logSubkon,
-      rab:         S.rab,
-    };
-    const d=await gsWrite(S.webAppUrl,'restoreFromBackup',payload);
-    applyGS(d);
-    showToast('✅ Semua data ('+total+' record) berhasil dikirim ke GSheet!');
-  }catch(e){
-    S.syncError=e.message;
-    showToast('❌ Gagal kirim ke GSheet: '+e.message,'err');
-  }finally{
-    S.syncing=false;updateSyncBadge();
+  // Tampilkan progress modal
+  openModal(`
+    <div class="modal-title">📤 Kirim ke GSheet</div>
+    <div id="push-progress" style="margin-bottom:14px">
+      <div id="push-step" style="font-size:13px;color:#475569;margin-bottom:8px">Menyiapkan…</div>
+      <div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden">
+        <div id="push-bar" style="height:100%;background:#10b981;border-radius:99px;transition:width .3s;width:0%"></div>
+      </div>
+      <div id="push-count" style="font-size:11px;color:#94a3b8;margin-top:5px">0 / ${steps.length} kategori</div>
+    </div>
+    <div id="push-log" style="max-height:180px;overflow-y:auto;font-size:11px;font-family:monospace;background:#f8fafc;border-radius:8px;padding:8px"></div>
+  `);
+
+  const bar=document.getElementById('push-bar');
+  const stepEl=document.getElementById('push-step');
+  const countEl=document.getElementById('push-count');
+  const logEl=document.getElementById('push-log');
+  function addLog(msg,ok=true){
+    if(logEl)logEl.innerHTML+='<div style="color:'+(ok?'#16a34a':'#dc2626')+'">'+msg+'</div>';
+  }
+
+  let done=0,totalRecords=0,errors=[];
+
+  for(const step of steps){
+    if(stepEl)stepEl.textContent='📤 '+step.label+'…';
+    try{
+      // Gunakan POST — tidak ada batas ukuran
+      const payload={};
+      payload[step.key]=step.data;
+      await gsPost(S.webAppUrl,'restoreFromBackup',payload);
+      totalRecords+=step.data.length;
+      addLog('✅ '+step.label+' ('+step.data.length+' record)');
+    }catch(e){
+      errors.push(step.label+': '+e.message);
+      addLog('❌ '+step.label+' gagal: '+e.message,false);
+    }
+    done++;
+    if(bar)bar.style.width=Math.round(done/steps.length*100)+'%';
+    if(countEl)countEl.textContent=done+' / '+steps.length+' kategori';
+    // Jeda 800ms agar GSheet tidak throttle
+    await new Promise(res=>setTimeout(res,800));
+  }
+
+  S.syncing=false;updateSyncBadge();
+
+  // Update pesan selesai di modal
+  if(stepEl){
+    if(errors.length===0){
+      stepEl.textContent='✅ Selesai! Semua data berhasil dikirim.';
+      stepEl.style.color='#16a34a';
+    }else{
+      stepEl.textContent='⚠️ Selesai dengan '+errors.length+' error.';
+      stepEl.style.color='#c2410c';
+    }
+  }
+  if(countEl)countEl.textContent=totalRecords+' total record dikirim ke GSheet';
+
+  // Tambah tombol Tutup & Sync di modal
+  const prog=document.getElementById('push-progress');
+  if(prog)prog.insertAdjacentHTML('afterend',`
+    <div class="act-row" style="margin-top:12px">
+      <button class="btn btn-g" style="flex:1" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-p" style="flex:1" onclick="closeModal();manualSync()">↻ Verifikasi GSheet</button>
+    </div>`);
+
+  if(errors.length===0){
+    showToast('✅ '+totalRecords+' record berhasil dikirim ke GSheet!');
+  }else{
+    showToast('⚠️ '+errors.length+' kategori gagal — cek log','err');
   }
 }
 
