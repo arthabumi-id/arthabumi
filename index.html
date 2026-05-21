@@ -375,10 +375,106 @@ function importData(){
       if(d.masterSubkon){S.masterSubkon=d.masterSubkon;ss(KS.sk,d.masterSubkon);}
       if(d.logSubkon){S.logSubkon=d.logSubkon;ss(KS.lsk,d.logSubkon);}
       if(bk.companyName){S.companyName=bk.companyName;ss(KS.co,{name:bk.companyName,tagline:S.companyTagline});}
-      closeModal();showToast('✅ Data berhasil di-restore dari '+file.name);go(S.page);
+      closeModal();
+      go(S.page);
+      // Tunjukkan modal pilihan push ke GSheet
+      showRestoreResult(file.name, bk);
     }catch(err){showToast('❌ Gagal import: '+err.message,'err');}
   };input.click();
 }
+
+function showRestoreResult(filename, bk){
+  const total=(bk.data.projects?.length||0)+(bk.data.pembelian?.length||0)+
+    (bk.data.logAbsensi?.length||0)+(bk.data.logKasbon?.length||0)+
+    (bk.data.logPembayaran?.length||0)+(bk.data.karyawan?.length||0);
+  const hasGS=!!S.webAppUrl;
+  openModal(`
+    <div class="modal-title">✅ Restore Berhasil</div>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:11px;padding:12px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:700;color:#15803d;margin-bottom:4px">Data lokal berhasil di-restore</div>
+      <div style="font-size:11px;color:#16a34a">📁 ${esc(filename)}</div>
+      <div style="font-size:11px;color:#16a34a;margin-top:2px">📊 ${total} record dimuat ke perangkat ini</div>
+    </div>
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:11px;padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;color:#c2410c;margin-bottom:6px">⚠️ GSheet BELUM diupdate</div>
+      <div style="font-size:11px;color:#92400e;line-height:1.6">
+        Restore hanya memulihkan data di perangkat ini.<br>
+        Data di Google Sheets <strong>belum berubah</strong>.
+      </div>
+    </div>
+    ${hasGS?`
+    <div style="font-size:12px;font-weight:600;color:#334155;margin-bottom:8px">Pilih langkah selanjutnya:</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-p btn-w" onclick="closeModal();pushAllToGSheet()">
+        📤 Kirim semua ke GSheet
+        <span style="font-size:10px;opacity:.8;display:block;font-weight:400;margin-top:1px">Tulis ulang semua data dari backup ke GSheet</span>
+      </button>
+      <button class="btn btn-o btn-w" onclick="closeModal();manualSync()">
+        ↻ Tarik data dari GSheet
+        <span style="font-size:10px;opacity:.8;display:block;font-weight:400;margin-top:1px">Pakai ini jika GSheet masih punya data terbaru</span>
+      </button>
+      <button class="btn btn-g btn-w" onclick="closeModal()">
+        Lewati — lokal saja dulu
+      </button>
+    </div>`:`
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:11px;font-size:11.5px;color:#1d4ed8">
+      💡 Belum terhubung ke GSheet. Hubungkan dulu di ⚙️ Settings, lalu tekan "Kirim semua ke GSheet".
+    </div>
+    <button class="btn btn-g btn-w" style="margin-top:10px" onclick="closeModal()">OK, mengerti</button>`}
+  `);
+}
+
+// ── Push semua data lokal → GSheet (untuk keperluan restore)
+async function pushAllToGSheet(){
+  if(!S.webAppUrl){showToast('Belum ada URL GSheet','err');return;}
+  openModal(`
+    <div class="modal-title">📤 Kirim ke GSheet</div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:12px;margin-bottom:14px;font-size:12px;color:#1d4ed8;line-height:1.6">
+      <strong>Proses ini akan:</strong><br>
+      • Hapus semua data di GSheet (kecuali formula)<br>
+      • Tulis ulang semua data dari backup<br><br>
+      <strong>⚠️ Data lama di GSheet akan terganti.</strong><br>
+      Pastikan backup ini adalah yang paling baru.
+    </div>
+    <div class="act-row">
+      <button class="btn btn-g" style="flex:1" onclick="closeModal()">Batal</button>
+      <button class="btn btn-d" style="flex:1" onclick="closeModal();doPushAllToGSheet()">Ya, Kirim Sekarang</button>
+    </div>`);
+}
+
+async function doPushAllToGSheet(){
+  if(!S.webAppUrl){showToast('Belum ada URL GSheet','err');return;}
+  showToast('📤 Mengirim data ke GSheet… Mohon tunggu','info');
+  S.syncing=true;updateSyncBadge();
+
+  const total=S.projects.length+S.pembelian.length+S.karyawan.length+
+    S.logAbsensi.length+S.logKasbon.length+S.logPembayaran.length+
+    S.masterSubkon.length+S.logSubkon.length+S.rab.length;
+
+  try{
+    const payload={
+      projects:    S.projects,
+      pembelian:   S.pembelian,
+      karyawan:    S.karyawan,
+      logAbsensi:  S.logAbsensi,
+      logKasbon:   S.logKasbon,
+      logPembayaran:S.logPembayaran,
+      masterToko:  S.masterToko,
+      masterSubkon:S.masterSubkon,
+      logSubkon:   S.logSubkon,
+      rab:         S.rab,
+    };
+    const d=await gsWrite(S.webAppUrl,'restoreFromBackup',payload);
+    applyGS(d);
+    showToast('✅ Semua data ('+total+' record) berhasil dikirim ke GSheet!');
+  }catch(e){
+    S.syncError=e.message;
+    showToast('❌ Gagal kirim ke GSheet: '+e.message,'err');
+  }finally{
+    S.syncing=false;updateSyncBadge();
+  }
+}
+
 function confirmClearAll(){
   if(!confirm('⚠️ HAPUS SEMUA DATA LOKAL?\n\nPastikan sudah backup dulu!\n\nLanjutkan?'))return;
   [KS.p,KS.beli,KS.kr,KS.abs,KS.ksb,KS.bayar,KS.brg,KS.toko,KS.rab,KS.sk,KS.lsk].forEach(k=>localStorage.removeItem(k));
