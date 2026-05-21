@@ -713,7 +713,7 @@ function submitAbsensi(){
     return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni:upah,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};});
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
   showToast('✅ Absensi '+active.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
-  doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,ket:a.ket})));
+  doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,status:a.status,kodeProj:a.kodeProj,upahHariIni:a.upahHariIni,ket:a.ket})));
 }
 function absLog(){
   const list=[...S.logAbsensi].reverse().slice(0,80);
@@ -767,7 +767,7 @@ function submitKasbon(){
   if(!id||!nom){showToast('Lengkapi karyawan & nominal','err');return;}
   const nk={id:'KSB-'+Date.now(),tgl:document.getElementById('ksb-tgl').value,idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:document.getElementById('ksb-tipe').value,nominal:nom,ket:document.getElementById('ksb-ket').value,noClosing:''};
   S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('✅ Kasbon disimpan');setTab('kasbon','log');
-  doSync('addKasbon',[{tgl:nk.tgl,idKaryawan:nk.idKaryawan,nama:nk.nama,tipe:nk.tipe,nominal:nk.nominal,ket:nk.ket}]);
+  doSync('addKasbon',[{tgl:nk.tgl,idKaryawan:nk.idKaryawan,tipe:nk.tipe,nominal:nk.nominal,ket:nk.ket}]);
 }
 function kasbonRekap(){
   return S.karyawan.map(k=>{
@@ -1125,7 +1125,7 @@ function finalizeClosing(){
   doSync('finalizeClosing',{
     dari,sampai,tglBayar,noClosing:noC,
     selectedIds:sIds,
-    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.kasbonDipotong)}))
+    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nominal:Number(r.kasbonDipotong)}))
   });
   clsRekap=[];clsSel={};
   setTab('closing','log');
@@ -1201,7 +1201,7 @@ function submitPay(){
   const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||''}));
   S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast('✅ '+ni.length+' pembayaran dicatat');
   S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];setTab('bayar','log');
-  doSync('addPembayaran',ni.map(it=>({tgl,kodeProj:it.kodeProj,namaProj:it.namaProj||'',nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
+  doSync('addPembayaran',ni.map(it=>({tgl,kodeProj:it.kodeProj,nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
 }
 function bayarLog(){
   const list=[...S.logPembayaran].reverse().slice(0,60);
