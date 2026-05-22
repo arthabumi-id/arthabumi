@@ -367,7 +367,15 @@ function buildPage(p){
 }
 // ── DASHBOARD
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
+function setDashView(v){S.tab.dashboard=v;go('dashboard');}
 function pgDashboard(){
+  const view=S.tab.dashboard||'rekap';
+  const tabBar=`<div class="tabs" style="margin-bottom:12px">
+    <button class="tab ${view==='rekap'?'tab-on':'tab-off'}" onclick="setDashView('rekap')">Proyek</button>
+    <button class="tab ${view==='piutang'?'tab-on':'tab-off'}" onclick="setDashView('piutang')">💰 Piutang</button>
+  </div>`;
+  if(view==='piutang')return `<div class="sec-title">${esc(S.companyName)}</div>${tabBar}${pgPiutang()}`;
+
   const filtered=S.dashFilter==='Semua'?S.projects:S.projects.filter(p=>p.status===S.dashFilter);
   const tK=filtered.reduce((s,p)=>s+(Number(p.nilaiKontrak)||0),0);
   const tB=S.logPembayaran.filter(x=>filtered.find(p=>p.kode===x.kodeProj)).reduce((s,p)=>s+(Number(p.nominal)||0),0);
@@ -389,7 +397,7 @@ function pgDashboard(){
     return `<div class="card">
       <div class="row" style="margin-bottom:8px">
         <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}</div></div>
-        ${bdg(p.status)}</div>
+        <div style="display:flex;align-items:center;gap:6px">${bdg(p.status)}<button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋 Rekap</button></div></div>
       <div class="g3">
         <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
         <div class="chip"><div class="chip-lbl">Biaya</div><div class="chip-val" style="color:#ea580c">${fRp(biaya)}</div></div>
@@ -406,6 +414,7 @@ function pgDashboard(){
     </div>`;
   });
   return `<div class="sec-title">${esc(S.companyName)}</div>
+    ${tabBar}
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">${filterBar}</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-lbl">Kontrak</div><div class="kpi-val" style="color:#2563eb">${fRp(tK)}</div></div>
@@ -414,6 +423,58 @@ function pgDashboard(){
       <div class="kpi"><div class="kpi-lbl">Diterima</div><div class="kpi-val" style="color:#7c3aed">${fRp(tB)}</div></div>
     </div>
     ${rows.length===0?'<div class="empty">Tidak ada proyek '+esc(S.dashFilter)+'</div>':rows.join('')}`;
+}
+
+// ── DASHBOARD PIUTANG ─────────────────────────────────────────────────
+function pgPiutang(){
+  const projs=S.projects
+    .map(p=>{
+      const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
+      const piutang=(Number(p.nilaiKontrak)||0)-bayar;
+      return{...p,bayar,piutang};
+    })
+    .filter(p=>p.piutang>0)
+    .sort((a,b)=>b.piutang-a.piutang);
+
+  if(!projs.length)return`<div style="text-align:center;padding:50px 20px">
+    <div style="font-size:36px;margin-bottom:8px">🎉</div>
+    <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px">Tidak ada piutang!</div>
+    <div style="font-size:13px;color:#94a3b8">Semua proyek sudah lunas.</div></div>`;
+
+  const totalPiutang=projs.reduce((s,p)=>s+p.piutang,0);
+  const totalKontrak=projs.reduce((s,p)=>s+(Number(p.nilaiKontrak)||0),0);
+  const totalBayar=projs.reduce((s,p)=>s+p.bayar,0);
+
+  const cards=projs.map(p=>{
+    const pct=p.nilaiKontrak>0?Math.round(p.bayar/p.nilaiKontrak*100):0;
+    const isHigh=p.piutang>=(Number(p.nilaiKontrak)||0)*0.5;
+    return `<div class="card" style="border-left:3px solid ${isHigh?'#ef4444':'#f97316'}">
+      <div class="row" style="margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div class="item-name">${esc(p.nama)}</div>
+          <div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${bdg(p.status)}
+          <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
+        <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Sudah Bayar (${pct}%)</div><div class="chip-val" style="color:#16a34a">${fRp(p.bayar)}</div></div>
+        <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Tagih</div><div class="chip-val" style="color:#dc2626;font-size:13px">${fRp(p.piutang)}</div></div>
+      </div>
+      <div style="margin-top:8px">
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:#10b981"></div></div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:3px">${pct}% terbayar</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="kpi-grid" style="margin-bottom:12px">
+    <div class="kpi" style="background:#fff7ed;border:1px solid #fed7aa"><div class="kpi-lbl">Total Piutang</div><div class="kpi-val" style="color:#dc2626">${fRp(totalPiutang)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">${projs.length} proyek belum lunas</div><div class="kpi-val" style="font-size:13px;color:#64748b">${fRp(totalBayar)} / ${fRp(totalKontrak)}</div></div>
+  </div>${cards}`;
 }
 // ── PROYEK
 function pgProject(){
@@ -426,6 +487,7 @@ function pgProject(){
       <div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
       ${bdg(p.status)}
+      <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
       <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${i})">✏️</button>
       <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">🗑</button>
     </div></div></div>`).join('')}`;
@@ -479,6 +541,90 @@ function delProject(kode){
   if(!confirm('Hapus proyek '+kode+'?'))return;
   S.projects=S.projects.filter(p=>p.kode!==kode);ss(KS.p,S.projects);go('project');
   showToast('🗑 Dihapus');doSync('deleteProject',{kode});
+}
+
+// ── REKAP PROYEK ──────────────────────────────────────────────────────
+function openRekapProyek(kode){
+  const p=S.projects.find(x=>x.kode===kode);
+  if(!p)return;
+  // Biaya
+  const matBiaya=S.pembelian.filter(b=>b.kodeProj===kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+  const upahTotal=S.logAbsensi.filter(a=>a.kodeProj===kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const upahSudah=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Sudah Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const subkonBiaya=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+  const totalBiaya=matBiaya+upahTotal+subkonBiaya;
+  // Pembayaran klien
+  const bayarRows=S.logPembayaran.filter(x=>x.kodeProj===kode).sort((a,b)=>b.tgl.localeCompare(a.tgl));
+  const bayarTotal=bayarRows.reduce((s,x)=>s+(Number(x.nominal)||0),0);
+  const piutang=(Number(p.nilaiKontrak)||0)-bayarTotal;
+  const laba=(Number(p.nilaiKontrak)||0)-totalBiaya;
+  const margin=p.nilaiKontrak>0?(laba/p.nilaiKontrak*100):0;
+  // RAB
+  const rab=S.rab.find(r=>r.kodeProj===kode);
+  const rabT=rab?(rab.material||0)+(rab.upah||0)+(rab.subkon||0)+(rab.overhead||0):0;
+  const pctRAB=rabT>0?Math.min(100,Math.round(totalBiaya/rabT*100)):0;
+  // Upah belum bayar per karyawan
+  const upahMap={};
+  S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').forEach(a=>{
+    if(!upahMap[a.idKaryawan])upahMap[a.idKaryawan]={nama:a.nama||a.idKaryawan,total:0,hari:0};
+    upahMap[a.idKaryawan].total+=(Number(a.upahHariIni)||0);
+    upahMap[a.idKaryawan].hari++;
+  });
+  const upahBelumList=Object.values(upahMap).sort((a,b)=>b.total-a.total);
+
+  const row2=(lbl,val,style='')=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:13px"><span style="color:#475569">${lbl}</span><span style="font-weight:700;${style}">${fRp(val)}</span></div>`;
+
+  openModal(`<div class="modal-title">📋 ${esc(p.nama)}</div>
+    <div style="font-size:11px;color:#64748b;margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span>${esc(p.kode)}</span><span>·</span><span>${esc(p.jenis)}</span>${p.tglMulai?`<span>·</span><span>Mulai ${fDate(p.tglMulai)}</span>`:''}
+      <span style="margin-left:2px">${bdg(p.status)}</span>
+    </div>
+
+    <div class="g2" style="margin-bottom:12px">
+      <div class="chip" style="background:#eff6ff"><div class="chip-lbl">Nilai Kontrak</div><div class="chip-val" style="color:#1d4ed8">${fRp(p.nilaiKontrak)}</div></div>
+      <div class="chip" style="${piutang>0?'background:#fff7ed':'background:#f0fdf4'}"><div class="chip-lbl">Piutang Klien</div><div class="chip-val" style="color:${piutang>0?'#dc2626':'#16a34a'}">${piutang>0?fRp(piutang):'Lunas ✓'}</div></div>
+      <div class="chip" style="background:#fef2f2"><div class="chip-lbl">Total Biaya</div><div class="chip-val" style="color:#dc2626">${fRp(totalBiaya)}</div></div>
+      <div class="chip" style="${laba>=0?'background:#f0fdf4':'background:#fff1f2'}"><div class="chip-lbl">Est. Laba (${margin.toFixed(1)}%)</div><div class="chip-val" style="color:${laba>=0?'#16a34a':'#dc2626'}">${fRp(laba)}</div></div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">BREAKDOWN BIAYA</div>
+    <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      ${row2('🧱 '+(rab&&rab.labelMat?esc(rab.labelMat):'Material'),matBiaya)}
+      ${row2('👷 '+(rab&&rab.labelUpah?esc(rab.labelUpah):'Upah Tenaga'),upahTotal)}
+      ${row2('🔨 '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
+      <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
+        <span style="color:#1e293b">Total</span><span style="color:#dc2626">${fRp(totalBiaya)}</span></div>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">
+      💰 UPAH BELUM DIBAYAR&nbsp;
+      ${upahBelum>0?`<span style="color:#dc2626;font-size:12px">${fRp(upahBelum)}</span>`:'<span style="color:#16a34a;font-size:12px">Semua lunas ✓</span>'}
+    </div>
+    ${upahBelumList.length===0
+      ?`<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;padding:8px 0">Tidak ada upah tertunggak di proyek ini.</div>`
+      :`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        ${upahBelumList.map(kr=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #fed7aa;font-size:12.5px">
+          <span style="color:#92400e">${esc(kr.nama)} <span style="color:#b45309;font-size:11px">${kr.hari} hari</span></span>
+          <span style="font-weight:700;color:#c2410c">${fRp(kr.total)}</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
+          <span style="color:#92400e">Dana yang perlu disiapkan</span><span style="color:#dc2626">${fRp(upahBelum)}</span></div>
+      </div>`}
+
+    <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">PEMBAYARAN KLIEN · ${fRp(bayarTotal)} diterima</div>
+    ${bayarRows.length===0
+      ?`<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;padding:8px 0">Belum ada pembayaran masuk.</div>`
+      :`<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        ${bayarRows.map(x=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0;font-size:12px">
+          <span style="color:#475569">${fDate(x.tgl)} · ${esc(x.metode||'')}${x.bank?' · '+esc(x.bank):''}</span>
+          <span style="font-weight:700;color:#2563eb">${fRp(x.nominal)}</span></div>`).join('')}
+      </div>`}
+
+    ${rabT>0?`<div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">RAB VS REALISASI · ${pctRAB}%</div>
+    <div class="prog-bar" style="margin-bottom:4px"><div class="prog-fill" style="width:${pctRAB}%;background:${totalBiaya>rabT?'#ef4444':'#10b981'}"></div></div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:12px">${totalBiaya>rabT?'⚠️ Biaya melebihi RAB':'✅ Masih dalam batas RAB'} (RAB ${fRp(rabT)})</div>`:''}
+
+    <button class="btn btn-g btn-w" onclick="closeModal()">Tutup</button>`);
 }
 // ── PEMBELIAN
 function pgBeli(){
