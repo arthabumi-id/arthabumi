@@ -398,7 +398,7 @@ function pgDashboard(){
     const pct=rabT>0?Math.min(100,Math.round(biaya/rabT*100)):0;
     return `<div class="card">
       <div class="row" style="margin-bottom:8px">
-        <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}</div></div>
+        <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}${p.catatan?' · 📝':''}</div></div>
         <div style="display:flex;align-items:center;gap:6px">${bdg(p.status)}<button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋 Rekap</button></div></div>
       <div class="g3">
         <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
@@ -492,7 +492,9 @@ function pgProject(){
       <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
       <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${i})">✏️</button>
       <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">🗑</button>
-    </div></div></div>`).join('')}`;
+    </div></div>
+    ${p.catatan?`<div style="margin-top:7px;padding:7px 10px;background:#fefce8;border-radius:8px;border-left:3px solid #eab308;font-size:12px;color:#713f12;white-space:pre-line;line-height:1.5">${esc(p.catatan)}</div>`:''}
+    </div>`).join('')}`;
 }
 function openAddProject(){
   const kode=padId('PRJ',S.projects,'kode');
@@ -507,6 +509,8 @@ function openAddProject(){
         ${numInp('p-kontrak',0,'350.000.000')}
         <div class="num-hint">Contoh: 35.000.000</div></div></div>
     <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date"></div>
+    <div class="fg"><label class="fl">📝 Catatan / Reminder</label>
+      <textarea class="fc" id="p-catatan" rows="3" placeholder="Contoh:&#10;HP Klien: 0812-xxxx&#10;Alamat: Jl. Mawar No. 5&#10;DP belum lunas — kejar tgl 1" style="resize:vertical;font-size:14px;line-height:1.5"></textarea></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveProject()">💾 Simpan</button></div>`);
@@ -524,6 +528,8 @@ function openEditProject(i){
       <div class="fg"><label class="fl">Nilai Kontrak<span class="req">*</span></label>
         ${numInp('p-kontrak',p.nilaiKontrak,'')}</div></div>
     <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date" value="${p.tglMulai||''}"></div>
+    <div class="fg"><label class="fl">📝 Catatan / Reminder</label>
+      <textarea class="fc" id="p-catatan" rows="3" placeholder="HP Klien, alamat, reminder, catatan teknis..." style="resize:vertical;font-size:14px;line-height:1.5">${esc(p.catatan||'')}</textarea></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveProject(true)">💾 Simpan</button></div>`);
@@ -533,7 +539,7 @@ function saveProject(isEdit){
   const nama=document.getElementById('p-nama').value.trim();
   const kontrak=getNum('p-kontrak');
   if(!kode||!nama||!kontrak){showToast('Lengkapi field wajib','err');return;}
-  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value};
+  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value,catatan:(document.getElementById('p-catatan').value||'').trim()};
   if(isEdit){const i=Number(document.getElementById('p-idx').value);S.projects[i]=d;}else S.projects.push(d);
   ss(KS.p,S.projects);closeModal();go('project');
   showToast(isEdit?'✅ Proyek diperbarui':'✅ Proyek ditambahkan');
@@ -666,10 +672,11 @@ function openRekapProyek(kode){
   const row2=(lbl,val,style='')=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:13px"><span style="color:#475569">${lbl}</span><span style="font-weight:700;${style}">${fRp(val)}</span></div>`;
 
   openModal(`<div class="modal-title">📋 ${esc(p.nama)}</div>
-    <div style="font-size:11px;color:#64748b;margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <div style="font-size:11px;color:#64748b;margin-bottom:${p.catatan?'8px':'14px'};display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <span>${esc(p.kode)}</span><span>·</span><span>${esc(p.jenis)}</span>${p.tglMulai?`<span>·</span><span>Mulai ${fDate(p.tglMulai)}</span>`:''}
       <span style="margin-left:2px">${bdg(p.status)}</span>
     </div>
+    ${p.catatan?`<div style="margin-bottom:14px;padding:10px 12px;background:#fefce8;border-radius:10px;border-left:3px solid #eab308;font-size:12.5px;color:#713f12;white-space:pre-line;line-height:1.6">📝 ${esc(p.catatan)}</div>`:''}
 
     <div class="g2" style="margin-bottom:12px">
       <div class="chip" style="background:#eff6ff"><div class="chip-lbl">Nilai Kontrak</div><div class="chip-val" style="color:#1d4ed8">${fRp(p.nilaiKontrak)}</div></div>
