@@ -136,6 +136,7 @@ const S={
   absRows:[],
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
   dashFilter:'Berjalan',
+  beliFilter:'',absFilter:'',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co'};
@@ -490,7 +491,7 @@ function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px">
       <span style="font-size:11px;font-weight:600;color:#64748b">Item ${i+1}</span>
@@ -524,19 +525,26 @@ function beliInput(){
       <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
     </div></div>`;
 }
+function setBeliFilter(v){S.beliFilter=v;go('beli');}
 function beliLog(){
-  const list=[...S.pembelian].reverse().slice(0,60);
-  return list.length===0?'<div class="empty">Belum ada data</div>':list.map(b=>{
+  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.beliFilter===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setBeliFilter(this.value)">${prjFilterOpts}</select></div>`;
+  const all=[...S.pembelian].reverse();
+  const list=(S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all).slice(0,60);
+  const namaProj=S.beliFilter?(S.projects.find(p=>p.kode===S.beliFilter)?.nama||S.beliFilter):'';
+  const emptyMsg=S.beliFilter?`<div class="empty">Tidak ada pembelian untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
+  return filterBar+(list.length===0?emptyMsg:list.map(b=>{
     const ri=S.pembelian.findIndex(x=>x.id===b.id);
+    const namaP=S.projects.find(p=>p.kode===b.kodeProj)?.nama||b.kodeProj;
     return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(b.namaBarang)}</div>
-        <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj)} · ${esc(b.toko||'')}</div></div>
+        <div class="item-sub">${fDate(b.tgl)} · ${esc(namaP)} · ${esc(b.toko||'')}</div></div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
         <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
       </div></div>
       <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div></div>`;
-  }).join('');
+  }).join(''));
 }
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
 function delBeliRow(i){S.formItems.splice(i,1);if(!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];go('beli');}
@@ -715,20 +723,26 @@ function submitAbsensi(){
   showToast('✅ Absensi '+active.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
   doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,ket:a.ket})));
 }
+function setAbsFilter(v){S.absFilter=v;go('absensi');}
 function absLog(){
-  const list=[...S.logAbsensi].reverse().slice(0,80);
-  if(!list.length)return '<div class="empty">Belum ada data</div>';
-  return list.map(a=>{
+  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.absFilter===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setAbsFilter(this.value)">${prjFilterOpts}</select></div>`;
+  const all=[...S.logAbsensi].reverse();
+  const list=(S.absFilter?all.filter(a=>a.kodeProj===S.absFilter):all).slice(0,80);
+  const namaProj=S.absFilter?(S.projects.find(p=>p.kode===S.absFilter)?.nama||S.absFilter):'';
+  const emptyMsg=S.absFilter?`<div class="empty">Tidak ada absensi untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
+  return filterBar+(list.length===0?emptyMsg:list.map(a=>{
     const ri=S.logAbsensi.findIndex(x=>x.id===a.id);
+    const namaP=S.projects.find(p=>p.kode===a.kodeProj)?.nama||a.kodeProj||'';
     return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(a.nama)}</div>
-        <div class="item-sub">${fDate(a.tgl)} · ${esc(a.kodeProj||'')} · ${fRp(a.upahHariIni)}</div></div>
+        <div class="item-sub">${fDate(a.tgl)} · ${esc(namaP)} · ${fRp(a.upahHariIni)}</div></div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
         ${bdg(a.status)}
         ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${ri})">🗑</button>`:''}
       </div></div>
       <div>${bdg(a.statusBayar)}</div></div>`;
-  }).join('');
+  }).join(''));
 }
 function delAbsensi(idx){
   const a=S.logAbsensi[idx];if(!a)return;
@@ -1170,7 +1184,7 @@ function pgBayar(){
 }
 function bayarInput(){
   if(!S.payItems||!S.payItems.length)S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const items=S.payItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:#64748b">Pembayaran ${i+1}</span>
       ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">✕</button>`:''}</div>
@@ -1367,7 +1381,7 @@ function pgSubkon(){
 }
 function subkonInput(){
   if(!S.masterSubkon.length)return `<div class="info-box">💡 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}">${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
   return `<div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="sk-tgl" value="${today()}"></div>
