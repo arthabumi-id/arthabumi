@@ -137,7 +137,7 @@ const S={
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
   rabLabels:{mat:'',upah:'',subkon:'',overhead:''},
   dashFilter:'Berjalan',
-  beliFilter:'',absFilter:'',
+  beliFilter:'',absFilter:'',beliSearchQ:'',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co'};
@@ -485,8 +485,12 @@ function pgBeli(){
   const tab=S.tab.beli||'input';
   return `<div class="row" style="margin-bottom:11px">
     <div class="sec-title" style="margin:0">Pembelian</div>
-    <div class="tabs"><button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button><button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button></div>
-  </div>${tab==='input'?beliInput():beliLog()}`;
+    <div class="tabs">
+      <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button>
+      <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button>
+      <button class="tab ${tab==='harga'?'tab-on':'tab-off'}" onclick="setTab('beli','harga')">Cek Harga</button>
+    </div>
+  </div>${tab==='input'?beliInput():tab==='log'?beliLog():beliCekHarga()}`;
 }
 function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
@@ -549,6 +553,63 @@ function beliLog(){
       <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
   }).join(''));
 }
+// ── CEK HARGA ─────────────────────────────────────────────────────────
+function beliCekHarga(){
+  return `<div class="fg" style="margin-bottom:10px">
+    <input class="fc" type="search" id="cek-harga-q" placeholder="🔍 Ketik nama barang..."
+      value="${esc(S.beliSearchQ||'')}"
+      oninput="S.beliSearchQ=this.value;_renderCekHarga()"
+      style="font-size:15px">
+  </div>
+  <div id="cek-harga-results">${_cekHargaResults()}</div>`;
+}
+function _cekHargaResults(){
+  const q=(S.beliSearchQ||'').toLowerCase().trim();
+  if(!q)return`<div class="empty" style="padding:30px 20px">Ketik nama barang untuk cek harga &amp; riwayat</div>`;
+  if(!S.masterBarang.length)return`<div class="empty">Data master barang kosong.<br>Sync dulu untuk memuat data.</div>`;
+  const items=S.masterBarang.filter(b=>b.nama.toLowerCase().includes(q));
+  if(!items.length)return`<div class="empty">Barang "<strong>${esc(q)}</strong>" belum ada di database</div>`;
+  const total=`<div style="font-size:11px;color:#94a3b8;margin-bottom:8px">${items.length} item ditemukan${items.length>30?' · tampil 30 teratas':''}</div>`;
+  const cards=items.slice(0,30).map(b=>{
+    const hist=S.pembelian
+      .filter(p=>p.namaBarang.toLowerCase()===b.nama.toLowerCase()&&Number(p.harga)>0)
+      .sort((a,c)=>c.tgl.localeCompare(a.tgl))
+      .slice(0,6);
+    const prices=hist.map(h=>Number(h.harga));
+    const minH=prices.length?Math.min(...prices):null;
+    const maxH=prices.length?Math.max(...prices):null;
+    const avgH=prices.length?Math.round(prices.reduce((s,v)=>s+v,0)/prices.length):null;
+    const rangeBar=prices.length>1?`<div style="display:flex;gap:10px;margin:5px 0 6px;flex-wrap:wrap">
+      <span style="font-size:11px;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px">Min ${fRp(minH)}</span>
+      <span style="font-size:11px;background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:20px">Avg ${fRp(avgH)}</span>
+      <span style="font-size:11px;background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:20px">Max ${fRp(maxH)}</span>
+    </div>`:prices.length===1?`<div style="margin-bottom:5px"></div>`:'';
+    const histRows=hist.map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:11.5px">
+      <div><span style="color:#475569;font-weight:600">${fDate(h.tgl)}</span>${h.toko?` · <span style="color:#64748b">${esc(h.toko)}</span>`:''}</div>
+      <div style="font-weight:700;color:#1e293b">${fRp(h.harga)} <span style="color:#94a3b8;font-weight:400">/ ${esc(h.satuan||b.satuan||'pcs')}</span></div>
+    </div>`).join('');
+    return `<div class="card" style="margin-bottom:8px">
+      <div class="row" style="margin-bottom:2px">
+        <div style="flex:1;min-width:0">
+          <div class="item-name">${esc(b.nama)}</div>
+          <div class="item-sub">${esc(b.kategori||'')}${b.kategori&&b.satuan?' · ':''}${esc(b.satuan||'')}</div>
+        </div>
+        <div style="text-align:right;margin-left:10px;flex-shrink:0">
+          <div style="font-size:16px;font-weight:800;color:#10b981">${fRp(b.hargaTerakhir)}</div>
+          <div style="font-size:10px;color:#94a3b8">harga terakhir</div>
+        </div>
+      </div>
+      ${rangeBar}
+      ${hist.length?`<div style="border-top:1px solid #f1f5f9;padding-top:4px">${histRows}</div>`:'<div style="font-size:11px;color:#94a3b8;margin-top:4px">Belum ada riwayat pembelian</div>'}
+    </div>`;
+  }).join('');
+  return total+cards;
+}
+function _renderCekHarga(){
+  const el=document.getElementById('cek-harga-results');
+  if(el)el.innerHTML=_cekHargaResults();
+}
+// ─────────────────────────────────────────────────────────────────────
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
 function delBeliRow(i){S.formItems.splice(i,1);if(!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];go('beli');}
 function submitBeli(){
