@@ -373,8 +373,10 @@ function pgDashboard(){
   const tabBar=`<div class="tabs" style="margin-bottom:12px">
     <button class="tab ${view==='rekap'?'tab-on':'tab-off'}" onclick="setDashView('rekap')">Proyek</button>
     <button class="tab ${view==='piutang'?'tab-on':'tab-off'}" onclick="setDashView('piutang')">💰 Piutang</button>
+    <button class="tab ${view==='hutang'?'tab-on':'tab-off'}" onclick="setDashView('hutang')">🔴 Hutang</button>
   </div>`;
   if(view==='piutang')return `<div class="sec-title">${esc(S.companyName)}</div>${tabBar}${pgPiutang()}`;
+  if(view==='hutang')return `<div class="sec-title">${esc(S.companyName)}</div>${tabBar}${pgHutang()}`;
 
   const filtered=S.dashFilter==='Semua'?S.projects:S.projects.filter(p=>p.status===S.dashFilter);
   const tK=filtered.reduce((s,p)=>s+(Number(p.nilaiKontrak)||0),0);
@@ -543,6 +545,94 @@ function delProject(kode){
   showToast('🗑 Dihapus');doSync('deleteProject',{kode});
 }
 
+// ── DASHBOARD HUTANG ──────────────────────────────────────────────────
+function pgHutang(){
+  // ── 1. Hutang Upah per Proyek ────────────────────────────────────────
+  const upahByProj={};
+  S.logAbsensi.filter(a=>a.statusBayar==='Belum Dibayar').forEach(a=>{
+    if(!upahByProj[a.kodeProj])upahByProj[a.kodeProj]={karyawan:{},total:0};
+    if(!upahByProj[a.kodeProj].karyawan[a.idKaryawan])
+      upahByProj[a.kodeProj].karyawan[a.idKaryawan]={nama:a.nama||a.idKaryawan,total:0,hari:0};
+    upahByProj[a.kodeProj].karyawan[a.idKaryawan].total+=(Number(a.upahHariIni)||0);
+    upahByProj[a.kodeProj].karyawan[a.idKaryawan].hari++;
+    upahByProj[a.kodeProj].total+=(Number(a.upahHariIni)||0);
+  });
+  const totalHutangUpah=Object.values(upahByProj).reduce((s,x)=>s+x.total,0);
+
+  // ── 2. Hutang Subkon ─────────────────────────────────────────────────
+  const subkonBelum=S.logSubkon.filter(ls=>ls.statusBayar==='Belum Dibayar');
+  const totalHutangSubkon=subkonBelum.reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0)-(Number(ls.nominalBayar)||0),0);
+
+  const grandTotal=totalHutangUpah+totalHutangSubkon;
+
+  if(grandTotal===0&&subkonBelum.length===0&&totalHutangUpah===0)
+    return`<div style="text-align:center;padding:50px 20px">
+      <div style="font-size:36px;margin-bottom:8px">✅</div>
+      <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px">Tidak ada hutang!</div>
+      <div style="font-size:13px;color:#94a3b8">Semua upah dan subkon sudah dibayar.</div></div>`;
+
+  // KPI
+  const kpi=`<div class="kpi-grid" style="margin-bottom:14px">
+    <div class="kpi" style="background:#fff1f2;border:1px solid #fecaca"><div class="kpi-lbl">Total Hutang</div><div class="kpi-val" style="color:#dc2626">${fRp(grandTotal)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Hutang Upah</div><div class="kpi-val" style="color:#ea580c">${fRp(totalHutangUpah)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">Hutang Subkon</div><div class="kpi-val" style="color:#7c3aed">${fRp(totalHutangSubkon)}</div></div>
+    <div class="kpi"><div class="kpi-lbl">${Object.keys(upahByProj).length} proyek · ${subkonBelum.length} subkon</div><div class="kpi-val" style="font-size:11px;color:#94a3b8">belum lunas</div></div>
+  </div>`;
+
+  // Bagian Upah
+  let upahSection='';
+  if(totalHutangUpah>0){
+    const projCards=Object.entries(upahByProj)
+      .sort((a,b)=>b[1].total-a[1].total)
+      .map(([kodeProj,data])=>{
+        const proj=S.projects.find(p=>p.kode===kodeProj);
+        const namaProj=proj?proj.nama:kodeProj;
+        const krList=Object.values(data.karyawan).sort((a,b)=>b.total-a.total);
+        return`<div class="card" style="border-left:3px solid #f97316;margin-bottom:8px">
+          <div class="row" style="margin-bottom:8px">
+            <div><div class="item-name">${esc(namaProj)}</div><div class="item-sub">${esc(kodeProj)}</div></div>
+            <div style="text-align:right">
+              <div style="font-size:15px;font-weight:800;color:#ea580c">${fRp(data.total)}</div>
+              <button class="btn btn-o btn-sm" style="font-size:10px;padding:3px 8px;margin-top:3px" onclick="go('closing')">Bayar →</button>
+            </div>
+          </div>
+          <div style="background:#fff7ed;border-radius:8px;padding:8px 10px">
+            ${krList.map(kr=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #fed7aa;font-size:12px">
+              <span style="color:#92400e">${esc(kr.nama)} <span style="color:#b45309;font-size:11px">${kr.hari} hari</span></span>
+              <span style="font-weight:700;color:#c2410c">${fRp(kr.total)}</span>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    upahSection=`<div style="font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:8px">👷 HUTANG UPAH KARYAWAN</div>${projCards}`;
+  }
+
+  // Bagian Subkon
+  let subkonSection='';
+  if(subkonBelum.length>0){
+    const subCards=subkonBelum
+      .sort((a,b)=>((Number(b.nilaiKontrak)||0)-(Number(b.nominalBayar)||0))-((Number(a.nilaiKontrak)||0)-(Number(a.nominalBayar)||0)))
+      .map(ls=>{
+        const sisa=(Number(ls.nilaiKontrak)||0)-(Number(ls.nominalBayar)||0);
+        const proj=S.projects.find(p=>p.kode===ls.kodeProj);
+        return`<div class="card" style="border-left:3px solid #7c3aed;margin-bottom:8px">
+          <div class="row">
+            <div style="flex:1;min-width:0">
+              <div class="item-name">${esc(ls.namaSubkon||ls.idSubkon)}</div>
+              <div class="item-sub">${esc(proj?proj.nama:ls.kodeProj)} · ${esc(ls.uraian||'')}</div>
+            </div>
+            <div style="text-align:right;margin-left:10px;flex-shrink:0">
+              <div style="font-size:14px;font-weight:800;color:#7c3aed">${fRp(sisa)}</div>
+              <div style="font-size:10px;color:#94a3b8">sisa dari ${fRp(ls.nilaiKontrak)}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    subkonSection=`<div style="font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin:12px 0 8px">🔨 HUTANG SUBKONTRAKTOR</div>${subCards}`;
+  }
+
+  return kpi+upahSection+subkonSection;
+}
 // ── REKAP PROYEK ──────────────────────────────────────────────────────
 function openRekapProyek(kode){
   const p=S.projects.find(x=>x.kode===kode);
