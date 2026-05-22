@@ -99,7 +99,64 @@ function _apiHandleAction(ss, action, data) {
     case "addPembayaran":     _apiAddPembayaran(ss, data);     break;
     case "finalizeClosing":   _apiFinalizeClosing(ss, data);   break;
     case "deleteAbsensi":     _apiDeleteAbsensi(ss, data);     break;
+    case "saveRAB":           _apiSaveRAB(ss, data);           break;
+    case "deleteRAB":         _apiDeleteRAB(ss, data);         break;
     default: throw new Error("Unknown action: " + action);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// WRITE: SAVE RAB (simpan/update anggaran + label kategori)
+// ════════════════════════════════════════════════════════════════════════
+
+function _apiSaveRAB(ss, d) {
+  var ws = ss.getSheetByName("RAB");
+  if (!ws) return;
+  var kodeProj = String(d.kodeProj || "").trim();
+  if (!kodeProj) return;
+  // Cari baris existing atau pakai baris berikutnya
+  var data = ws.getRange("B4:B53").getValues();
+  var r = -1;
+  for (var i = 0; i < data.length; i++) {
+    if (String(data[i][0]).trim() === kodeProj) { r = i + 4; break; }
+  }
+  if (r < 0) {
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][0]).trim() === "") { r = i + 4; break; }
+    }
+  }
+  if (r < 0) return; // Sheet penuh
+  ws.getRange(r, 1).setValue(r - 3);
+  ws.getRange(r, 2).setValue(kodeProj);
+  ws.getRange(r, 3).setValue(Number(d.material) || 0).setNumberFormat("#,##0");
+  ws.getRange(r, 4).setValue(Number(d.upah)     || 0).setNumberFormat("#,##0");
+  ws.getRange(r, 5).setValue(Number(d.subkon)   || 0).setNumberFormat("#,##0");
+  ws.getRange(r, 6).setValue(Number(d.overhead) || 0).setNumberFormat("#,##0");
+  ws.getRange(r, 7).setFormula("=C"+r+"+D"+r+"+E"+r+"+F"+r).setNumberFormat("#,##0");
+  var tglParsed = d.tglUpdate ? new Date(d.tglUpdate) : new Date();
+  ws.getRange(r, 8).setValue(tglParsed).setNumberFormat("dd/MM/yyyy");
+  // Label kategori (kolom I–L)
+  ws.getRange(r, 9).setValue(d.labelMat     || "");
+  ws.getRange(r, 10).setValue(d.labelUpah   || "");
+  ws.getRange(r, 11).setValue(d.labelSubkon || "");
+  ws.getRange(r, 12).setValue(d.labelOverhead || "");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// WRITE: DELETE RAB
+// ════════════════════════════════════════════════════════════════════════
+
+function _apiDeleteRAB(ss, d) {
+  var ws = ss.getSheetByName("RAB");
+  if (!ws) return;
+  var kodeProj = String(d.kodeProj || "").trim();
+  if (!kodeProj) return;
+  var data = ws.getRange("B4:B53").getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (String(data[i][0]).trim() === kodeProj) {
+      ws.getRange(i + 4, 1, 1, 12).clearContent();
+      break;
+    }
   }
 }
 
@@ -239,7 +296,7 @@ function _apiReadPembelian(ss) {
       satuan:     String(r[5]  || "pcs"),
       qty:        Number(r[6])  || 0,
       harga:      Number(r[7])  || 0,
-      diskon:     r[8] ? Number(r[8]) * 100 : 0,
+      diskon:     Number(r[8]) || 0,
       status:     String(r[9]  || "HABIS"),
       toko:       String(r[10] || ""),
       total:      Number(r[11]) || 0,
@@ -442,11 +499,11 @@ function _apiAddPembelian(ss, items) {
     ws.getRange(r, 6).setValue(it.satuan     || "pcs");
     ws.getRange(r, 7).setValue(it.qty        || 0);
     ws.getRange(r, 8).setValue(it.harga      || 0).setNumberFormat("#,##0");
-    ws.getRange(r, 9).setValue(it.diskon ? it.diskon / 100 : "").setNumberFormat("0.0%");
+    ws.getRange(r, 9).setValue(it.diskon || "").setNumberFormat("#,##0");
     ws.getRange(r, 10).setValue(it.status    || "HABIS");
     ws.getRange(r, 11).setValue(it.toko      || "");
     ws.getRange(r, 12).setFormula(
-      '=IF(OR(D'+r+'="",G'+r+'="",H'+r+'=""),"",IF(J'+r+'="ASET",0,G'+r+'*H'+r+'*(1-IF(I'+r+'="",0,I'+r+'))))'
+      '=IF(OR(D'+r+'="",G'+r+'="",H'+r+'=""),"",IF(J'+r+'="ASET",0,MAX(0,G'+r+'*H'+r+'-IFERROR(I'+r+',0))))'
     ).setNumberFormat("#,##0");
   }
 

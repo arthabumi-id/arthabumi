@@ -1263,24 +1263,27 @@ function rabInput(){
   return `<div class="card" style="margin-bottom:10px">
     <div class="fg"><label class="fl">Proyek<span class="req">*</span></label>
       <select class="fc" onchange="loadRabForProj(this.value)">${prjOpts}</select></div>
-    ${existing?`<div style="font-size:11px;color:#16a34a;margin-top:-4px">✅ RAB tersimpan · Update: ${fDate(existing.tglUpdate)}</div>`:''}
+    ${existing?`<div class="row" style="margin-top:-4px">
+      <div style="font-size:11px;color:#16a34a">✅ RAB tersimpan · Update: ${fDate(existing.tglUpdate)}</div>
+      <button class="btn btn-d btn-sm" style="font-size:11px;padding:4px 10px" onclick="deleteRAB()">🗑 Hapus RAB</button>
+    </div>`:''}
   </div>
   ${S.rabKodeProj?`<div class="card">
     <div class="sec-title" style="font-size:13px;margin-bottom:4px">Estimasi Anggaran</div>
     <div class="fg">
-      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 1 (cth: Material, Rangka Besi, Keramik…)" value="${esc(S.rabLabels.mat)}" oninput="S.rabLabels.mat=this.value">
+      <input id="rab-lbl-mat" class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 1 (cth: Material, Rangka Besi, Keramik…)" value="${esc(S.rabLabels.mat)}" oninput="S.rabLabels.mat=this.value">
       <input class="fc" type="text" inputmode="numeric" id="rab-mat" value="${nom.material?Number(nom.material).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.material||0}" oninput="applyNiFmt(this);S.rabNominal.material=parseInt(this.dataset.raw)||0">
     </div>
     <div class="fg">
-      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 2 (cth: Upah Tenaga, Tim Borongan…)" value="${esc(S.rabLabels.upah)}" oninput="S.rabLabels.upah=this.value">
+      <input id="rab-lbl-upah" class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 2 (cth: Upah Tenaga, Tim Borongan…)" value="${esc(S.rabLabels.upah)}" oninput="S.rabLabels.upah=this.value">
       <input class="fc" type="text" inputmode="numeric" id="rab-upah" value="${nom.upah?Number(nom.upah).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.upah||0}" oninput="applyNiFmt(this);S.rabNominal.upah=parseInt(this.dataset.raw)||0">
     </div>
     <div class="fg">
-      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 3 (cth: Subkon, Las & Bending…)" value="${esc(S.rabLabels.subkon)}" oninput="S.rabLabels.subkon=this.value">
+      <input id="rab-lbl-sub" class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 3 (cth: Subkon, Las & Bending…)" value="${esc(S.rabLabels.subkon)}" oninput="S.rabLabels.subkon=this.value">
       <input class="fc" type="text" inputmode="numeric" id="rab-sub" value="${nom.subkon?Number(nom.subkon).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.subkon||0}" oninput="applyNiFmt(this);S.rabNominal.subkon=parseInt(this.dataset.raw)||0">
     </div>
     <div class="fg">
-      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 4 (cth: Overhead, Transport, Lain-lain…)" value="${esc(S.rabLabels.overhead)}" oninput="S.rabLabels.overhead=this.value">
+      <input id="rab-lbl-ovh" class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 4 (cth: Overhead, Transport, Lain-lain…)" value="${esc(S.rabLabels.overhead)}" oninput="S.rabLabels.overhead=this.value">
       <input class="fc" type="text" inputmode="numeric" id="rab-ovh" value="${nom.overhead?Number(nom.overhead).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.overhead||0}" oninput="applyNiFmt(this);S.rabNominal.overhead=parseInt(this.dataset.raw)||0">
     </div>
     ${total>0?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:12px;margin-top:4px;margin-bottom:12px">
@@ -1309,14 +1312,33 @@ function loadRabForProj(kodeProj){
 }
 function saveRAB(){
   if(!S.rabKodeProj){showToast('Pilih proyek dulu','err');return;}
+  // Baca label langsung dari DOM (paling akurat) lalu update state
+  const lm=document.getElementById('rab-lbl-mat')?.value??S.rabLabels.mat??'';
+  const lu=document.getElementById('rab-lbl-upah')?.value??S.rabLabels.upah??'';
+  const ls=document.getElementById('rab-lbl-sub')?.value??S.rabLabels.subkon??'';
+  const lo=document.getElementById('rab-lbl-ovh')?.value??S.rabLabels.overhead??'';
+  S.rabLabels={mat:lm,upah:lu,subkon:ls,overhead:lo};
   const nom=S.rabNominal;
   const total=(Number(nom.material)||0)+(Number(nom.upah)||0)+(Number(nom.subkon)||0)+(Number(nom.overhead)||0);
   if(!total){showToast('Isi minimal satu angka','err');return;}
-  const rabData={kodeProj:S.rabKodeProj,tglUpdate:today(),material:Number(nom.material)||0,upah:Number(nom.upah)||0,subkon:Number(nom.subkon)||0,overhead:Number(nom.overhead)||0,labelMat:S.rabLabels.mat||'',labelUpah:S.rabLabels.upah||'',labelSubkon:S.rabLabels.subkon||'',labelOverhead:S.rabLabels.overhead||''};
+  const rabData={kodeProj:S.rabKodeProj,tglUpdate:today(),material:Number(nom.material)||0,upah:Number(nom.upah)||0,subkon:Number(nom.subkon)||0,overhead:Number(nom.overhead)||0,labelMat:lm,labelUpah:lu,labelSubkon:ls,labelOverhead:lo};
   const idx=S.rab.findIndex(r=>r.kodeProj===S.rabKodeProj);
   if(idx>=0)S.rab[idx]=rabData;else S.rab.push(rabData);
   ss(KS.rab,S.rab);showToast('✅ RAB disimpan');go('rab');
   doSync('saveRAB',rabData);
+}
+function deleteRAB(){
+  if(!S.rabKodeProj)return;
+  const proj=S.projects.find(p=>p.kode===S.rabKodeProj);
+  const namaProj=proj?.nama||S.rabKodeProj;
+  if(!confirm('Hapus RAB untuk "'+namaProj+'"?\nData anggaran akan dihapus permanen.'))return;
+  const kodeProj=S.rabKodeProj;
+  S.rab=S.rab.filter(r=>r.kodeProj!==kodeProj);
+  S.rabNominal={material:0,upah:0,subkon:0,overhead:0};
+  S.rabLabels={mat:'',upah:'',subkon:'',overhead:''};
+  ss(KS.rab,S.rab);
+  showToast('🗑 RAB dihapus');go('rab');
+  doSync('deleteRAB',{kodeProj});
 }
 function rabPerbandingan(){
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.rabKodeProj===p.kode?'selected':''}>${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
