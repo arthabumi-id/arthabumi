@@ -135,6 +135,7 @@ const S={
   payItems:[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}],
   absRows:[],
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
+  rabLabels:{mat:'',upah:'',subkon:'',overhead:''},
   dashFilter:'Berjalan',
   beliFilter:'',absFilter:'',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
@@ -158,7 +159,7 @@ const fDate=d=>{if(!d)return'-';try{
 }catch{return d;}};
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const calcTotal=it=>{const b=(Number(it.qty)||0)*(Number(it.harga)||0),d=it.diskon>0?b*(it.diskon/100):0;return it.status==='ASET'?0:b-d;};
+const calcTotal=it=>{const b=(Number(it.qty)||0)*(Number(it.harga)||0),d=Number(it.diskon)||0;return it.status==='ASET'?0:Math.max(0,b-d);};
 const padId=(pfx,arr,key='id')=>pfx+'-'+String(Math.max(0,...arr.map(x=>parseInt((x[key]||'0').split('-').pop())||0))+1).padStart(3,'0');
 const bdgClass=s=>({Berjalan:'bdg-blue',Selesai:'bdg-green',Hold:'bdg-yellow',Batal:'bdg-red',Hadir:'bdg-green','Tidak Hadir':'bdg-red','Setengah Hari':'bdg-yellow',Libur:'bdg-gray',AMBIL:'bdg-orange',POTONG:'bdg-purple','Belum Dibayar':'bdg-red','Sudah Dibayar':'bdg-green',DP:'bdg-orange',Lunas:'bdg-green'}[s]||'bdg-gray');
 const bdg=(s,extra='')=>`<span class="bdg ${bdgClass(s)} ${extra}">${esc(s)}</span>`;
@@ -505,7 +506,9 @@ function beliInput(){
       <div class="fg"><label class="fl">Harga (Rp)</label>
         <input class="fc" type="text" inputmode="numeric" value="${it.harga?Number(it.harga).toLocaleString('id-ID'):''}" placeholder="0" data-raw="${it.harga||0}"
           oninput="let r=this.value.replace(/[^0-9]/g,'');S.formItems[${i}].harga=parseInt(r||'0');this.value=r?parseInt(r).toLocaleString('id-ID'):''"></div>
-      <div class="fg"><label class="fl">Diskon%</label><input class="fc" type="number" value="${it.diskon}" oninput="S.formItems[${i}].diskon=this.value"></div>
+      <div class="fg"><label class="fl">Diskon (Rp)</label>
+        <input class="fc" type="text" inputmode="numeric" value="${it.diskon?Number(it.diskon).toLocaleString('id-ID'):''}" placeholder="0" data-raw="${it.diskon||0}"
+          oninput="let r=this.value.replace(/[^0-9]/g,'');S.formItems[${i}].diskon=parseInt(r||'0');this.value=r?parseInt(r).toLocaleString('id-ID'):''"></div>
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Status</label><select class="fc" onchange="S.formItems[${i}].status=this.value"><option ${it.status==='HABIS'?'selected':''}>HABIS</option><option ${it.status==='SISA'?'selected':''}>SISA</option><option ${it.status==='ASET'?'selected':''}>ASET</option></select></div>
@@ -543,7 +546,7 @@ function beliLog(){
         <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
         <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
       </div></div>
-      <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' -'+b.diskon+'%':''}</div></div>`;
+      <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
   }).join(''));
 }
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
@@ -711,7 +714,7 @@ function absInput(){
   </div>
   <button class="btn btn-p btn-w" onclick="submitAbsensi()">💾 Simpan Absensi</button>`:''}`;
 }
-function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};S.absRows[i][key]=val;if(key==='status')go('absensi');}
+function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};if(key==='status'&&S.absRows[i].status===val){S.absRows[i].status='';go('absensi');return;}S.absRows[i][key]=val;if(key==='status')go('absensi');}
 function submitAbsensi(){
   const tgl=document.getElementById('abs-tgl')?.value||today();
   const defProj=document.getElementById('abs-prj')?.value||'';
@@ -1264,18 +1267,22 @@ function rabInput(){
   </div>
   ${S.rabKodeProj?`<div class="card">
     <div class="sec-title" style="font-size:13px;margin-bottom:4px">Estimasi Anggaran</div>
-    <div class="fg"><label class="fl">🧱 Material</label>
-      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-mat\" value=\"${nom.material?Number(nom.material).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.material||0}\" oninput=\"applyNiFmt(this);S.rabNominal.material=parseInt(this.dataset.raw)||0\">
-      <div class="num-hint">Cat, keramik, semen, besi, dll</div></div>
-    <div class="fg"><label class="fl">👷 Upah Tenaga</label>
-      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-upah\" value=\"${nom.upah?Number(nom.upah).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.upah||0}\" oninput=\"applyNiFmt(this);S.rabNominal.upah=parseInt(this.dataset.raw)||0\">
-      <div class="num-hint">Upah harian tim sendiri</div></div>
-    <div class="fg"><label class="fl">🔨 Subkontraktor</label>
-      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-sub\" value=\"${nom.subkon?Number(nom.subkon).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.subkon||0}\" oninput=\"applyNiFmt(this);S.rabNominal.subkon=parseInt(this.dataset.raw)||0\">
-      <div class="num-hint">Borongan / tim luar</div></div>
-    <div class="fg"><label class="fl">📦 Overhead / Lain-lain</label>
-      <input class=\"fc\" type=\"text\" inputmode=\"numeric\" id=\"rab-ovh\" value=\"${nom.overhead?Number(nom.overhead).toLocaleString('id-ID'):''}\" placeholder=\"0\" data-raw=\"${nom.overhead||0}\" oninput=\"applyNiFmt(this);S.rabNominal.overhead=parseInt(this.dataset.raw)||0\">
-      <div class="num-hint">Transport, konsumsi, biaya tak terduga</div></div>
+    <div class="fg">
+      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 1 (cth: Material, Rangka Besi, Keramik…)" value="${esc(S.rabLabels.mat)}" oninput="S.rabLabels.mat=this.value">
+      <input class="fc" type="text" inputmode="numeric" id="rab-mat" value="${nom.material?Number(nom.material).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.material||0}" oninput="applyNiFmt(this);S.rabNominal.material=parseInt(this.dataset.raw)||0">
+    </div>
+    <div class="fg">
+      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 2 (cth: Upah Tenaga, Tim Borongan…)" value="${esc(S.rabLabels.upah)}" oninput="S.rabLabels.upah=this.value">
+      <input class="fc" type="text" inputmode="numeric" id="rab-upah" value="${nom.upah?Number(nom.upah).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.upah||0}" oninput="applyNiFmt(this);S.rabNominal.upah=parseInt(this.dataset.raw)||0">
+    </div>
+    <div class="fg">
+      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 3 (cth: Subkon, Las & Bending…)" value="${esc(S.rabLabels.subkon)}" oninput="S.rabLabels.subkon=this.value">
+      <input class="fc" type="text" inputmode="numeric" id="rab-sub" value="${nom.subkon?Number(nom.subkon).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.subkon||0}" oninput="applyNiFmt(this);S.rabNominal.subkon=parseInt(this.dataset.raw)||0">
+    </div>
+    <div class="fg">
+      <input class="fc" style="font-size:12px;color:#475569;margin-bottom:5px" placeholder="Nama kategori 4 (cth: Overhead, Transport, Lain-lain…)" value="${esc(S.rabLabels.overhead)}" oninput="S.rabLabels.overhead=this.value">
+      <input class="fc" type="text" inputmode="numeric" id="rab-ovh" value="${nom.overhead?Number(nom.overhead).toLocaleString('id-ID'):''}" placeholder="0 (Rp)" data-raw="${nom.overhead||0}" oninput="applyNiFmt(this);S.rabNominal.overhead=parseInt(this.dataset.raw)||0">
+    </div>
     ${total>0?`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:12px;margin-top:4px;margin-bottom:12px">
       <div class="row" style="margin-bottom:8px">
         <span style="font-size:13px;font-weight:700">Total RAB</span>
@@ -1296,6 +1303,7 @@ function loadRabForProj(kodeProj){
   S.rabKodeProj=kodeProj;
   const ex=S.rab.find(r=>r.kodeProj===kodeProj);
   S.rabNominal=ex?{material:ex.material||0,upah:ex.upah||0,subkon:ex.subkon||0,overhead:ex.overhead||0}:{material:0,upah:0,subkon:0,overhead:0};
+  S.rabLabels=ex?{mat:ex.labelMat||'',upah:ex.labelUpah||'',subkon:ex.labelSubkon||'',overhead:ex.labelOverhead||''}:{mat:'',upah:'',subkon:'',overhead:''};
   if(ex)showToast('📂 RAB dimuat','info');
   go('rab');
 }
@@ -1304,7 +1312,7 @@ function saveRAB(){
   const nom=S.rabNominal;
   const total=(Number(nom.material)||0)+(Number(nom.upah)||0)+(Number(nom.subkon)||0)+(Number(nom.overhead)||0);
   if(!total){showToast('Isi minimal satu angka','err');return;}
-  const rabData={kodeProj:S.rabKodeProj,tglUpdate:today(),material:Number(nom.material)||0,upah:Number(nom.upah)||0,subkon:Number(nom.subkon)||0,overhead:Number(nom.overhead)||0};
+  const rabData={kodeProj:S.rabKodeProj,tglUpdate:today(),material:Number(nom.material)||0,upah:Number(nom.upah)||0,subkon:Number(nom.subkon)||0,overhead:Number(nom.overhead)||0,labelMat:S.rabLabels.mat||'',labelUpah:S.rabLabels.upah||'',labelSubkon:S.rabLabels.subkon||'',labelOverhead:S.rabLabels.overhead||''};
   const idx=S.rab.findIndex(r=>r.kodeProj===S.rabKodeProj);
   if(idx>=0)S.rab[idx]=rabData;else S.rab.push(rabData);
   ss(KS.rab,S.rab);showToast('✅ RAB disimpan');go('rab');
@@ -1349,10 +1357,10 @@ function rabPerbandingan(){
       <div class="kpi"><div class="kpi-lbl">Total RAB</div><div class="kpi-val" style="color:#ea580c;font-size:11px">${fRp(rabT)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Realisasi</div><div class="kpi-val" style="color:${realT>rabT?'#dc2626':'#16a34a'};font-size:11px">${fRp(realT)}</div></div>
     </div></div>
-  ${rowComp('Material','🧱',rab.material||0,realMat)}
-  ${rowComp('Upah Tenaga','👷',rab.upah||0,realUpah)}
-  ${rowComp('Subkontraktor','🔨',rab.subkon||0,realSub)}
-  ${rab.overhead>0?rowComp('Overhead','📦',rab.overhead||0,0):''}
+  ${rowComp(rab.labelMat||'Material','🧱',rab.material||0,realMat)}
+  ${rowComp(rab.labelUpah||'Upah Tenaga','👷',rab.upah||0,realUpah)}
+  ${rowComp(rab.labelSubkon||'Subkontraktor','🔨',rab.subkon||0,realSub)}
+  ${rab.overhead>0?rowComp(rab.labelOverhead||'Overhead','📦',rab.overhead||0,0):''}
   <div class="card" style="margin-top:4px">
     <div class="row" style="margin-bottom:10px"><span style="font-weight:700">Total Keseluruhan</span></div>
     <div class="g2">
