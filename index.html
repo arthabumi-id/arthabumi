@@ -137,7 +137,7 @@ const S={
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
   rabLabels:{mat:'',upah:'',subkon:'',overhead:''},
   dashFilter:'Berjalan',
-  beliFilter:'',absFilter:'',beliSearchQ:'',
+  beliFilter:'',absFilter:'',beliSearchQ:'',catatanKode:'',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co'};
@@ -266,6 +266,7 @@ const NAV=[
   {id:'bayar',label:'Bayar',icon:'💰'},
   {id:'rab',label:'RAB',icon:'📐'},
   {id:'subkon',label:'Subkon',icon:'🔨'},
+  {id:'catatan',label:'Catatan',icon:'📝'},
 ];
 function buildNav(){
   return NAV.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
@@ -362,8 +363,60 @@ async function installPWA(){
 }
 // ── Page Builder
 function buildPage(p){
-  const fn={dashboard:pgDashboard,project:pgProject,beli:pgBeli,karyawan:pgKaryawan,absensi:pgAbsensi,kasbon:pgKasbon,closing:pgClosing,bayar:pgBayar,rab:pgRAB,subkon:pgSubkon};
+  const fn={dashboard:pgDashboard,project:pgProject,beli:pgBeli,karyawan:pgKaryawan,absensi:pgAbsensi,kasbon:pgKasbon,closing:pgClosing,bayar:pgBayar,rab:pgRAB,subkon:pgSubkon,catatan:pgCatatan};
   return (fn[p]||pgDashboard)();
+}
+// ── CATATAN PROYEK ────────────────────────────────────────────────────
+function pgCatatan(){
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+
+    S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.catatanKode===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const existing=S.projects.find(p=>p.kode===S.catatanKode);
+  const currentTxt=existing?(existing.catatan||''):'';
+  const hasCatatan=S.projects.filter(p=>p.catatan&&p.catatan.trim());
+
+  return `<div class="sec-title">📝 Catatan Proyek</div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="fg">
+        <label class="fl">Pilih Proyek</label>
+        <select class="fc" id="cat-proj" onchange="S.catatanKode=this.value;_loadCatatan()">
+          ${prjOpts}
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Catatan / Reminder</label>
+        <textarea class="fc" id="cat-txt" rows="5"
+          placeholder="Contoh:&#10;HP Klien: 0812-xxxx&#10;Alamat: Jl. Mawar No. 5&#10;DP belum lunas — kejar tgl 1&#10;Catatan teknis: finishing halus, warna cat Dulux Putih"
+          style="resize:vertical;font-size:14px;line-height:1.6">${esc(currentTxt)}</textarea>
+      </div>
+      <button class="btn btn-p btn-w" onclick="saveCatatan()">💾 Simpan Catatan</button>
+    </div>
+    ${hasCatatan.length===0?`<div class="empty">Belum ada catatan tersimpan</div>`
+      :`<div class="sec-title" style="font-size:13px;color:#64748b;margin-bottom:8px">Tersimpan (${hasCatatan.length})</div>`+
+        hasCatatan.map(p=>`<div class="card" style="margin-bottom:8px;cursor:pointer;border-left:3px solid #eab308" onclick="S.catatanKode='${esc(p.kode)}';go('catatan')">
+          <div class="row" style="margin-bottom:6px">
+            <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${bdg(p.status)}</div></div>
+            <span style="font-size:11px;color:#94a3b8;flex-shrink:0">Tap edit</span>
+          </div>
+          <div style="background:#fefce8;border-radius:8px;padding:8px 10px;font-size:12.5px;color:#713f12;white-space:pre-line;line-height:1.5">${esc(p.catatan)}</div>
+        </div>`).join('')}`;
+}
+function _loadCatatan(){
+  const proj=S.projects.find(p=>p.kode===S.catatanKode);
+  const el=document.getElementById('cat-txt');
+  if(el)el.value=proj?(proj.catatan||''):'';
+}
+function saveCatatan(){
+  const kode=(document.getElementById('cat-proj')?.value||S.catatanKode).trim();
+  if(!kode){showToast('Pilih proyek dulu','err');return;}
+  const txt=(document.getElementById('cat-txt')?.value||'').trim();
+  const idx=S.projects.findIndex(p=>p.kode===kode);
+  if(idx<0)return;
+  S.projects[idx]={...S.projects[idx],catatan:txt};
+  S.catatanKode=kode;
+  ss(KS.p,S.projects);
+  showToast('✅ Catatan disimpan');
+  go('catatan');
+  doSync('updateProject',{...S.projects[idx]});
 }
 // ── DASHBOARD
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
@@ -509,8 +562,6 @@ function openAddProject(){
         ${numInp('p-kontrak',0,'350.000.000')}
         <div class="num-hint">Contoh: 35.000.000</div></div></div>
     <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date"></div>
-    <div class="fg"><label class="fl">📝 Catatan / Reminder</label>
-      <textarea class="fc" id="p-catatan" rows="3" placeholder="Contoh:&#10;HP Klien: 0812-xxxx&#10;Alamat: Jl. Mawar No. 5&#10;DP belum lunas — kejar tgl 1" style="resize:vertical;font-size:14px;line-height:1.5"></textarea></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveProject()">💾 Simpan</button></div>`);
@@ -528,8 +579,6 @@ function openEditProject(i){
       <div class="fg"><label class="fl">Nilai Kontrak<span class="req">*</span></label>
         ${numInp('p-kontrak',p.nilaiKontrak,'')}</div></div>
     <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" id="p-tgl" type="date" value="${p.tglMulai||''}"></div>
-    <div class="fg"><label class="fl">📝 Catatan / Reminder</label>
-      <textarea class="fc" id="p-catatan" rows="3" placeholder="HP Klien, alamat, reminder, catatan teknis..." style="resize:vertical;font-size:14px;line-height:1.5">${esc(p.catatan||'')}</textarea></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveProject(true)">💾 Simpan</button></div>`);
@@ -539,7 +588,8 @@ function saveProject(isEdit){
   const nama=document.getElementById('p-nama').value.trim();
   const kontrak=getNum('p-kontrak');
   if(!kode||!nama||!kontrak){showToast('Lengkapi field wajib','err');return;}
-  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value,catatan:(document.getElementById('p-catatan').value||'').trim()};
+  const existingCatatan=isEdit?(S.projects[Number(document.getElementById('p-idx').value)]?.catatan||''):'';
+  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value,catatan:existingCatatan};
   if(isEdit){const i=Number(document.getElementById('p-idx').value);S.projects[i]=d;}else S.projects.push(d);
   ss(KS.p,S.projects);closeModal();go('project');
   showToast(isEdit?'✅ Proyek diperbarui':'✅ Proyek ditambahkan');
