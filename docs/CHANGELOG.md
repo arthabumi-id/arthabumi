@@ -135,8 +135,13 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ### ✅ Feature 1: Cashflow per Proyek
 - **Fungsi baru**: `calcCashflow(kodeProj)` = pembayaran - (pembelian + upah + subkon)
-- **Gunakan**: Untuk dashboard KPI dan analisa cash position per proyek
+- **Integrasi Dashboard**: Setiap project card punya chip 💰 Cashflow
+  - Menampilkan: Pembayaran diterima - Total biaya
+  - 🟢 Hijau jika positif (bayar > biaya)
+  - 🔴 Merah jika negatif (bayar < biaya)
+  - Posisi: Antara chip Bayar & Piutang
 - **Formula**: Pembayaran klien dikurangi semua biaya (material, upah, subkon)
+- **Gunakan**: Untuk dashboard KPI dan analisa cash position per proyek
 
 ### ✅ Feature 2: Single Shop Name Input
 - **Pembelian Form**: Single `toko` input field di top form (full width)

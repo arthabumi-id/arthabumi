@@ -1,7 +1,7 @@
 # ARTHABUMI — Handoff Document
 **Owner:** Eddy Santoso
-**Terakhir diupdate:** 2026-05-22
-**Status proyek:** Session 2 selesai ✅ | Apps Script perlu redeploy ⚠️
+**Terakhir diupdate:** 2026-05-26
+**Status proyek:** Session 4 (v1.11) selesai ✅ | Apps Script tidak perlu update ✅
 
 ---
 
@@ -133,7 +133,48 @@ arthabumi/CHANGELOG.md → riwayat versi
 | setup.gs | v1.8.1 | Tidak ada perubahan |
 | diagnostic.gs | v1.8 | Tidak ada perubahan |
 | backup.gs | v1.0 | Tidak ada perubahan |
-| index.html | v1.9 | Banyak fitur baru (lihat bagian Session 2) |
+| index.html | v1.11 | Session 4: Cashflow + Single Shop + Confirmation Modal + Date Filter |
+
+---
+
+## Yang Dikerjakan di Session 4 (2026-05-26) — v1.11
+
+### Frontend — index.html (v1.9 → v1.11)
+
+#### Fitur 1: Cashflow per Proyek
+- **Helper function:** `calcCashflow(kodeProj)` → Pembayaran - (Pembelian + Upah + Subkon)
+- **Dashboard Integration:** Setiap project card punya chip 💰 Cashflow
+  - Tampil: Pembayaran diterima - Total biaya
+  - 🟢 Hijau jika positif (bayar > biaya), 🔴 Merah jika negatif
+  - Posisi: Antara chip Bayar & Piutang
+
+#### Fitur 2: Single Shop Name Input (Pembelian)
+- Single `toko` input field di top form (full width)
+- Sync real-time ke semua item rows: `S.formItems.forEach(x=>x.toko=this.value)`
+- Ekstrak shop dari first item saat render form
+
+#### Fitur 3: Confirmation Modal
+- New function: `showBeliConfirmation(items, total)` 
+- Modal breakdown: item (name, qty, price, discount, subtotal) + total akhir
+- User approve/cancel sebelum `executeBeli()` proses sync
+
+#### Fitur 4: Date Filter (Pembelian + Absensi)
+- Helper function: `filterByDate(items, mode, fromDate, toDate)`
+- 5 mode: 'all' | 'today' | 'thisweek' | 'thismonth' | 'custom'
+- Filter UI: 5 pill buttons + conditional date range inputs
+- Applied to: Purchase Log & Attendance Log
+- State: `S.tab.beliDateMode/From/To` & `S.tab.absDateMode/From/To`
+
+### Apps Script
+**NO CHANGES** — Semua fitur v1.11 adalah frontend-only ✅
+
+---
+
+## Status Deploy (Session 4)
+
+✅ **Frontend complete** — index.html v1.11 siap production
+✅ **Apps Script tidak perlu update** — semua fitur adalah frontend logic
+✅ **Dokumentasi updated** — CLAUDE.md, CHANGELOG.md, HANDOFF.md
 
 ---
 
