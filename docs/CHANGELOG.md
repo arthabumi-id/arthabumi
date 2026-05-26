@@ -1,8 +1,19 @@
-# CHANGELOG — Arthabumi App
+# 📝 CHANGELOG — Arthabumi Project
 
-Format: `[YYYY-MM-DD] Versi X.X — Deskripsi`
+Riwayat lengkap pengembangan aplikasi (v1.1-v1.6b) dan backup/deployment (v1.10 onwards).
 
 ---
+
+## 📊 STRUKTUR CHANGELOG
+
+**Bagian 1:** App Development History (v1.1 → v1.6b)  
+**Bagian 2:** Backup & Deployment History (v1.10 onwards)
+
+Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
+
+---
+
+# 🔧 BAGIAN 1: APP DEVELOPMENT HISTORY (v1.1 → v1.6b)
 
 ## [2026-05-20] v1.6b — Fix Tanggal GSheet (Root Fix)
 
@@ -31,7 +42,7 @@ Format: `[YYYY-MM-DD] Versi X.X — Deskripsi`
 - 🐛 **Format tanggal GSheet** — `setNumberFormat("DD/MM/YYYY")` → `"dd/MM/yyyy"` (format benar Apps Script)
 
 ### File yang diubah
-- `index.html` — fungsi `beliLog()`, `delPembelian()`, `openPasteBeli()`, `parsePasteText()`, `applyPasteBeli()`
+- `arthabumi/index.html` — fungsi `beliLog()`, `delPembelian()`, `openPasteBeli()`, `parsePasteText()`, `applyPasteBeli()`
 - `arthabumi-webapi.gs` — tambah `_apiDeletePembelian()`, fix semua `setNumberFormat`
 
 ---
@@ -87,9 +98,32 @@ Format: `[YYYY-MM-DD] Versi X.X — Deskripsi`
 
 ---
 
-## [2026-05-15] v1.1 — Accounting App
+## [2026-05-15] v1.1 — Accounting App (First Release)
 
 ### Fitur Baru
 - ✨ **8 modul** — Dashboard, Proyek, Pembelian, Karyawan, Absensi, Kasbon, Closing, Bayar
 - ✨ **localStorage** — data tersimpan offline di browser
 - ✨ **Closing gaji** — generate rekap + finalize dengan kasbon potong
+
+---
+
+# 📦 BAGIAN 2: BACKUP & DEPLOYMENT HISTORY (v1.10 onwards)
+
+## **v1.10** — 2026-05-26 ✨ NEW
+**Dua fitur TODO high-priority dari Session 2 berhasil diimplementasikan**
+
+### ✅ TODO #1: Progress % per Proyek
+- **Field baru**: `progress` (0-100%) di setiap proyek
+- **Add Project Modal**: Input progress saat buat proyek baru
+- **Edit Project Modal**: Bisa update progress kapan saja
+- **saveProject()**: Simpan progress ke localStorage & GSheet sync
+- **Dashboard Display**: Progress bar dengan color coding:
+  - 🟢 Hijau (≥75%) — Sudah jauh maju
+  - 🟡 Kuning (50-74%) — Sedang berjalan
+  - 🔴 Merah (<50%) — Baru dimulai
+- **Rekap Modal**: Tampilkan progress bar di bagian atas
+
+### ✅ TODO #2: Alert / Tanda Bahaya
+- **⚠️ Upah Menumpuk**: Alert jika upah belum bayar > 10% dari nilai kontrak
+- **⚠️ Biaya Mendekati RAB**: Alert jika biaya sudah > 90% dari RAB
+- **Display Lok

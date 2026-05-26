@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.6b
+- **Versi aktif:** v1.10 (Latest)
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 
@@ -14,12 +14,22 @@
 ## FILE STRUKTUR
 ```
 arthabumi/
-├── index.html            ← App utama (upload ke GitHub Pages)
-├── arthabumi-webapi.gs   ← Backend GSheet (paste ke Apps Script)
-├── SYSTEM.md             ← File ini (briefing Claude)
-├── CHANGELOG.md          ← Riwayat versi
-├── DEPLOY.md             ← Checklist deploy
-└── TODO.md               ← Backlog fitur
+├── index.html                    ← App utama (v1.10)
+├── SYSTEM.md                     ← File ini (briefing Claude)
+├── backend/
+│   ├── arthabumi-webapi.gs       ← Main GSheet API (paste ke Apps Script)
+│   ├── backup.gs
+│   ├── config.gs
+│   ├── constants.gs
+│   ├── diagnostic.gs
+│   ├── helpers.gs
+│   ├── read.gs
+│   ├── setup.gs
+│   └── write.gs
+└── docs/
+    ├── CHANGELOG.md              ← Riwayat versi lengkap
+    ├── HANDOFF.md                ← Project status & TODO
+    └── TODO.md                   ← Backlog fitur
 ```
 
 ---
@@ -28,21 +38,28 @@ arthabumi/
 
 ### ▶ Template Standar
 ```
-Baca SYSTEM.md. [Upload: index.html + arthabumi-webapi.gs kalau perlu baca kode]
+Baca SYSTEM.md. [Upload: index.html + backend/arthabumi-webapi.gs kalau perlu baca kode]
 Kerjakan: [deskripsi tugas]
-File yang diubah: [index.html / arthabumi-webapi.gs / keduanya]
+File yang diubah: [index.html / backend/*.gs / keduanya]
 ```
 
 ### ▶ Shortcut per Jenis Tugas
 | Jenis | Upload file yang dibutuhkan |
 |---|---|
 | Bug fix kecil | SYSTEM.md saja + describe bug |
-| Fitur baru | SYSTEM.md + index.html + webapi.gs |
-| Fix GSheet/tanggal | SYSTEM.md + arthabumi-webapi.gs |
+| Fitur baru | SYSTEM.md + index.html + backend/arthabumi-webapi.gs |
+| Fix GSheet/tanggal | SYSTEM.md + backend/arthabumi-webapi.gs |
 | UI/tampilan saja | SYSTEM.md + index.html |
-| TODO item | "Baca SYSTEM.md, kerjakan TODO #[nomor]" |
+| TODO item | "Baca SYSTEM.md, kerjakan docs/TODO.md #[nomor]" |
 
 > 💡 **Tips:** Kalau Claude tidak punya konteks kode terbaru, upload file-nya. Kalau hanya tanya atau diskusi, SYSTEM.md saja sudah cukup.
+
+### ▶ File Locations (setelah reorganize)
+- **Frontend:** `arthabumi/index.html`
+- **Backend:** `arthabumi/backend/arthabumi-webapi.gs` (main API), atau file lain di `backend/`
+- **Docs:** `arthabumi/docs/` (CHANGELOG, HANDOFF, TODO)
+- **Backup:** `backups/index-v{VERSION}-{TIMESTAMP}.html`
+- **Scripts:** Root folder (`backup-before-update.bat`, `backup-before-update.ps1`)
 
 ---
 
@@ -171,14 +188,15 @@ Tab:     tabs, tab tab-on/tab-off
 
 ---
 
-## VERSI AKTIF: v1.6b
-Perubahan terakhir:
-- ✅ Hapus log pembelian (+ sync GSheet `deletePembelian`)
-- ✅ Paste pembelian cepat (format: `nama, qty, harga, toko`)
-- ✅ Fix tanggal bug — pakai `Utilities.parseDate` dengan spreadsheet timezone
-- ✅ Fix `_apiSerDate` — pakai spreadsheet timezone bukan script timezone
+## VERSI AKTIF: v1.10
+Perubahan terakhir (2026-05-26):
+- ✅ Progress % per Proyek (0-100%) dengan color-coded progress bar
+- ✅ Alert System: Upah Menumpuk & Biaya Mendekati RAB
+- ✅ Dashboard filtering & Rekap modal improvements
+- ✅ Backup & deployment system (automated scripts)
+- ✅ Reorganized project structure (backend/, docs/ folders)
 
-Lihat `CHANGELOG.md` untuk riwayat lengkap.
+**Lihat:** `docs/CHANGELOG.md` untuk riwayat lengkap app development & deployment history
 
 ---
 

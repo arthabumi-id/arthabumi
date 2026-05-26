@@ -1,0 +1,17 @@
+Update fitu app:
+1. input pembelian, bagian diskon pakai nominal jgn persentase
+2. bagian absensi, bila ketekan hadir, tekan sekali lagi utk cancel pilihan
+3. bagian RAB, estimasi anggaran, judul small title seperti material, upah tenaga, di kosongkan agar bisa di isi title random per project, karena scope pekerjaan akan berbeda-beda.
+
+
+di apps script gsheet, saya menggunakan files, jadi pelajari dulu:
+constans.gs
+config.gs
+helpers.gs
+read.gs
+write.gs
+setup.gs
+diagnostic.gs
+backup.gs
+
+Tolong sesuaikan dengan file yg exisiting ini, dan update di file-file ini saja
