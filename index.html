@@ -121,7 +121,7 @@ button{-webkit-appearance:none;font-family:inherit}
 </div>
 <script>
 'use strict';
-// ARTHABUMI v1.10 - Progress % per Proyek + Alert Tanda Bahaya (Upah Menumpuk & Biaya Mendekati RAB)
+// ARTHABUMI v1.11 - Cashflow per Project + Single Shop Name + Confirmation Modal + Date Filter
 const S={
   page:'dashboard',tab:{},
   projects:[],pembelian:[],karyawan:[],
@@ -421,6 +421,36 @@ function saveCatatan(){
 // ── DASHBOARD
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
 function setDashView(v){S.tab.dashboard=v;go('dashboard');}
+// ── FEATURE 4: Date Filter [v1.11]
+const filterByDate=(items,mode,fromDate,toDate)=>{
+  if(!mode||mode==='all')return items;
+  const today_str=today();
+  const t=new Date(today_str);
+  let from,to;
+  if(mode==='today'){from=to=today_str;}
+  else if(mode==='thisweek'){
+    const day=t.getDay();const diff=t.getDate()-day+(day===0?-6:1);
+    const start=new Date(t.setDate(diff));from=start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
+    to=today_str;
+  }
+  else if(mode==='thismonth'){
+    from=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-01';
+    to=today_str;
+  }
+  else if(mode==='custom'){
+    from=fromDate;to=toDate;
+  }
+  if(!from||!to)return items;
+  return items.filter(x=>{const d=(x.tgl||'').substring(0,10);return d>=from&&d<=to;});
+};
+// ── FEATURE 1: Cashflow Calculation [v1.11]
+const calcCashflow=(kodeProj)=>{
+  const pembayaran=S.logPembayaran.filter(x=>x.kodeProj===kodeProj).reduce((s,x)=>s+(Number(x.nominal)||0),0);
+  const pembelian=S.pembelian.filter(b=>b.kodeProj===kodeProj&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+  const upah=S.logAbsensi.filter(a=>a.kodeProj===kodeProj).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kodeProj).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+  return pembayaran-(pembelian+upah+subkon);
+};
 function pgDashboard(){
   const view=S.tab.dashboard||'rekap';
   const tabBar=`<div class="tabs" style="margin-bottom:12px">
@@ -813,6 +843,7 @@ function beliInput(){
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const currentShop=S.formItems[0]?.toko||'';
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px">
       <span style="font-size:11px;font-weight:600;color:#64748b">Item ${i+1}</span>
@@ -832,8 +863,8 @@ function beliInput(){
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Status</label><select class="fc" onchange="S.formItems[${i}].status=this.value"><option ${it.status==='HABIS'?'selected':''}>HABIS</option><option ${it.status==='SISA'?'selected':''}>SISA</option><option ${it.status==='ASET'?'selected':''}>ASET</option></select></div>
-      <div class="fg"><label class="fl">Toko</label>
-        <input class="fc" list="tk-dl" value="${esc(it.toko)}" oninput="S.formItems[${i}].toko=this.value">
+      <div class="fg" style="display:none"><label class="fl">Toko</label>
+        <input class="fc" list="tk-dl" value="${esc(currentShop)}" oninput="S.formItems.forEach(x=>x.toko=this.value)">
         <datalist id="tk-dl">${tk}</datalist></div>
     </div>
   </div>`).join('');
@@ -842,6 +873,9 @@ function beliInput(){
   <div class="card">
     <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${today()}"></div>
     <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div></div>
+    <div class="fg"><label class="fl">🏢 Nama Toko (untuk semua item)</label>
+      <input class="fc" list="tk-dl" id="beli-toko" value="${esc(currentShop)}" placeholder="Pilih toko" oninput="S.formItems.forEach(x=>x.toko=this.value)">
+      <datalist id="tk-dl">${tk}</datalist></div>
     ${items}
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
@@ -849,11 +883,33 @@ function beliInput(){
     </div></div>`;
 }
 function setBeliFilter(v){S.beliFilter=v;go('beli');}
+function setBeliDateFilter(v){S.tab.beliDateMode=v;if(v==='custom'){document.getElementById('beli-date-from').style.display='block';document.getElementById('beli-date-to').style.display='block';}else{document.getElementById('beli-date-from').style.display='none';document.getElementById('beli-date-to').style.display='none';}go('beli');}
 function beliLog(){
+  const dateMode=S.tab.beliDateMode||'all';
+  const fromD=S.tab.beliDateFrom||'';
+  const toD=S.tab.beliDateTo||'';
   const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.beliFilter===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
-  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setBeliFilter(this.value)">${prjFilterOpts}</select></div>`;
+  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setBeliFilter(this.value)">${prjFilterOpts}</select></div>
+    <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="tab ${dateMode==='all'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('all')">Semua</button>
+      <button class="tab ${dateMode==='today'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('today')">Hari Ini</button>
+      <button class="tab ${dateMode==='thisweek'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('thisweek')">Minggu Ini</button>
+      <button class="tab ${dateMode==='thismonth'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('thismonth')">Bulan Ini</button>
+      <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('custom')">Custom</button>
+    </div>
+    <div id="beli-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
+      <label class="fl">Dari Tanggal</label>
+      <input class="fc" type="date" value="${fromD}" oninput="S.tab.beliDateFrom=this.value;go('beli')">
+    </div>
+    <div id="beli-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
+      <label class="fl">Sampai Tanggal</label>
+      <input class="fc" type="date" value="${toD}" oninput="S.tab.beliDateTo=this.value;go('beli')">
+    </div>
+    </div>`;
   const all=[...S.pembelian].reverse();
-  const list=(S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all).slice(0,60);
+  let list=S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all;
+  list=filterByDate(list,dateMode,fromD,toD).slice(0,60);
   const namaProj=S.beliFilter?(S.projects.find(p=>p.kode===S.beliFilter)?.nama||S.beliFilter):'';
   const emptyMsg=S.beliFilter?`<div class="empty">Tidak ada pembelian untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
   return filterBar+(list.length===0?emptyMsg:list.map(b=>{
@@ -928,7 +984,38 @@ function _renderCekHarga(){
 // ─────────────────────────────────────────────────────────────────────
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
 function delBeliRow(i){S.formItems.splice(i,1);if(!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];go('beli');}
-function submitBeli(){
+// ── FEATURE 3: Confirmation Modal [v1.11]
+function showBeliConfirmation(items, total){
+  const breakdown=items.map(it=>{
+    const subtotal=calcTotal(it);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
+      <div>
+        <div style="font-weight:600;color:#1e293b">${esc(it.namaBarang)}</div>
+        <div style="color:#94a3b8;font-size:11px">${it.qty}× ${fRp(it.harga)}${Number(it.diskon)>0?' - diskon '+fRp(it.diskon):''}</div>
+      </div>
+      <div style="font-weight:700;color:#10b981;white-space:nowrap;margin-left:8px">${fRp(subtotal)}</div>
+    </div>`;
+  }).join('');
+
+  openModal(`<div class="modal-title">✅ Konfirmasi Pembelian</div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:11px;margin-bottom:12px;font-size:12px;color:#15803d">
+      <strong>Total Pembelian</strong><br><span style="font-size:18px;font-weight:800;color:#10b981">${fRp(total)}</span>
+    </div>
+    <div style="border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin-bottom:8px"><strong style="font-size:12px;color:#64748b">Breakdown Item:</strong></div>
+    ${breakdown}
+    <div style="margin-top:12px;padding-top:8px;border-top:2px solid #e2e8f0">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px">
+        <span>Total Akhir:</span>
+        <span style="color:#10b981">${fRp(total)}</span>
+      </div>
+    </div>
+    <div class="act-row" style="margin-top:16px">
+      <button class="btn btn-g btn-sm" onclick="closeModal()">❌ Batal</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="executeBeli()">✅ Konfirmasi & Simpan</button>
+    </div>`);
+}
+
+function executeBeli(){
   const tgl=document.getElementById('beli-tgl').value;
   const kodeProj=document.getElementById('beli-prj').value;
   if(!kodeProj){showToast('Pilih proyek','err');return;}
@@ -941,7 +1028,16 @@ function submitBeli(){
   showToast('✅ '+newItems.length+' item disimpan');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   setTab('beli','log');
+  closeModal();
   doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
+}
+function submitBeli(){
+  const tgl=document.getElementById('beli-tgl').value;
+  const kodeProj=document.getElementById('beli-prj').value;
+  if(!kodeProj){showToast('Pilih proyek','err');return;}
+  if(S.formItems.some(it=>!it.namaBarang||!it.harga)){showToast('Lengkapi nama & harga','err');return;}
+  const total=S.formItems.reduce((s,it)=>s+calcTotal(it),0);
+  showBeliConfirmation(S.formItems,total);
 }
 function delPembelian(idx){
   const b=S.pembelian[idx];if(!b)return;
@@ -1104,11 +1200,33 @@ function submitAbsensi(){
   doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
+function setAbsDateFilter(v){S.tab.absDateMode=v;if(v==='custom'){document.getElementById('abs-date-from').style.display='block';document.getElementById('abs-date-to').style.display='block';}else{document.getElementById('abs-date-from').style.display='none';document.getElementById('abs-date-to').style.display='none';}go('absensi');}
 function absLog(){
+  const dateMode=S.tab.absDateMode||'all';
+  const fromD=S.tab.absDateFrom||'';
+  const toD=S.tab.absDateTo||'';
   const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.absFilter===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
-  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setAbsFilter(this.value)">${prjFilterOpts}</select></div>`;
+  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setAbsFilter(this.value)">${prjFilterOpts}</select></div>
+    <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <button class="tab ${dateMode==='all'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('all')">Semua</button>
+      <button class="tab ${dateMode==='today'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('today')">Hari Ini</button>
+      <button class="tab ${dateMode==='thisweek'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('thisweek')">Minggu Ini</button>
+      <button class="tab ${dateMode==='thismonth'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('thismonth')">Bulan Ini</button>
+      <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('custom')">Custom</button>
+    </div>
+    <div id="abs-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
+      <label class="fl">Dari Tanggal</label>
+      <input class="fc" type="date" value="${fromD}" oninput="S.tab.absDateFrom=this.value;go('absensi')">
+    </div>
+    <div id="abs-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
+      <label class="fl">Sampai Tanggal</label>
+      <input class="fc" type="date" value="${toD}" oninput="S.tab.absDateTo=this.value;go('absensi')">
+    </div>
+    </div>`;
   const all=[...S.logAbsensi].reverse();
-  const list=(S.absFilter?all.filter(a=>a.kodeProj===S.absFilter):all).slice(0,80);
+  let list=S.absFilter?all.filter(a=>a.kodeProj===S.absFilter):all;
+  list=filterByDate(list,dateMode,fromD,toD).slice(0,80);
   const namaProj=S.absFilter?(S.projects.find(p=>p.kode===S.absFilter)?.nama||S.absFilter):'';
   const emptyMsg=S.absFilter?`<div class="empty">Tidak ada absensi untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
   return filterBar+(list.length===0?emptyMsg:list.map(a=>{

@@ -126,4 +126,35 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 ### ✅ TODO #2: Alert / Tanda Bahaya
 - **⚠️ Upah Menumpuk**: Alert jika upah belum bayar > 10% dari nilai kontrak
 - **⚠️ Biaya Mendekati RAB**: Alert jika biaya sudah > 90% dari RAB
-- **Display Lok
+- **Display**: Badge di dashboard + project card
+
+---
+
+## **v1.11** — 2026-05-26 ✨ NEW
+**Empat fitur besar untuk meningkatkan UX pembelian & filter log**
+
+### ✅ Feature 1: Cashflow per Proyek
+- **Fungsi baru**: `calcCashflow(kodeProj)` = pembayaran - (pembelian + upah + subkon)
+- **Gunakan**: Untuk dashboard KPI dan analisa cash position per proyek
+- **Formula**: Pembayaran klien dikurangi semua biaya (material, upah, subkon)
+
+### ✅ Feature 2: Single Shop Name Input
+- **Pembelian Form**: Single `toko` input field di top form (full width)
+- **Sinkronisasi real-time**: Semua item rows otomatis pakai toko yang sama
+- **Implementasi**: `S.formItems.forEach(x=>x.toko=this.value)` on input
+- **Ekstrak**: Ambil shop dari first item saat render form
+
+### ✅ Feature 3: Confirmation Modal
+- **Fitur baru**: `showBeliConfirmation()` — modal breakdown sebelum save
+- **Tampil**: Item breakdown (name, qty, price, discount, subtotal per item)
+- **Total**: Hitung ulang total setelah semua diskon
+- **Aksi**: User approve/cancel sebelum `executeBeli()` proses sync
+
+### ✅ Feature 4: Date Filter
+- **Logika baru**: `filterByDate(items, mode, fromDate, toDate)` helper
+- **Mode**: 'all' | 'today' | 'thisweek' | 'thismonth' | 'custom'
+- **Aplikasi**: Purchase Log (beliLog) & Attendance Log (absLog)
+- **UI**: 5 mode buttons + conditional date range inputs
+- **Filter**: Compare date substring `tgl.substring(0,10)` dalam range
+
+---
