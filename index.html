@@ -493,6 +493,7 @@ function pgDashboard(){
         <div class="chip"><div class="chip-lbl">Biaya</div><div class="chip-val" style="color:#ea580c">${fRp(biaya)}</div></div>
         <div class="chip"><div class="chip-lbl">Laba</div><div class="chip-val" style="color:${laba>=0?'#16a34a':'#dc2626'}">${fRp(laba)}</div></div>
         <div class="chip"><div class="chip-lbl">Bayar</div><div class="chip-val" style="color:#2563eb">${fRp(bayar)}</div></div>
+        <div class="chip" style="background:#f0fdf4;border-left:2px solid #10b981"><div class="chip-lbl">💰 Cashflow</div><div class="chip-val" style="color:${bayar-biaya>=0?'#16a34a':'#dc2626'};font-weight:700">${fRp(bayar-biaya)}</div></div>
         <div class="chip" style="${piutang>0?'background:#fff7ed':''}"><div class="chip-lbl">Piutang</div><div class="chip-val" style="color:${piutang>0?'#dc2626':'#64748b'}">${fRp(piutang)}</div></div>
         ${rabT>0?`<div class="chip" style="background:#eff6ff"><div class="chip-lbl">RAB</div><div class="chip-val" style="color:#1d4ed8">${fRp(rabT)}</div></div>`
           :`<div class="chip" style="background:#fef9c3;cursor:pointer" onclick="S.rabKodeProj='${p.kode}';go('rab')"><div class="chip-lbl">RAB</div><div class="chip-val" style="color:#854d0e;font-size:10px">+ Buat</div></div>`}
