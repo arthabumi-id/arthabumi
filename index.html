@@ -1215,8 +1215,46 @@ function submitAbsensi(){
     const upahHariIni=baseUpah+upahLembur;
     return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni,jamLembur,upahLembur,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};
   });
+  showAbsensiConfirmation(newAbs,tgl);
+}
+function showAbsensiConfirmation(newAbs,tgl){
+  const STS_COLOR={'Hadir':'#10b981','Setengah Hari':'#f59e0b','Tidak Hadir':'#ef4444','Libur':'#94a3b8'};
+  const totalUpah=newAbs.reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const adaLembur=newAbs.some(a=>Number(a.jamLembur)>0);
+  const rows=newAbs.map(a=>{
+    const col=STS_COLOR[a.status]||'#94a3b8';
+    const namaP=S.projects.find(p=>p.kode===a.kodeProj)?.nama||a.kodeProj||'—';
+    return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f5f9">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#1e293b">${esc(a.nama)}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap">
+          <span style="font-size:10px;padding:1px 7px;border-radius:9px;font-weight:600;background:${col}22;color:${col};border:1px solid ${col}44">${a.status}</span>
+          <span style="font-size:10px;color:#94a3b8">${esc(namaP)}</span>
+          ${Number(a.jamLembur)>0?`<span style="font-size:10px;color:#d97706;font-weight:600">⏰ ${a.jamLembur}j lembur</span>`:''}
+        </div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;margin-left:8px">
+        ${Number(a.jamLembur)>0?`<div style="font-size:10px;color:#94a3b8">+${fRp(a.upahLembur)} lembur</div>`:''}
+        <div style="font-size:13px;font-weight:800;color:#16a34a">${fRp(a.upahHariIni)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  openModal(`<div class="modal-title">📋 Konfirmasi Absensi</div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:11px;margin-bottom:12px">
+      <div style="font-size:11px;color:#15803d;margin-bottom:2px">📅 ${fDate(tgl)} &nbsp;·&nbsp; ${newAbs.length} karyawan</div>
+      <div style="font-size:18px;font-weight:800;color:#10b981">${fRp(totalUpah)}</div>
+      <div style="font-size:10px;color:#15803d;margin-top:1px">Total upah hari ini${adaLembur?' (inkl. lembur)':''}</div>
+    </div>
+    <div style="max-height:45vh;overflow-y:auto;margin-bottom:4px">${rows}</div>
+    <div class="act-row" style="margin-top:14px">
+      <button class="btn btn-g btn-sm" onclick="closeModal()">❌ Batal</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="executeAbsensi(${JSON.stringify(newAbs).replace(/</g,'\\u003c')})">✅ Simpan Absensi</button>
+    </div>`);
+}
+function executeAbsensi(newAbs){
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
-  showToast('✅ Absensi '+active.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
+  closeModal();
+  showToast('✅ Absensi '+newAbs.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
   doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
