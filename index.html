@@ -161,7 +161,7 @@ const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const calcTotal=it=>{const b=(Number(it.qty)||0)*(Number(it.harga)||0),d=Number(it.diskon)||0;return it.status==='ASET'?0:Math.max(0,b-d);};
 const padId=(pfx,arr,key='id')=>pfx+'-'+String(Math.max(0,...arr.map(x=>parseInt((x[key]||'0').split('-').pop())||0))+1).padStart(3,'0');
-const bdgClass=s=>({Berjalan:'bdg-blue',Selesai:'bdg-green',Hold:'bdg-yellow',Batal:'bdg-red',Hadir:'bdg-green','Tidak Hadir':'bdg-red','Setengah Hari':'bdg-yellow',Libur:'bdg-gray',AMBIL:'bdg-orange',POTONG:'bdg-purple','Belum Dibayar':'bdg-red','Sudah Dibayar':'bdg-green',DP:'bdg-orange',Lunas:'bdg-green'}[s]||'bdg-gray');
+const bdgClass=s=>({Berjalan:'bdg-blue',Selesai:'bdg-green',Hold:'bdg-yellow',Batal:'bdg-red',Hadir:'bdg-green','Tidak Hadir':'bdg-red','Setengah Hari':'bdg-yellow',Libur:'bdg-gray',AMBIL:'bdg-orange',POTONG:'bdg-purple',BONUS:'bdg-yellow','Belum Dibayar':'bdg-red','Sudah Dibayar':'bdg-green',DP:'bdg-orange',Lunas:'bdg-green'}[s]||'bdg-gray');
 const bdg=(s,extra='')=>`<span class="bdg ${bdgClass(s)} ${extra}">${esc(s)}</span>`;
 function showToast(msg,type='ok'){const el=document.getElementById('toast');el.textContent=msg;el.className=`t-${type}`;el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',type==='err'?6000:type==='info'?2000:4000);}
 // ── [v1.8] Format angka ribuan Indonesia (titik pemisah ribuan)
@@ -449,7 +449,8 @@ const calcCashflow=(kodeProj)=>{
   const pembelian=S.pembelian.filter(b=>b.kodeProj===kodeProj&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
   const upah=S.logAbsensi.filter(a=>a.kodeProj===kodeProj).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kodeProj).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  return pembayaran-(pembelian+upah+subkon);
+  const bonus=S.logKasbon.filter(x=>x.kodeProj===kodeProj&&x.tipe==='BONUS').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+  return pembayaran-(pembelian+upah+subkon+bonus);
 };
 function pgDashboard(){
   const view=S.tab.dashboard||'rekap';
@@ -1434,7 +1435,8 @@ function closingLog(){
   if(!list.length)return '<div class="empty">Belum ada data closing<br><br><button class="btn btn-o btn-sm" onclick="setTab(this.dataset.p,this.dataset.t)" data-p="closing" data-t="baru">+ Buat Closing</button></div>';
   return list.map(c=>{
     const ksbPotong=S.logKasbon.filter(x=>x.noClosing===c.noClosing&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
-    const netBayar=c.totalUpah-ksbPotong;
+    const bonusTotal=S.logKasbon.filter(x=>x.noClosing===c.noClosing&&x.tipe==='BONUS').reduce((s,x)=>s+(Number(x.nominal)||0),0);
+    const netBayar=c.totalUpah+bonusTotal-ksbPotong;
     return `<div class="card" style="cursor:pointer" onclick="openClosingDetail('${esc(c.noClosing)}')">
       <div class="row" style="margin-bottom:10px">
         <div style="flex:1;min-width:0">
@@ -1463,6 +1465,9 @@ function openClosingDetail(noClosing){
   // Kumpulkan semua absensi terkait closing ini, group per karyawan
   const absClosing=S.logAbsensi.filter(a=>a.noClosing===noClosing);
   const ksbClosing=S.logKasbon.filter(k=>k.noClosing===noClosing&&k.tipe==='POTONG');
+  const bonClosing=S.logKasbon.filter(k=>k.noClosing===noClosing&&k.tipe==='BONUS');
+  // Map bonus per karyawan
+  const bonMap={};bonClosing.forEach(b=>{bonMap[b.idKaryawan]=(bonMap[b.idKaryawan]||0)+(Number(b.nominal)||0);});
 
   // Group absensi per karyawan
   const byKaryawan={};
@@ -1479,12 +1484,14 @@ function openClosingDetail(noClosing){
 
   const totalUpah=Object.values(byKaryawan).reduce((s,k)=>s+k.totalUpah,0);
   const totalPotong=ksbClosing.reduce((s,k)=>s+(Number(k.nominal)||0),0);
-  const netTotal=totalUpah-totalPotong;
+  const totalBonus=bonClosing.reduce((s,k)=>s+(Number(k.nominal)||0),0);
+  const netTotal=totalUpah+totalBonus-totalPotong;
 
   // Build rows per karyawan
   const krRows=Object.values(byKaryawan).map(kr=>{
     const potong=ksbClosing.filter(k=>k.idKaryawan===kr.id).reduce((s,k)=>s+(Number(k.nominal)||0),0);
-    const net=kr.totalUpah-potong;
+    const bonus=bonMap[kr.id]||0;
+    const net=kr.totalUpah+bonus-potong;
     // Sort records by date
     const sorted=[...kr.records].sort((a,b)=>String(a.tgl||'').localeCompare(String(b.tgl||'')));
     const hariHadir=sorted.filter(r=>r.status==='Hadir').length;
@@ -1509,6 +1516,7 @@ function openClosingDetail(noClosing){
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:#64748b">Upah: <strong style="color:#16a34a">${fRp(kr.totalUpah)}</strong></div>
+          ${bonus>0?`<div style="font-size:11px;color:#d97706">🎁 Bonus: +${fRp(bonus)}</div>`:''}
           ${potong>0?`<div style="font-size:11px;color:#7c3aed">Potong: -${fRp(potong)}</div>`:''}
           <div style="font-size:13px;font-weight:800;color:${net>=0?'#1d4ed8':'#dc2626'}">Net: ${fRp(net)}</div>
         </div>
@@ -1538,6 +1546,10 @@ function openClosingDetail(noClosing){
         <span style="color:#94a3b8;font-size:11px">Total Upah</span>
         <span style="color:#34d399;font-weight:700">${fRp(totalUpah)}</span>
       </div>
+      ${totalBonus>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="color:#94a3b8;font-size:11px">🎁 Total Bonus</span>
+        <span style="color:#fbbf24;font-weight:600">+ ${fRp(totalBonus)}</span>
+      </div>`:''}
       ${totalPotong>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
         <span style="color:#94a3b8;font-size:11px">Kasbon Dipotong</span>
         <span style="color:#c084fc;font-weight:600">- ${fRp(totalPotong)}</span>
@@ -1577,7 +1589,10 @@ function genClosing(){
     const am=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const sisaKasbon=Math.max(0,am-pt);
-    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon,kasbonDipotong:0};
+    // Hitung proyek mayoritas (default proyek untuk bonus)
+    const projCount={};abs.forEach(a=>{if(a.kodeProj)projCount[a.kodeProj]=(projCount[a.kodeProj]||0)+1;});
+    const majorityProj=Object.keys(projCount).sort((a,b)=>projCount[b]-projCount[a])[0]||'';
+    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon,kasbonDipotong:0,bonusAmount:0,bonusProj:majorityProj};
   }).filter(r=>r!==null);
   clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
   if(!clsRekap.length){showToast('Tidak ada absensi "Belum Dibayar" di periode ini','err');return;}
@@ -1593,19 +1608,35 @@ function toggleAllCls(pilih){
 function toggleSatuCls(idKaryawan,checked){
   clsSel[idKaryawan]=checked;
   // Update total tanpa re-render penuh
-  const total=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah-(r.kasbonDipotong||0)),0);
+  const total=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah+(r.bonusAmount||0)-(r.kasbonDipotong||0)),0);
   const el=document.getElementById('cls-total');
   if(el)el.textContent=fRp(total);
   const selCount=clsRekap.filter(r=>clsSel[r.idKaryawan]).length;
   const elCnt=document.getElementById('cls-sel-count');
   if(elCnt)elCnt.textContent=selCount+' / '+clsRekap.length+' karyawan dipilih';
 }
+function updateClsNet(i){
+  const ksbRaw=(document.getElementById('cls-ksb-'+i)?.value||'').replace(/[^0-9]/g,'');
+  const bonRaw=(document.getElementById('cls-bon-'+i)?.value||'').replace(/[^0-9]/g,'');
+  const projEl=document.getElementById('cls-bonproj-'+i);
+  clsRekap[i].kasbonDipotong=parseInt(ksbRaw)||0;
+  clsRekap[i].bonusAmount=parseInt(bonRaw)||0;
+  if(projEl)clsRekap[i].bonusProj=projEl.value;
+  const net=clsRekap[i].totalUpah+clsRekap[i].bonusAmount-clsRekap[i].kasbonDipotong;
+  const netEl=document.getElementById('cls-net-'+i);
+  if(netEl){netEl.textContent=fRp(net);netEl.style.color=net>=0?'#16a34a':'#dc2626';}
+  if(clsSel[clsRekap[i].idKaryawan]){
+    const tot=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah+(r.bonusAmount||0)-(r.kasbonDipotong||0)),0);
+    const el=document.getElementById('cls-total');if(el)el.textContent=fRp(tot);
+  }
+}
 function buildClsRekap(){
-  const totalAll=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah-(r.kasbonDipotong||0)),0);
+  const totalAll=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah+(r.bonusAmount||0)-(r.kasbonDipotong||0)),0);
   const selCount=clsRekap.filter(r=>clsSel[r.idKaryawan]).length;
   const rows=clsRekap.map((r,i)=>{
     const isSel=!!clsSel[r.idKaryawan];
-    const net=r.totalUpah-Number(r.kasbonDipotong||0);
+    const net=r.totalUpah+(r.bonusAmount||0)-Number(r.kasbonDipotong||0);
+    const projOpts=`<option value="">— Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.bonusProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
     return `<div class="card" id="cls-card-${i}" style="border:2px solid ${isSel?'#10b981':'#e2e8f0'};opacity:${isSel?'1':'0.55'};transition:all .15s">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer" onclick="toggleSatuCls('${r.idKaryawan}',!clsSel['${r.idKaryawan}']);document.getElementById('cls-card-${i}').style.border='2px solid '+(clsSel['${r.idKaryawan}']?'#10b981':'#e2e8f0');document.getElementById('cls-card-${i}').style.opacity=clsSel['${r.idKaryawan}']?'1':'0.55';document.getElementById('cls-chk-${i}').checked=!!clsSel['${r.idKaryawan}']">
         <input type="checkbox" id="cls-chk-${i}" ${isSel?'checked':''}
@@ -1621,13 +1652,24 @@ function buildClsRekap(){
         <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(r.totalUpah)}</div></div>
         <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:#c2410c">${fRp(r.sisaKasbon)}</div></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <label style="font-size:11px;color:#64748b;white-space:nowrap">Potong kasbon:</label>
         <input class="fc" type="text" inputmode="numeric" id="cls-ksb-${i}"
           value="${r.kasbonDipotong?Number(r.kasbonDipotong).toLocaleString('id-ID'):''}"
           style="flex:1" placeholder="0"
-          oninput="let rv=this.value.replace(/[^0-9]/g,'');clsRekap[${i}].kasbonDipotong=parseInt(rv||'0')||0;this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';const net=clsRekap[${i}].totalUpah-(clsRekap[${i}].kasbonDipotong||0);document.getElementById('cls-net-${i}').textContent=fRp(net);if(clsSel[clsRekap[${i}].idKaryawan]){const tot=clsRekap.filter(r=>clsSel[r.idKaryawan]).reduce((s,r)=>s+(r.totalUpah-(r.kasbonDipotong||0)),0);const el=document.getElementById('cls-total');if(el)el.textContent=fRp(tot);}">
-        <span id="cls-net-${i}" style="font-weight:800;font-size:14px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
+          oninput="let rv=this.value.replace(/[^0-9]/g,'');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';updateClsNet(${i})">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 9px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px">
+        <span style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;flex-shrink:0">🎁 Bonus:</span>
+        <input class="fc" type="text" inputmode="numeric" id="cls-bon-${i}"
+          value="${r.bonusAmount?Number(r.bonusAmount).toLocaleString('id-ID'):''}"
+          style="flex:1;border-color:#fcd34d" placeholder="0"
+          oninput="let rv=this.value.replace(/[^0-9]/g,'');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';updateClsNet(${i})">
+        <select id="cls-bonproj-${i}" style="font-size:11px;padding:5px 5px;border:1px solid #fcd34d;border-radius:7px;background:#fff;max-width:130px;min-width:80px" onchange="updateClsNet(${i})">${projOpts}</select>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #f1f5f9">
+        <span style="font-size:11px;color:#64748b">Net Dibayar</span>
+        <span id="cls-net-${i}" style="font-weight:800;font-size:15px;color:${net>=0?'#16a34a':'#dc2626'};white-space:nowrap">${fRp(net)}</span>
       </div>
     </div>`;
   }).join('');
@@ -1664,10 +1706,14 @@ function finalizeClosing(){
   const sIds=clsRekap.filter(r=>clsSel[r.idKaryawan]).map(r=>r.idKaryawan);
   if(!sIds.length){showToast('Pilih minimal 1 karyawan','err');return;}
 
-  // Baca ulang nilai kasbon dipotong dari input (pastikan sinkron)
+  // Baca ulang nilai kasbon + bonus dari input (pastikan sinkron)
   clsRekap.forEach((r,i)=>{
-    const inp=document.getElementById('cls-ksb-'+i);
-    if(inp){r.kasbonDipotong=parseInt((inp.value||'').replace(/[^0-9]/g,''))||0;}
+    const ksbInp=document.getElementById('cls-ksb-'+i);
+    if(ksbInp){r.kasbonDipotong=parseInt((ksbInp.value||'').replace(/[^0-9]/g,''))||0;}
+    const bonInp=document.getElementById('cls-bon-'+i);
+    if(bonInp){r.bonusAmount=parseInt((bonInp.value||'').replace(/[^0-9]/g,''))||0;}
+    const projSel=document.getElementById('cls-bonproj-'+i);
+    if(projSel){r.bonusProj=projSel.value;}
   });
 
   let updated=0;
@@ -1687,8 +1733,19 @@ function finalizeClosing(){
     S.logKasbon.push({
       id:'KSB-CLO-'+Date.now()+'-'+r.idKaryawan,
       tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,
-      tipe:'POTONG',nominal:Number(r.kasbonDipotong),
+      tipe:'POTONG',nominal:Number(r.kasbonDipotong),kodeProj:'',
       noClosing:noC,ket:'Potong kasbon — '+noC
+    });
+  });
+
+  // Tambah BONUS kasbon
+  const bonusItems=clsRekap.filter(r=>clsSel[r.idKaryawan]&&Number(r.bonusAmount)>0);
+  bonusItems.forEach(r=>{
+    S.logKasbon.push({
+      id:'KSB-BON-'+Date.now()+'-'+r.idKaryawan,
+      tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,
+      tipe:'BONUS',nominal:Number(r.bonusAmount),kodeProj:r.bonusProj||'',
+      noClosing:noC,ket:'Bonus — '+noC+(r.bonusProj?' · '+r.bonusProj:'')
     });
   });
   ss(KS.ksb,S.logKasbon);
@@ -1697,7 +1754,8 @@ function finalizeClosing(){
   doSync('finalizeClosing',{
     dari,sampai,tglBayar,noClosing:noC,
     selectedIds:sIds,
-    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.kasbonDipotong)}))
+    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.kasbonDipotong),kodeProj:''})),
+    bonusItems:bonusItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.bonusAmount),kodeProj:r.bonusProj||''}))
   });
   clsRekap=[];clsSel={};
   setTab('closing','log');
@@ -1722,9 +1780,9 @@ function deleteClosing(noClosing){
   });
   ss(KS.abs,S.logAbsensi);
 
-  // Hapus kasbon POTONG terkait closing ini
+  // Hapus kasbon POTONG & BONUS terkait closing ini
   const before=S.logKasbon.length;
-  S.logKasbon=S.logKasbon.filter(k=>k.noClosing!==noClosing||k.tipe!=='POTONG');
+  S.logKasbon=S.logKasbon.filter(k=>k.noClosing!==noClosing||(k.tipe!=='POTONG'&&k.tipe!=='BONUS'));
   ss(KS.ksb,S.logKasbon);
   const removedKsb=before-S.logKasbon.length;
 

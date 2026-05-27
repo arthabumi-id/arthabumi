@@ -147,7 +147,7 @@ function _apiReadLogKasbon(ss) {
   var ws = ss.getSheetByName(SHEET.KASBON);
   if (!ws) return [];
   var R    = ROWS.KASBON;
-  var data = ws.getRange("A" + R.start + ":H" + R.end).getValues();
+  var data = ws.getRange("A" + R.start + ":I" + R.end).getValues(); // extended to I for kodeProj
   var out  = [], cnt = 0;
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
@@ -161,7 +161,8 @@ function _apiReadLogKasbon(ss) {
       nominal:    Number(r[4]) || 0,
       nama:       String(r[5] || ""),
       noClosing:  String(r[6] || ""),
-      ket:        String(r[7] || "")
+      ket:        String(r[7] || ""),
+      kodeProj:   String(r[8] || "")  // I = kodeProj (v1.13, untuk BONUS)
     });
   }
   return out;

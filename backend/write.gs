@@ -272,6 +272,7 @@ function _apiAddKasbon(ss, items) {
     ws.getRange(r, 6).setValue(_sanitizeStr(it.nama)       || "");
     ws.getRange(r, 7).setValue(_sanitizeStr(it.noClosing)  || "");
     ws.getRange(r, 8).setValue(_sanitizeStr(it.ket)        || "");
+    ws.getRange(r, 9).setValue(_sanitizeStr(it.kodeProj)   || ""); // I = kodeProj (v1.13, untuk BONUS)
   }
 }
 
