@@ -13,6 +13,32 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 BAGIAN 2: SESSION 5 (v1.12)
+
+## [2026-05-27] v1.12 — Fitur Lembur di Absensi
+
+### Fitur Baru
+- ✨ **Input Jam Lembur per Karyawan** — muncul otomatis di card karyawan saat status Hadir/Setengah Hari
+  - Input angka jam lembur (0.5 increment, max 24 jam)
+  - Tarif lembur = upahHarian / 8 per jam
+  - Total upah = base upah + (jamLembur × upahHarian / 8)
+- ✨ **Kalkulasi Otomatis** — upahHariIni sudah inklusif lembur (semua SUMIF/total otomatis benar)
+- ✨ **Log Absensi** — tampilkan label "⏰ Lembur X jam · +Rp Y" jika ada lembur
+- ✨ **Closing Detail Modal** — tampilkan badge "⏰Xj" di per-baris hari kerja
+- ✨ **GSheet Kolom baru** — M=jamLembur, N=upahLembur di LOG ABSENSI
+
+### File yang diubah
+- `arthabumi/index.html` → absInput(), setAbsRow(), submitAbsensi(), absLog(), openClosingDetail()
+- `arthabumi/backend/write.gs` → _apiAddAbsensi() tulis kolom M & N
+- `arthabumi/backend/read.gs` → _apiReadLogAbsensi() baca kolom M & N (range ke :N)
+
+### Notes
+- **Backward compatible**: data lama tanpa lembur tetap aman (jamLembur default 0)
+- **GSheet**: Perlu tambah header kolom M = "Jam Lembur" dan N = "Upah Lembur" secara manual
+- Kalkulasi: `tarif = upahHarian/8`, `upahLembur = round(jamLembur × upahHarian/8)`
+
+---
+
 # 🔧 BAGIAN 1: APP DEVELOPMENT HISTORY (v1.1 → v1.6b)
 
 ## [2026-05-20] v1.6b — Fix Tanggal GSheet (Root Fix)

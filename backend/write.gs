@@ -232,6 +232,8 @@ function _apiAddAbsensi(ss, items) {
     ws.getRange(r,10).setValue("");
     ws.getRange(r,11).setValue("");
     ws.getRange(r,12).setValue(_sanitizeStr(it.ket) || "");
+    ws.getRange(r,13).setValue(_sanitizeNum(it.jamLembur || 0)).setNumberFormat("0.#");   // M = jamLembur
+    ws.getRange(r,14).setValue(_sanitizeNum(it.upahLembur || 0)).setNumberFormat("#,##0"); // N = upahLembur
   }
 }
 

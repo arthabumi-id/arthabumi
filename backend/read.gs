@@ -117,7 +117,7 @@ function _apiReadLogAbsensi(ss) {
   var ws = ss.getSheetByName(SHEET.ABSENSI);
   if (!ws) return [];
   var R    = ROWS.ABSENSI;
-  var data = ws.getRange("A" + R.start + ":L" + R.end).getValues();
+  var data = ws.getRange("A" + R.start + ":N" + R.end).getValues(); // extended to N for lembur fields
   var out  = [], cnt = 0;
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
@@ -135,7 +135,9 @@ function _apiReadLogAbsensi(ss) {
       statusBayar: String(r[8]  || "Belum Dibayar"),
       noClosing:   String(r[9]  || ""),
       tglBayar:    _apiSerDate(r[10]),
-      ket:         String(r[11] || "")
+      ket:         String(r[11] || ""),
+      jamLembur:   Number(r[12]) || 0,  // M = jamLembur (v1.12)
+      upahLembur:  Number(r[13]) || 0   // N = upahLembur (v1.12)
     });
   }
   return out;

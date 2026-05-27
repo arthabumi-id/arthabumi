@@ -1159,19 +1159,33 @@ function absInput(){
   const STS_FULL={'Hadir':'Hadir','Setengah':'Setengah Hari','Tidak Hadir':'Tidak Hadir','Libur':'Libur'};
   const STS_COLOR={'Hadir':'#10b981','Setengah':'#f59e0b','Tidak Hadir':'#ef4444','Libur':'#94a3b8'};
   const rows=S.karyawan.map((k,i)=>{
-    const r=S.absRows[i]||{status:'',kodeProj:'',ket:''};
+    const r=S.absRows[i]||{status:'',kodeProj:'',ket:'',jamLembur:0};
     const curFull=r.status;
-    const upahHariIni=curFull==='Hadir'?k.upahHarian:curFull==='Setengah Hari'?k.upahHarian*0.5:0;
+    const jamLembur=Number(r.jamLembur)||0;
+    const tarifLembur=Math.round(k.upahHarian/8);
+    const upahLembur=Math.round(jamLembur*k.upahHarian/8);
+    const baseUpah=curFull==='Hadir'?k.upahHarian:curFull==='Setengah Hari'?k.upahHarian*0.5:0;
+    const upahHariIni=baseUpah+upahLembur;
     const stsBtns=STS.map(s=>{const full=STS_FULL[s],active=curFull===full,col=STS_COLOR[s];
       return `<button type="button" onclick="setAbsRow(${i},'status','${full}')" style="flex:1;padding:8px 2px;border-radius:9px;border:2px solid ${active?col:'#e2e8f0'};background:${active?col:'#fff'};color:${active?'#fff':'#64748b'};font-size:11px;font-weight:600;cursor:pointer">${s}</button>`;}).join('');
     const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)"><option value="">-- Default --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.kodeProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}</select>`;
+    const lemburRow=(curFull==='Hadir'||curFull==='Setengah Hari')?`
+      <div style="display:flex;align-items:center;gap:6px;margin-top:7px;padding:7px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px">
+        <span style="font-size:11px;color:#92400e;font-weight:600;flex-shrink:0">⏰ Lembur</span>
+        <input type="number" min="0" max="24" step="0.5" value="${jamLembur||''}" placeholder="0"
+          style="width:62px;padding:4px 7px;border:1px solid #fcd34d;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff"
+          oninput="setAbsRow(${i},'jamLembur',parseFloat(this.value)||0);go('absensi')">
+        <span style="font-size:11px;color:#78350f">jam &nbsp;·&nbsp; ${fRp(tarifLembur)}/jam</span>
+        ${upahLembur>0?`<span style="font-size:12px;font-weight:700;color:#d97706;margin-left:auto">+${fRp(upahLembur)}</span>`:''}
+      </div>`:'';
     return `<div class="card" style="margin-bottom:8px">
       <div class="row" style="margin-bottom:8px">
         <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${k.jabatan} · ${fRp(k.upahHarian)}/hr</div></div>
-        ${upahHariIni>0?`<span style="font-weight:700;color:#10b981;font-size:14px;flex-shrink:0">${fRp(upahHariIni)}</span>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
+        ${upahHariIni>0?`<div style="text-align:right;flex-shrink:0">${upahLembur>0?`<div style="font-size:10px;color:#94a3b8;text-decoration:line-through">${fRp(baseUpah)}</div>`:''}<span style="font-weight:700;color:#10b981;font-size:14px">${fRp(upahHariIni)}</span></div>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
       </div>
       <div style="display:flex;gap:5px;margin-bottom:8px">${stsBtns}</div>
-      <div class="fg" style="margin-bottom:0">${projSel}</div>
+      ${lemburRow}
+      <div class="fg" style="margin-bottom:0;margin-top:7px">${projSel}</div>
     </div>`;
   }).join('');
   return `<div class="card" style="margin-bottom:10px">
@@ -1188,17 +1202,22 @@ function absInput(){
   </div>
   <button class="btn btn-p btn-w" onclick="submitAbsensi()">💾 Simpan Absensi</button>`:''}`;
 }
-function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:''};if(key==='status'&&S.absRows[i].status===val){S.absRows[i].status='';go('absensi');return;}S.absRows[i][key]=val;if(key==='status')go('absensi');}
+function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:'',jamLembur:0};if(key==='status'&&S.absRows[i].status===val){S.absRows[i].status='';S.absRows[i].jamLembur=0;go('absensi');return;}S.absRows[i][key]=val;if(key==='status')go('absensi');}
 function submitAbsensi(){
   const tgl=document.getElementById('abs-tgl')?.value||today();
   const defProj=document.getElementById('abs-prj')?.value||'';
   const active=S.karyawan.map((k,i)=>({k,r:S.absRows[i]||{}})).filter(({r})=>r.status&&r.status!=='Tidak Hadir'&&r.status!=='Libur');
   if(!active.length){showToast('Pilih status minimal 1 karyawan','err');return;}
-  const newAbs=active.map(({k,r})=>{const upah=r.status==='Hadir'?k.upahHarian:r.status==='Setengah Hari'?k.upahHarian*0.5:0;
-    return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni:upah,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};});
+  const newAbs=active.map(({k,r})=>{
+    const baseUpah=r.status==='Hadir'?k.upahHarian:r.status==='Setengah Hari'?k.upahHarian*0.5:0;
+    const jamLembur=Number(r.jamLembur)||0;
+    const upahLembur=Math.round(jamLembur*k.upahHarian/8);
+    const upahHariIni=baseUpah+upahLembur;
+    return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni,jamLembur,upahLembur,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};
+  });
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
   showToast('✅ Absensi '+active.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
-  doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,ket:a.ket})));
+  doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
 function setAbsDateFilter(v){S.tab.absDateMode=v;if(v==='custom'){document.getElementById('abs-date-from').style.display='block';document.getElementById('abs-date-to').style.display='block';}else{document.getElementById('abs-date-from').style.display='none';document.getElementById('abs-date-to').style.display='none';}go('absensi');}
@@ -1235,7 +1254,8 @@ function absLog(){
     const namaP=S.projects.find(p=>p.kode===a.kodeProj)?.nama||a.kodeProj||'';
     return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(a.nama)}</div>
-        <div class="item-sub">${fDate(a.tgl)} · ${esc(namaP)} · ${fRp(a.upahHariIni)}</div></div>
+        <div class="item-sub">${fDate(a.tgl)} · ${esc(namaP)} · ${fRp(a.upahHariIni)}</div>
+        ${(Number(a.jamLembur)>0)?`<div style="font-size:10px;color:#d97706;margin-top:2px;font-weight:600">⏰ Lembur ${a.jamLembur} jam &nbsp;·&nbsp; +${fRp(Number(a.upahLembur)||0)}</div>`:''}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
         ${bdg(a.status)}
         ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${ri})">🗑</button>`:''}
@@ -1438,6 +1458,7 @@ function openClosingDetail(noClosing){
           <span style="font-size:11px;color:#475569">${fDate(r.tgl)}</span>
           <span style="margin-left:6px;font-size:10px;padding:1px 6px;border-radius:9px;font-weight:600;background:${r.status==='Hadir'?'#dcfce7':r.status==='Setengah Hari'?'#fef9c3':'#f1f5f9'};color:${r.status==='Hadir'?'#15803d':r.status==='Setengah Hari'?'#854d0e':'#475569'}">${r.status}</span>
           ${r.kodeProj?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">${esc(r.kodeProj)}</span>`:''}
+          ${(Number(r.jamLembur)>0)?`<span style="font-size:10px;color:#d97706;margin-left:4px;font-weight:700">⏰${r.jamLembur}j</span>`:''}
         </div>
         <span style="font-size:12px;font-weight:600;color:#16a34a">${fRp(r.upahHariIni)}</span>
       </div>`).join('');
