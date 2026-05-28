@@ -26,14 +26,14 @@ function setupAllSheets() {
   _setupSheetRAB(ss);
   _setupSheetMasterSubkon(ss);
   _setupSheetLogSubkon(ss);
+  setupRekapSheet();  // v1.13: sheet REKAP dengan formula otomatis
 
   SpreadsheetApp.flush();
   Logger.log("════════════════════════════════════════");
-  Logger.log("✅ SELESAI! Semua 11 sheet sudah diformat (v1.13).");
+  Logger.log("✅ SELESAI! Semua 12 sheet sudah diformat (v1.13).");
   Logger.log("   Timezone: " + TZ);
   Logger.log("   Langkah berikutnya:");
-  Logger.log("   1. Jalankan fixAllProjectFormulas() → update formula di MASTER PROJECT");
-  Logger.log("   2. Buka app → Dashboard → klik '📊 Update Rekap ke Google Sheets' → buat sheet REKAP");
+  Logger.log("   → Jalankan fixAllProjectFormulas() untuk perbaiki formula MASTER PROJECT");
 }
 
 // ── Jalankan ini untuk setup 3 sheet baru saja (RAB, SUBKON, LOG SUBKON)
@@ -431,6 +431,173 @@ function _setupSheetLogSubkon(ss) {
     "Belum Dibayar": {bg:"#fee2e2", fg:"#b91c1c"}
   });
   Logger.log("  ✓ LOG SUBKON");
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// REKAP SHEET — Formula otomatis, update sendiri setiap data berubah
+// Jalankan SEKALI: setupRekapSheet() dari Apps Script Editor
+// Setelah itu sheet REKAP langsung live tanpa perlu tombol di app
+//
+// Kolom REKAP:
+//   A=No  B=Kode  C=Nama  D=Jenis  E=Status  F=NilaiKontrak
+//   G=Material  H=UpahGross  I=Subkon  J=KasbonAmbil  K=KasbonBonus
+//   L=TotalBiaya  M=Laba  N=Margin%  O=Bayar  P=Piutang  Q=Progress%
+//
+// ⚠️ Catatan: Kasbon POTONG tidak bisa dihitung otomatis di GSheet
+//    karena butuh logika noClosing (linkage kompleks). Untuk nilai presisi
+//    termasuk POTONG, buka app → klik 📋 Rekap per proyek.
+// ════════════════════════════════════════════════════════════════════════
+function setupRekapSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var wsRekap = ss.getSheetByName(SHEET.REKAP);
+  if (!wsRekap) {
+    wsRekap = ss.insertSheet(SHEET.REKAP, 0); // taruh di posisi pertama
+  }
+  wsRekap.clearFormats();
+  wsRekap.clearConditionalFormatRules();
+
+  var R          = ROWS.PROJECT;
+  var DATA_START = 4;
+  var NUM_ROWS   = R.end - R.start + 1; // 50 baris (max 50 proyek)
+  var LAST_DATA  = DATA_START + NUM_ROWS - 1; // baris 53
+  var TOTAL_ROW  = LAST_DATA + 1;             // baris 54 = total
+  var LAST_COL   = 17; // kolom A-Q
+
+  // Bersihkan area isi (aman — hanya range rekap, bukan sheet lain)
+  wsRekap.getRange(1, 1, TOTAL_ROW + 2, LAST_COL).clearContent();
+
+  // ── Judul & Subtitle ──────────────────────────────────────────────────
+  _formatTitle(wsRekap,
+    "  📊  REKAP PROYEK ARTHABUMI",
+    "  Kalkulasi otomatis via rumus SUMIF — update real-time  |  ⚠️ Kasbon POTONG tidak termasuk (lihat Rekap di app untuk nilai presisi)",
+    LAST_COL);
+
+  // ── Header ────────────────────────────────────────────────────────────
+  _formatHeaders(wsRekap, [
+    "No","Kode","Nama Proyek","Jenis","Status",
+    "Nilai Kontrak","Material","Upah Gross","Subkon",
+    "Kasbon Ambil","Kasbon Bonus","Total Biaya",
+    "Est. Laba","Margin %","Sudah Bayar","Piutang","Progress %"
+  ]);
+
+  // ── Bangun array formula (50 baris sekaligus, 1 API call) ─────────────
+  var formulas = [];
+  for (var i = 0; i < NUM_ROWS; i++) {
+    var pr = R.start + i;        // baris di MASTER PROJECT (4..53)
+    var rr = DATA_START + i;     // baris di REKAP (4..53)
+    var b  = "$B" + rr;          // ref ke kolom kode
+
+    formulas.push([
+      // A: No
+      "=IF('MASTER PROJECT'!B" + pr + "=\"\",\"\"," + (i+1) + ")",
+      // B: Kode Proyek
+      "=IF('MASTER PROJECT'!B" + pr + "=\"\",\"\",'MASTER PROJECT'!B" + pr + ")",
+      // C: Nama Proyek
+      "=IF(" + b + "=\"\",\"\",'MASTER PROJECT'!C" + pr + ")",
+      // D: Jenis
+      "=IF(" + b + "=\"\",\"\",'MASTER PROJECT'!D" + pr + ")",
+      // E: Status
+      "=IF(" + b + "=\"\",\"\",'MASTER PROJECT'!E" + pr + ")",
+      // F: Nilai Kontrak
+      "=IF(" + b + "=\"\",\"\",'MASTER PROJECT'!F" + pr + ")",
+      // G: Material — SUMIFS exclude ASET
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS(PEMBELIAN!$L:$L,PEMBELIAN!$C:$C," + b + ",PEMBELIAN!$J:$J,\"<>ASET\"),0))",
+      // H: Upah Gross — dari LOG ABSENSI (inklusif lembur v1.12)
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG ABSENSI'!$F:$F," + b + ",'LOG ABSENSI'!$H:$H),0))",
+      // I: Subkon
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG SUBKON'!$C:$C," + b + ",'LOG SUBKON'!$H:$H),0))",
+      // J: Kasbon AMBIL (terkait proyek via kolom I LOG KASBON)
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"AMBIL\"),0))",
+      // K: Kasbon BONUS
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"BONUS\"),0))",
+      // L: Total Biaya = G+H+I+J+K
+      "=IF(" + b + "=\"\",\"\",$G" + rr + "+$H" + rr + "+$I" + rr + "+$J" + rr + "+$K" + rr + ")",
+      // M: Est. Laba = Kontrak - TotalBiaya
+      "=IF(" + b + "=\"\",\"\",$F" + rr + "-$L" + rr + ")",
+      // N: Margin %
+      "=IF(OR(" + b + "=\"\",$F" + rr + "=0),\"\",$M" + rr + "/$F" + rr + ")",
+      // O: Sudah Bayar (dari klien)
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG PEMBAYARAN'!$C:$C," + b + ",'LOG PEMBAYARAN'!$E:$E),0))",
+      // P: Piutang = Kontrak - Bayar
+      "=IF(" + b + "=\"\",\"\",$F" + rr + "-$O" + rr + ")",
+      // Q: Progress % (ditulis app, 0-100)
+      "=IF(" + b + "=\"\",\"\",'MASTER PROJECT'!P" + pr + ")"
+    ]);
+  }
+  // Set semua formula sekaligus (efisien)
+  wsRekap.getRange(DATA_START, 1, NUM_ROWS, LAST_COL).setFormulas(formulas);
+
+  // ── Baris Total (SUM) ─────────────────────────────────────────────────
+  wsRekap.getRange(TOTAL_ROW, 1, 1, 5).merge()
+    .setValue("TOTAL")
+    .setBackground("#334155").setFontColor("#ffffff")
+    .setFontWeight("bold").setFontSize(10).setHorizontalAlignment("center");
+  var sumCols = {6:"F",7:"G",8:"H",9:"I",10:"J",11:"K",12:"L",13:"M",15:"O",16:"P"};
+  Object.keys(sumCols).forEach(function(colIdx) {
+    var col = sumCols[colIdx];
+    wsRekap.getRange(TOTAL_ROW, Number(colIdx))
+      .setFormula("=SUMIF($B" + DATA_START + ":$B" + LAST_DATA + ",\"<>\"," +
+                  col + DATA_START + ":" + col + LAST_DATA + ")")
+      .setFontWeight("bold").setBackground("#f1f5f9");
+  });
+  wsRekap.getRange(TOTAL_ROW, 14) // Margin% average
+    .setFormula("=IFERROR(SUMIF($B" + DATA_START + ":$B" + LAST_DATA + ",\"<>\",$M" + DATA_START + ":$M" + LAST_DATA + ")" +
+                "/SUMIF($B" + DATA_START + ":$B" + LAST_DATA + ",\"<>\",$F" + DATA_START + ":$F" + LAST_DATA + "),\"\")")
+    .setFontWeight("bold").setBackground("#f1f5f9");
+
+  // ── Format angka ──────────────────────────────────────────────────────
+  var rpFmt  = "#,##0";
+  var pctFmt = "0.0%";
+  var numRange = [6,7,8,9,10,11,12,13,15,16]; // kolom Rp
+  numRange.forEach(function(c) {
+    wsRekap.getRange(DATA_START, c, NUM_ROWS + 1, 1).setNumberFormat(rpFmt);
+  });
+  wsRekap.getRange(DATA_START, 14, NUM_ROWS + 1, 1).setNumberFormat(pctFmt); // Margin
+  wsRekap.getRange(DATA_START, 17, NUM_ROWS, 1).setNumberFormat("#,##0").setHorizontalAlignment("center"); // Progress
+
+  // Laba warna merah kalau negatif
+  wsRekap.getRange(DATA_START, 13, NUM_ROWS, 1)
+    .setNumberFormat('#,##0;[Red](#,##0);"-"');
+  wsRekap.getRange(DATA_START, 16, NUM_ROWS, 1) // Piutang
+    .setNumberFormat('#,##0;[Red](#,##0);"-"');
+
+  // ── Conditional Format ────────────────────────────────────────────────
+  _addStatusCF(wsRekap, wsRekap.getRange("E" + DATA_START + ":E" + LAST_DATA), {
+    "Berjalan": {bg:"#dbeafe", fg:"#1d4ed8"},
+    "Selesai":  {bg:"#dcfce7", fg:"#15803d"},
+    "Hold":     {bg:"#fef9c3", fg:"#854d0e"},
+    "Batal":    {bg:"#fee2e2", fg:"#b91c1c"}
+  });
+
+  // ── Zebra rows + alignment ────────────────────────────────────────────
+  _formatDataArea(wsRekap, DATA_START, LAST_DATA, LAST_COL);
+  wsRekap.getRange("A" + DATA_START + ":B" + LAST_DATA).setHorizontalAlignment("center");
+  wsRekap.getRange("D" + DATA_START + ":E" + LAST_DATA).setHorizontalAlignment("center");
+  wsRekap.getRange("A" + TOTAL_ROW + ":E" + TOTAL_ROW).setBackground("#334155");
+
+  // ── Lebar kolom ───────────────────────────────────────────────────────
+  wsRekap.setColumnWidth(1, 40);   // No
+  wsRekap.setColumnWidth(2, 80);   // Kode
+  wsRekap.setColumnWidth(3, 200);  // Nama
+  wsRekap.setColumnWidth(4, 110);  // Jenis
+  wsRekap.setColumnWidth(5, 85);   // Status
+  wsRekap.setColumnWidth(6, 130);  // Kontrak
+  wsRekap.setColumnWidth(7, 120);  // Material
+  wsRekap.setColumnWidth(8, 120);  // Upah
+  wsRekap.setColumnWidth(9, 100);  // Subkon
+  wsRekap.setColumnWidth(10, 110); // Kasbon Ambil
+  wsRekap.setColumnWidth(11, 105); // Kasbon Bonus
+  wsRekap.setColumnWidth(12, 125); // Total Biaya
+  wsRekap.setColumnWidth(13, 120); // Laba
+  wsRekap.setColumnWidth(14, 75);  // Margin
+  wsRekap.setColumnWidth(15, 120); // Bayar
+  wsRekap.setColumnWidth(16, 110); // Piutang
+  wsRekap.setColumnWidth(17, 80);  // Progress
+
+  wsRekap.setFrozenRows(3);
+  SpreadsheetApp.flush();
+  Logger.log("  ✓ REKAP (formula otomatis, 17 kolom A-Q)");
 }
 
 // ════════════════════════════════════════════════════════════════════════
