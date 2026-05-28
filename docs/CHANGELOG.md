@@ -13,6 +13,63 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 7 (v1.14) — 2026-05-28
+
+## [2026-05-28] v1.14 — Kasbon Hutang Riwayat Pelunasan + Biaya Model Final
+
+### Keputusan Arsitektur — Biaya Model FINAL
+**Formula total biaya proyek dikunci:**
+```
+Total Biaya = Material + Upah Gross + Subkon + Bonus Kasbon
+```
+POTONG kasbon = **informasional saja**, tidak mempengaruhi biaya proyek.
+Alasan: biaya sudah tercatat saat AMBIL kasbon, POTONG hanya mekanisme pelunasan hutang.
+
+### Fitur Baru — Tab Hutang Kasbon (index.html)
+- ✨ **`_kasbonCard(k, kb, isLunas)`** — helper baru untuk render kartu karyawan kasbon, dipakai di dua tempat
+- ✨ **Seksi Hutang Aktif** — kartu merah untuk karyawan masih punya hutang
+- ✨ **Dropdown Riwayat Pelunasan** (`<details>`) — per karyawan, tiap entri POTONG ditampilkan:
+  - Tanggal pelunasan
+  - Dari upah proyek mana (kodeProj → nama proyek)
+  - Nominal yang dipotong
+  - No.Closing (jika ada)
+  - Urut dari lama ke baru
+  - Total dipotong di footer dropdown
+- ✨ **Seksi Riwayat Sudah Lunas** — collapsed `<details>` di bawah hutang aktif
+  - Karyawan yang pernah punya kasbon tapi sudah lunas 100%
+  - Badge hijau ✅ LUNAS
+  - Riwayat pelunasan tetap bisa dilihat (tidak hilang setelah lunas)
+
+### Fix Backend
+- 🐛 **`rekap.gs`**: `totalBiaya` diubah dari `mat + upahNet + subkon + bonus` → `mat + upahGross + subkon + bonus`
+- 🐛 **`setup.gs`**: Formula kolom L sheet REKAP diubah dari `G+H-J+I+K` → `G+H+I+K`
+- 🔤 **`setup.gs`**: Header kolom J diubah jadi "Kasbon Potong (info)" untuk kejelasan
+
+### File yang diubah
+- `arthabumi/index.html` — `_kasbonCard()`, `kasbonHutang()`
+- `arthabumi/backend/rekap.gs` — totalBiaya formula
+- `arthabumi/backend/setup.gs` — kolom L formula + header kolom J
+
+### Notes
+- Tidak ada perubahan GSheet schema (tidak perlu tambah/ubah kolom)
+- Untuk aktifkan fix REKAP: paste `setup.gs` → jalankan `setupRekapSheet()`, lalu `_apiUpdateRekap()`
+
+---
+
+# 🔧 SESSION 6 (v1.13) — 2026-05-27
+
+## [2026-05-27] v1.13 — Kasbon v2: kodeProj Langsung di LOG KASBON
+
+### Perubahan Model Data
+- **LOG KASBON kolom I** = kodeProj — diisi saat closing untuk POTONG & BONUS
+- **`calcKasbonForProj(kode)`** v2: filter langsung by `kodeProj` di logKasbon, tidak lagi via noClosing linkage
+
+### File yang diubah
+- `arthabumi/index.html` — calcKasbonForProj, calcCashflow, pgDashboard, openRekapProyek, kasbonHutang
+- `arthabumi/backend/write.gs` — _apiFinalizeClosing (tulis kodeProj ke kolom I), _apiDeleteClosing (hapus 9 kolom A:I), _apiAddPembelian (update MASTER TOKO jika toko baru)
+
+---
+
 # 🔧 BAGIAN 2: SESSION 5 (v1.12)
 
 ## [2026-05-27] v1.12 — Fitur Lembur di Absensi
