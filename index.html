@@ -444,9 +444,9 @@ const filterByDate=(items,mode,fromDate,toDate)=>{
   return items.filter(x=>{const d=(x.tgl||'').substring(0,10);return d>=from&&d<=to;});
 };
 // ── FEATURE 1: Cashflow Calculation [v1.11]
-// Helper: total bonus+kasbon-beban-proyek untuk kodeProj tertentu
+// Helper: total beban proyek dari kasbon — hanya BONUS (bukan AMBIL, karena AMBIL adalah advance gaji yang sudah tercatat di upahHariIni)
 const calcKasbonBeban=(kodeProj)=>{
-  return S.logKasbon.filter(x=>x.kodeProj===kodeProj&&(x.tipe==='BONUS'||(x.tipe==='AMBIL'&&x.kodeProj)))
+  return S.logKasbon.filter(x=>x.kodeProj===kodeProj&&x.tipe==='BONUS')
     .reduce((s,x)=>s+(Number(x.nominal)||0),0);
 };
 const calcCashflow=(kodeProj)=>{
@@ -754,10 +754,9 @@ function openRekapProyek(kode){
   const upahSudah=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Sudah Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkonBiaya=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+  // Hanya BONUS yang jadi biaya proyek — AMBIL adalah advance gaji (tidak double count)
   const bonusBeban=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='BONUS').reduce((s,x)=>s+(Number(x.nominal)||0),0);
-  const kasbonBeban=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
-  const totalKasbonBeban=bonusBeban+kasbonBeban;
-  const totalBiaya=matBiaya+upahTotal+subkonBiaya+totalKasbonBeban;
+  const totalBiaya=matBiaya+upahTotal+subkonBiaya+bonusBeban;
   // Pembayaran klien
   const bayarRows=S.logPembayaran.filter(x=>x.kodeProj===kode).sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const bayarTotal=bayarRows.reduce((s,x)=>s+(Number(x.nominal)||0),0);
@@ -806,7 +805,6 @@ function openRekapProyek(kode){
       ${row2('👷 '+(rab&&rab.labelUpah?esc(rab.labelUpah):'Upah Tenaga'),upahTotal)}
       ${row2('🔨 '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
       ${bonusBeban>0?row2('🎁 Bonus Karyawan',bonusBeban,'color:#d97706'):''}
-      ${kasbonBeban>0?row2('💼 Kasbon Beban Proyek',kasbonBeban,'color:#7c3aed'):''}
       <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
         <span style="color:#1e293b">Total</span><span style="color:#dc2626">${fRp(totalBiaya)}</span></div>
     </div>
