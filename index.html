@@ -444,18 +444,34 @@ const filterByDate=(items,mode,fromDate,toDate)=>{
   return items.filter(x=>{const d=(x.tgl||'').substring(0,10);return d>=from&&d<=to;});
 };
 // ── FEATURE 1: Cashflow Calculation [v1.11]
-// Helper: total beban proyek dari kasbon — hanya BONUS (bukan AMBIL, karena AMBIL adalah advance gaji yang sudah tercatat di upahHariIni)
-const calcKasbonBeban=(kodeProj)=>{
-  return S.logKasbon.filter(x=>x.kodeProj===kodeProj&&x.tipe==='BONUS')
+// Helper: hitung semua komponen kasbon untuk satu proyek
+// - ambil  = total kasbon AMBIL yang tercatat untuk proyek ini
+// - potong = total kasbon POTONG dari closing yang cover proyek ini
+// - bonus  = total bonus karyawan untuk proyek ini
+// - hutang = ambil - potong (sisa yang belum lunas)
+const calcKasbonForProj=(kode)=>{
+  // Pasangan worker+noClosing yang ada di proyek ini
+  const wc=S.logAbsensi
+    .filter(a=>a.kodeProj===kode&&a.noClosing&&a.noClosing.trim()!=='')
+    .map(a=>({w:a.idKaryawan,c:a.noClosing.trim()}));
+  const ambil=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='AMBIL')
     .reduce((s,x)=>s+(Number(x.nominal)||0),0);
+  const potong=S.logKasbon.filter(x=>x.tipe==='POTONG'&&x.noClosing&&
+    wc.some(p=>p.w===x.idKaryawan&&p.c===x.noClosing.trim()))
+    .reduce((s,x)=>s+(Number(x.nominal)||0),0);
+  const bonus=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='BONUS')
+    .reduce((s,x)=>s+(Number(x.nominal)||0),0);
+  return{ambil,potong,bonus,hutang:Math.max(0,ambil-potong)};
 };
 const calcCashflow=(kodeProj)=>{
   const pembayaran=S.logPembayaran.filter(x=>x.kodeProj===kodeProj).reduce((s,x)=>s+(Number(x.nominal)||0),0);
   const pembelian=S.pembelian.filter(b=>b.kodeProj===kodeProj&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
   const upah=S.logAbsensi.filter(a=>a.kodeProj===kodeProj).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kodeProj).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  const kasbonBeban=calcKasbonBeban(kodeProj);
-  return pembayaran-(pembelian+upah+subkon+kasbonBeban);
+  const kb=calcKasbonForProj(kodeProj);
+  // biaya = pembelian + (upah_gross - potong) + subkon + bonus + ambil
+  // = pembelian + upah + subkon + bonus + hutang  (karena hutang = ambil - potong)
+  return pembayaran-(pembelian+(upah-kb.potong)+subkon+kb.bonus+kb.ambil);
 };
 function pgDashboard(){
   const view=S.tab.dashboard||'rekap';
@@ -473,15 +489,21 @@ function pgDashboard(){
   const tM=S.pembelian.filter(b=>b.status!=='ASET'&&filtered.find(p=>p.kode===b.kodeProj)).reduce((s,b)=>s+calcTotal(b),0);
   const tU=S.logAbsensi.filter(a=>filtered.find(p=>p.kode===a.kodeProj)).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const tSK=S.logSubkon.filter(ls=>filtered.find(p=>p.kode===ls.kodeProj)).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  const tKB=filtered.reduce((s,p)=>s+calcKasbonBeban(p.kode),0); // total bonus+kasbon-beban semua proyek
-  const tL=tK-(tM+tU+tSK+tKB);
+  // tKB = total kasbon beban = bonus + hutang (AMBIL - POTONG) di semua proyek terfilter
+  // tPotong dibutuhkan untuk mengimbangi tU (upah gross sudah termasuk absensi yg ada POTONG)
+  const _allKb=filtered.map(p=>calcKasbonForProj(p.kode));
+  const tKB=_allKb.reduce((s,kb)=>s+kb.bonus+kb.hutang,0);
+  const tPotong=_allKb.reduce((s,kb)=>s+kb.potong,0);
+  const tL=tK-(tM+(tU-tPotong)+tSK+tKB);
   const statuses=['Semua','Berjalan','Selesai','Hold','Batal'];
   const filterBar=statuses.map(s=>`<button onclick="setDashFilter('${s}')" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${S.dashFilter===s?'#10b981':'#f1f5f9'};color:${S.dashFilter===s?'#fff':'#64748b'};flex-shrink:0">${s}${S.dashFilter===s?' ('+filtered.length+')':''}</button>`).join('');
   const rows=filtered.map(p=>{
-    const biaya=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0)
-      +S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0)
-      +S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0)
-      +calcKasbonBeban(p.kode); // bonus + kasbon-beban proyek
+    const _kb=calcKasbonForProj(p.kode);
+    const _mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+    const _upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+    const _subkon=S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+    // biaya = material + net_upah(gross-potong) + subkon + bonus + ambil
+    const biaya=_mat+(_upah-_kb.potong)+_subkon+_kb.bonus+_kb.ambil;
     const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const laba=(Number(p.nilaiKontrak)||0)-biaya,piutang=(Number(p.nilaiKontrak)||0)-bayar;
     const rab=S.rab.find(r=>r.kodeProj===p.kode);
@@ -754,9 +776,12 @@ function openRekapProyek(kode){
   const upahSudah=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Sudah Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkonBiaya=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  // Hanya BONUS yang jadi biaya proyek — AMBIL adalah advance gaji (tidak double count)
-  const bonusBeban=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='BONUS').reduce((s,x)=>s+(Number(x.nominal)||0),0);
-  const totalBiaya=matBiaya+upahTotal+subkonBiaya+bonusBeban;
+  // Kasbon: hutang = AMBIL - POTONG (selisih yang jadi beban proyek); BONUS = extra pay
+  const kb=calcKasbonForProj(kode);
+  // totalBiaya = material + (upahGross - potong) + subkon + bonus + ambil
+  //            = material + upahGross + subkon + bonus + hutang  (hutang = ambil - potong)
+  const upahNet=upahTotal-kb.potong;
+  const totalBiaya=matBiaya+upahNet+subkonBiaya+kb.bonus+kb.ambil;
   // Pembayaran klien
   const bayarRows=S.logPembayaran.filter(x=>x.kodeProj===kode).sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const bayarTotal=bayarRows.reduce((s,x)=>s+(Number(x.nominal)||0),0);
@@ -802,9 +827,14 @@ function openRekapProyek(kode){
     <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">BREAKDOWN BIAYA</div>
     <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:12px">
       ${row2('🧱 '+(rab&&rab.labelMat?esc(rab.labelMat):'Material'),matBiaya)}
-      ${row2('👷 '+(rab&&rab.labelUpah?esc(rab.labelUpah):'Upah Tenaga'),upahTotal)}
+      ${row2('👷 Upah Tenaga (gross)',upahTotal)}
+      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 16px;font-size:12px;color:#64748b"><span>↳ Potong Kasbon (closing)</span><span style="color:#16a34a">- ${fRp(kb.potong)}</span></div>`:''}
+      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 5px 16px;font-size:12px;border-bottom:1px solid #f1f5f9"><span style="color:#475569;font-weight:600">Net Upah</span><span style="font-weight:700">${fRp(upahNet)}</span></div>`:''}
       ${row2('🔨 '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
-      ${bonusBeban>0?row2('🎁 Bonus Karyawan',bonusBeban,'color:#d97706'):''}
+      ${kb.ambil>0?row2('💼 Kasbon (hutang karyawan)',kb.ambil,'color:#7c3aed'):''}
+      ${kb.bonus>0?row2('🎁 Bonus Karyawan',kb.bonus,'color:#d97706'):''}
+      ${kb.hutang>0?`<div style="padding:4px 0 2px;font-size:11px;color:#94a3b8">⚠️ Hutang kasbon = ${fRp(kb.ambil)} − ${fRp(kb.potong)} = ${fRp(kb.hutang)} (belum lunas)</div>`:''}
+      ${kb.ambil>0&&kb.hutang===0?`<div style="padding:4px 0 2px;font-size:11px;color:#16a34a">✅ Kasbon ${fRp(kb.ambil)} sudah lunas (potong ${fRp(kb.potong)})</div>`:''}
       <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
         <span style="color:#1e293b">Total</span><span style="color:#dc2626">${fRp(totalBiaya)}</span></div>
     </div>
