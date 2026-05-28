@@ -56,10 +56,11 @@ function _apiUpdateRekap(ss) {
       .filter(function(x){ return x.kodeProj === kode; })
       .reduce(function(s, x){ return s + (Number(x.nominal)||0); }, 0);
 
-    // Turunan — v2: biaya = material + (upah_gross - potong) + subkon + bonus
-    // POTONG mengurangi upah yg harus dibayar (bukan biaya tambahan)
+    // Turunan — FINAL: biaya = material + upah_gross + subkon + bonus
+    // POTONG tidak dikurangi dari biaya (informatif saja di breakdown)
+    // upahNet hanya untuk tampilan breakdown, bukan untuk totalBiaya
     var upahNet = upahGross - potong;
-    var totalBiaya = mat + upahNet + subkon + bonus;
+    var totalBiaya = mat + upahGross + subkon + bonus;
     var laba       = (Number(p.nilaiKontrak)||0) - totalBiaya;
     var margin     = p.nilaiKontrak > 0 ? laba / p.nilaiKontrak : 0;
     var piutang    = (Number(p.nilaiKontrak)||0) - bayar;
@@ -144,10 +145,10 @@ function _apiUpdateRekap(ss) {
     "Est. Laba","Margin%","Sudah Bayar","Piutang","Progress%","Tgl Mulai"
   ];
   // Kolom: 1=No 2=Kode 3=Nama 4=Jenis 5=Status
-  //        6=Kontrak 7=Mat 8=UpahGross 9=KasbonPotong(deduction) 10=NetUpah
+  //        6=Kontrak 7=Mat 8=UpahGross 9=KasbonPotong(info only) 10=NetUpah(info)
   //        11=Subkon 12=KasbonBonus 13=TotalBiaya
   //        14=Laba 15=Margin% 16=Bayar 17=Piutang 18=Progress% 19=TglMulai
-  // TotalBiaya = Mat + NetUpah + Subkon + KasbonBonus (POTONG sdh reduce upah)
+  // TotalBiaya FINAL = Mat + UpahGross + Subkon + KasbonBonus (POTONG tidak dikurangi)
   var HDR_ROW = 8;
   wsRekap.getRange(HDR_ROW, 1, 1, HDR.length)
     .setValues([HDR])

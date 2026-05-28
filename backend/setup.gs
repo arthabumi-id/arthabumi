@@ -476,7 +476,7 @@ function setupRekapSheet() {
   _formatHeaders(wsRekap, [
     "No","Kode","Nama Proyek","Jenis","Status",
     "Nilai Kontrak","Material","Upah Gross","Subkon",
-    "Kasbon Potong","Kasbon Bonus","Total Biaya",
+    "Kasbon Potong (info)","Kasbon Bonus","Total Biaya",
     "Est. Laba","Margin %","Sudah Bayar","Piutang","Progress %"
   ]);
 
@@ -511,9 +511,9 @@ function setupRekapSheet() {
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"POTONG\"),0))",
       // K: Kasbon BONUS
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"BONUS\"),0))",
-      // L: Total Biaya = G + (H - J) + I + K = G+H-J+I+K
-      //    POTONG mengurangi upah (bukan biaya tambahan) — tidak double-counting
-      "=IF(" + b + "=\"\",\"\",$G" + rr + "+$H" + rr + "-$J" + rr + "+$I" + rr + "+$K" + rr + ")",
+      // L: Total Biaya = G + H + I + K = Mat + UpahGross + Subkon + Bonus
+      //    J (Kasbon Potong) TIDAK dikurangi — hanya informatif, bukan pengurang biaya
+      "=IF(" + b + "=\"\",\"\",$G" + rr + "+$H" + rr + "+$I" + rr + "+$K" + rr + ")",
       // M: Est. Laba = Kontrak - TotalBiaya
       "=IF(" + b + "=\"\",\"\",$F" + rr + "-$L" + rr + ")",
       // N: Margin %
