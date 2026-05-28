@@ -1363,9 +1363,10 @@ function kasbonLog(){
   return list.length===0?'<div class="empty">Belum ada data</div>':list.map(k=>{
     const ri=S.logKasbon.findIndex(x=>x.id===k.id);
     const canDel=!k.noClosing||k.noClosing.trim()==='';
+    const projNama=k.kodeProj?S.projects.find(p=>p.kode===k.kodeProj)?.nama||k.kodeProj:'';
     return `<div class="card"><div class="row">
       <div style="flex:1;min-width:0">
-        <div class="item-name">${esc(k.nama)}</div>
+        <div class="item-name">${esc(k.nama)}${k.tipe==='BONUS'&&projNama?` <span style="font-size:11px;color:#16a34a;font-weight:500">🎁 ${esc(projNama)}</span>`:''}</div>
         <div class="item-sub">${fDate(k.tgl)}${k.ket?' · '+esc(k.ket):''}${k.noClosing?' · <span style="color:#7c3aed;font-size:10px">🔒'+esc(k.noClosing)+'</span>':''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">

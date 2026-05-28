@@ -135,6 +135,27 @@ function _apiAddPembelian(ss, items) {
       }
     }
   }
+
+  // Update MASTER TOKO — tambah toko baru jika belum ada (v1.13)
+  var wsToko = ss.getSheetByName(SHEET.TOKO);
+  if (wsToko) {
+    var Rt       = ROWS.TOKO;
+    var tokoData = wsToko.getRange("B" + Rt.start + ":B" + Rt.end).getValues();
+    var tokoList = tokoData.map(function(row){ return String(row[0]).trim().toLowerCase(); });
+    for (var ti = 0; ti < items.length; ti++) {
+      var tokoName = String(items[ti].toko || "").trim();
+      if (!tokoName) continue;
+      if (tokoList.indexOf(tokoName.toLowerCase()) >= 0) continue; // sudah ada
+      // Cari baris kosong pertama
+      for (var tj = 0; tj < tokoList.length; tj++) {
+        if (tokoList[tj] === "") {
+          wsToko.getRange(tj + Rt.start, 2).setValue(tokoName);
+          tokoList[tj] = tokoName.toLowerCase(); // hindari duplikat dalam batch yang sama
+          break;
+        }
+      }
+    }
+  }
 }
 
 function _apiDeletePembelian(ss, d) {
@@ -393,6 +414,27 @@ function _apiFinalizeClosing(ss, d) {
       wsKsb.getRange(r, 6).setValue(_sanitizeStr(it.nama) || "");
       wsKsb.getRange(r, 7).setValue(noClosing);
       wsKsb.getRange(r, 8).setValue("Potong kasbon — " + noClosing);
+      // kolom I (kodeProj) kosong untuk POTONG
+      wsKsb.getRange(r, 9).setValue("");
+    }
+  }
+
+  // ── Tulis BONUS kasbon ke GSheet (v1.13) ─────────────────────────────
+  var bonusItems = d.bonusItems || [];
+  if (bonusItems.length > 0) {
+    var nextBonRow = _apiFindNext(wsKsb, "C", Rk.start, Rk.end);
+    for (var b = 0; b < bonusItems.length; b++) {
+      var bn = bonusItems[b];
+      var rb = nextBonRow + b;
+      wsKsb.getRange(rb, 1).setValue(rb - 3);
+      if (tglBayarDate) wsKsb.getRange(rb, 2).setValue(tglBayarDate).setNumberFormat("dd/MM/yyyy");
+      wsKsb.getRange(rb, 3).setValue(_sanitizeStr(bn.idKaryawan) || "");
+      wsKsb.getRange(rb, 4).setValue("BONUS");
+      wsKsb.getRange(rb, 5).setValue(_sanitizeNum(bn.nominal)).setNumberFormat("#,##0");
+      wsKsb.getRange(rb, 6).setValue(_sanitizeStr(bn.nama) || "");
+      wsKsb.getRange(rb, 7).setValue(noClosing);
+      wsKsb.getRange(rb, 8).setValue("Bonus — " + noClosing + (bn.kodeProj ? " · " + bn.kodeProj : ""));
+      wsKsb.getRange(rb, 9).setValue(_sanitizeStr(bn.kodeProj) || ""); // I = kodeProj
     }
   }
 }
@@ -417,10 +459,14 @@ function _apiDeleteClosing(ss, d) {
   var wsKsb = ss.getSheetByName(SHEET.KASBON);
   if (wsKsb) {
     var Rk      = ROWS.KASBON;
+    // Range D:G → index 0=tipe, 1=nominal, 2=nama, 3=noClosing
     var ksbData = wsKsb.getRange("D" + Rk.start + ":G" + Rk.end).getValues();
     for (var j = ksbData.length - 1; j >= 0; j--) {
-      if (String(ksbData[j][3]).trim() === noClosing && String(ksbData[j][0]).trim() === "POTONG") {
-        wsKsb.getRange(j + Rk.start, 1, 1, 8).clearContent();
+      var tipeRow      = String(ksbData[j][0]).trim();
+      var noClosingRow = String(ksbData[j][3]).trim();
+      // Hapus POTONG dan BONUS yang terkait closing ini
+      if (noClosingRow === noClosing && (tipeRow === "POTONG" || tipeRow === "BONUS")) {
+        wsKsb.getRange(j + Rk.start, 1, 1, 9).clearContent(); // 9 kolom (A:I)
       }
     }
   }
