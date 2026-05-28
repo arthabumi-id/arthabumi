@@ -451,22 +451,16 @@ const filterByDate=(items,mode,fromDate,toDate)=>{
 // ── FEATURE 1: Cashflow Calculation [v1.11]
 // Helper: hitung semua komponen kasbon untuk satu proyek
 // - ambil  = total kasbon AMBIL yang tercatat untuk proyek ini
-// - potong = total kasbon POTONG dari closing yang cover proyek ini
-// - bonus  = total bonus karyawan untuk proyek ini
-// - hutang = ambil - potong (sisa yang belum lunas)
+// calcKasbonForProj v2 — model baru:
+// - POTONG: user secara eksplisit pilih proyek mana yang menanggung kasbon ini
+// - BONUS : bonus karyawan untuk proyek ini
+// - Hutang karyawan (global) dipisah di getWorkerKasbonDetail
 const calcKasbonForProj=(kode)=>{
-  // Pasangan worker+noClosing yang ada di proyek ini
-  const wc=S.logAbsensi
-    .filter(a=>a.kodeProj===kode&&a.noClosing&&a.noClosing.trim()!=='')
-    .map(a=>({w:a.idKaryawan,c:a.noClosing.trim()}));
-  const ambil=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='AMBIL')
-    .reduce((s,x)=>s+(Number(x.nominal)||0),0);
-  const potong=S.logKasbon.filter(x=>x.tipe==='POTONG'&&x.noClosing&&
-    wc.some(p=>p.w===x.idKaryawan&&p.c===x.noClosing.trim()))
+  const potong=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='POTONG')
     .reduce((s,x)=>s+(Number(x.nominal)||0),0);
   const bonus=S.logKasbon.filter(x=>x.kodeProj===kode&&x.tipe==='BONUS')
     .reduce((s,x)=>s+(Number(x.nominal)||0),0);
-  return{ambil,potong,bonus,hutang:Math.max(0,ambil-potong)};
+  return{potong,bonus};
 };
 // Helper: kasbon per-worker, breakdown per proyek
 // Returns {byProj:[{kodeProj,projNama,ambil}], totalAmbil, totalPotong, hutang}
@@ -492,9 +486,8 @@ const calcCashflow=(kodeProj)=>{
   const upah=S.logAbsensi.filter(a=>a.kodeProj===kodeProj).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kodeProj).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
   const kb=calcKasbonForProj(kodeProj);
-  // biaya = pembelian + (upah_gross - potong) + subkon + bonus + ambil
-  // = pembelian + upah + subkon + bonus + hutang  (karena hutang = ambil - potong)
-  return pembayaran-(pembelian+(upah-kb.potong)+subkon+kb.bonus+kb.ambil);
+  // biaya v2 = pembelian + upah (gross) + subkon + POTONG_dibebankan_ke_proyek + bonus
+  return pembayaran-(pembelian+upah+subkon+kb.potong+kb.bonus);
 };
 function pgDashboard(){
   const view=S.tab.dashboard||'rekap';
@@ -512,12 +505,10 @@ function pgDashboard(){
   const tM=S.pembelian.filter(b=>b.status!=='ASET'&&filtered.find(p=>p.kode===b.kodeProj)).reduce((s,b)=>s+calcTotal(b),0);
   const tU=S.logAbsensi.filter(a=>filtered.find(p=>p.kode===a.kodeProj)).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const tSK=S.logSubkon.filter(ls=>filtered.find(p=>p.kode===ls.kodeProj)).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  // tKB = total kasbon beban = bonus + hutang (AMBIL - POTONG) di semua proyek terfilter
-  // tPotong dibutuhkan untuk mengimbangi tU (upah gross sudah termasuk absensi yg ada POTONG)
+  // tKB = total kasbon dibebankan + bonus ke semua proyek terfilter
   const _allKb=filtered.map(p=>calcKasbonForProj(p.kode));
-  const tKB=_allKb.reduce((s,kb)=>s+kb.bonus+kb.hutang,0);
-  const tPotong=_allKb.reduce((s,kb)=>s+kb.potong,0);
-  const tL=tK-(tM+(tU-tPotong)+tSK+tKB);
+  const tKB=_allKb.reduce((s,kb)=>s+kb.potong+kb.bonus,0);
+  const tL=tK-(tM+tU+tSK+tKB);
   const statuses=['Semua','Berjalan','Selesai','Hold','Batal'];
   const filterBar=statuses.map(s=>`<button onclick="setDashFilter('${s}')" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${S.dashFilter===s?'#10b981':'#f1f5f9'};color:${S.dashFilter===s?'#fff':'#64748b'};flex-shrink:0">${s}${S.dashFilter===s?' ('+filtered.length+')':''}</button>`).join('');
   const rows=filtered.map(p=>{
@@ -525,8 +516,8 @@ function pgDashboard(){
     const _mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
     const _upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
     const _subkon=S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-    // biaya = material + net_upah(gross-potong) + subkon + bonus + ambil
-    const biaya=_mat+(_upah-_kb.potong)+_subkon+_kb.bonus+_kb.ambil;
+    // biaya v2 = material + upah (gross) + subkon + kasbon POTONG dibebankan + bonus
+    const biaya=_mat+_upah+_subkon+_kb.potong+_kb.bonus;
     const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const laba=(Number(p.nilaiKontrak)||0)-biaya,piutang=(Number(p.nilaiKontrak)||0)-bayar;
     const rab=S.rab.find(r=>r.kodeProj===p.kode);
@@ -850,12 +841,10 @@ function openRekapProyek(kode){
   const upahSudah=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Sudah Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkonBiaya=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  // Kasbon: hutang = AMBIL - POTONG (selisih yang jadi beban proyek); BONUS = extra pay
+  // Kasbon v2: POTONG eksplisit dibebankan ke proyek ini oleh user saat closing
   const kb=calcKasbonForProj(kode);
-  // totalBiaya = material + (upahGross - potong) + subkon + bonus + ambil
-  //            = material + upahGross + subkon + bonus + hutang  (hutang = ambil - potong)
-  const upahNet=upahTotal-kb.potong;
-  const totalBiaya=matBiaya+upahNet+subkonBiaya+kb.bonus+kb.ambil;
+  // biaya = material + upah (gross) + subkon + POTONG dibebankan + BONUS
+  const totalBiaya=matBiaya+upahTotal+subkonBiaya+kb.potong+kb.bonus;
   // Pembayaran klien
   const bayarRows=S.logPembayaran.filter(x=>x.kodeProj===kode).sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const bayarTotal=bayarRows.reduce((s,x)=>s+(Number(x.nominal)||0),0);
@@ -902,13 +891,9 @@ function openRekapProyek(kode){
     <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:12px">
       ${row2('🧱 '+(rab&&rab.labelMat?esc(rab.labelMat):'Material'),matBiaya)}
       ${row2('👷 Upah Tenaga (gross)',upahTotal)}
-      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 16px;font-size:12px;color:#64748b"><span>↳ Potong Kasbon (closing)</span><span style="color:#16a34a">- ${fRp(kb.potong)}</span></div>`:''}
-      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 5px 16px;font-size:12px;border-bottom:1px solid #f1f5f9"><span style="color:#475569;font-weight:600">Net Upah</span><span style="font-weight:700">${fRp(upahNet)}</span></div>`:''}
       ${row2('🔨 '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
-      ${kb.ambil>0?row2('💼 Kasbon (hutang karyawan)',kb.ambil,'color:#7c3aed'):''}
+      ${kb.potong>0?row2('💼 Kasbon dipotong (dibebankan ke proyek ini)',kb.potong,'color:#7c3aed'):''}
       ${kb.bonus>0?row2('🎁 Bonus Karyawan',kb.bonus,'color:#d97706'):''}
-      ${kb.hutang>0?`<div style="padding:4px 0 2px;font-size:11px;color:#94a3b8">⚠️ Hutang kasbon = ${fRp(kb.ambil)} − ${fRp(kb.potong)} = ${fRp(kb.hutang)} (belum lunas)</div>`:''}
-      ${kb.ambil>0&&kb.hutang===0?`<div style="padding:4px 0 2px;font-size:11px;color:#16a34a">✅ Kasbon ${fRp(kb.ambil)} sudah lunas (potong ${fRp(kb.potong)})</div>`:''}
       <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
         <span style="color:#1e293b">Total</span><span style="color:#dc2626">${fRp(totalBiaya)}</span></div>
     </div>
@@ -1767,7 +1752,7 @@ function genClosing(){
     // Hitung proyek mayoritas (default proyek untuk bonus)
     const projCount={};abs.forEach(a=>{if(a.kodeProj)projCount[a.kodeProj]=(projCount[a.kodeProj]||0)+1;});
     const majorityProj=Object.keys(projCount).sort((a,b)=>projCount[b]-projCount[a])[0]||'';
-    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon,kasbonDipotong:sisaKasbon,bonusAmount:0,bonusProj:majorityProj};
+    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon,kasbonDipotong:sisaKasbon,ksbProj:majorityProj,bonusAmount:0,bonusProj:majorityProj};
   }).filter(r=>r!==null);
   clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
   if(!clsRekap.length){showToast('Tidak ada absensi "Belum Dibayar" di periode ini','err');return;}
@@ -1794,9 +1779,11 @@ function updateClsNet(i){
   const ksbRaw=(document.getElementById('cls-ksb-'+i)?.value||'').replace(/[^0-9]/g,'');
   const bonRaw=(document.getElementById('cls-bon-'+i)?.value||'').replace(/[^0-9]/g,'');
   const projEl=document.getElementById('cls-bonproj-'+i);
+  const ksbProjEl=document.getElementById('cls-ksbproj-'+i);
   clsRekap[i].kasbonDipotong=parseInt(ksbRaw)||0;
   clsRekap[i].bonusAmount=parseInt(bonRaw)||0;
   if(projEl)clsRekap[i].bonusProj=projEl.value;
+  if(ksbProjEl)clsRekap[i].ksbProj=ksbProjEl.value;
   const net=clsRekap[i].totalUpah+clsRekap[i].bonusAmount-clsRekap[i].kasbonDipotong;
   const netEl=document.getElementById('cls-net-'+i);
   if(netEl){netEl.textContent=fRp(net);netEl.style.color=net>=0?'#16a34a':'#dc2626';}
@@ -1834,12 +1821,23 @@ function buildClsRekap(){
         <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(r.totalUpah)}</div></div>
         <div class="chip" style="background:${r.sisaKasbon>0?'#fef2f2':'#f0fdf4'}"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:${r.sisaKasbon>0?'#dc2626':'#16a34a'}">${fRp(r.sisaKasbon)}</div></div>
       </div>
-      ${hutangInfo}<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <label style="font-size:11px;color:#64748b;white-space:nowrap">Potong kasbon:</label>
-        <input class="fc" type="text" inputmode="numeric" id="cls-ksb-${i}"
-          value="${r.kasbonDipotong?Number(r.kasbonDipotong).toLocaleString('id-ID'):''}"
-          style="flex:1" placeholder="0"
-          oninput="let rv=this.value.replace(/[^0-9]/g,'');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';updateClsNet(${i})">
+      ${hutangInfo}<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:9px;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">💼 Potong Kasbon</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <label style="font-size:11px;color:#166534;white-space:nowrap;flex-shrink:0">Nominal:</label>
+          <input class="fc" type="text" inputmode="numeric" id="cls-ksb-${i}"
+            value="${r.kasbonDipotong?Number(r.kasbonDipotong).toLocaleString('id-ID'):''}"
+            style="flex:1;border-color:#86efac" placeholder="0"
+            oninput="let rv=this.value.replace(/[^0-9]/g,'');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';updateClsNet(${i})">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:11px;color:#166534;white-space:nowrap;flex-shrink:0">Bebankan ke:</label>
+          <select id="cls-ksbproj-${i}" class="fc" style="flex:1;border-color:#86efac;font-size:12px" onchange="clsRekap[${i}].ksbProj=this.value;updateClsNet(${i})">
+            <option value="">— Tidak dibebankan —</option>
+            ${S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.ksbProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 9px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px">
         <span style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;flex-shrink:0">🎁 Bonus:</span>
@@ -1896,6 +1894,8 @@ function finalizeClosing(){
     if(bonInp){r.bonusAmount=parseInt((bonInp.value||'').replace(/[^0-9]/g,''))||0;}
     const projSel=document.getElementById('cls-bonproj-'+i);
     if(projSel){r.bonusProj=projSel.value;}
+    const ksbProjSel=document.getElementById('cls-ksbproj-'+i);
+    if(ksbProjSel){r.ksbProj=ksbProjSel.value;}
   });
 
   let updated=0;
@@ -1915,8 +1915,8 @@ function finalizeClosing(){
     S.logKasbon.push({
       id:'KSB-CLO-'+Date.now()+'-'+r.idKaryawan,
       tgl:tglBayar,idKaryawan:r.idKaryawan,nama:r.nama,
-      tipe:'POTONG',nominal:Number(r.kasbonDipotong),kodeProj:'',
-      noClosing:noC,ket:'Potong kasbon — '+noC
+      tipe:'POTONG',nominal:Number(r.kasbonDipotong),kodeProj:r.ksbProj||'',
+      noClosing:noC,ket:'Potong kasbon — '+noC+(r.ksbProj?' → '+(S.projects.find(p=>p.kode===r.ksbProj)?.nama||r.ksbProj):'')
     });
   });
 
@@ -1936,7 +1936,7 @@ function finalizeClosing(){
   doSync('finalizeClosing',{
     dari,sampai,tglBayar,noClosing:noC,
     selectedIds:sIds,
-    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.kasbonDipotong),kodeProj:''})),
+    kasbonItems:ksbItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.kasbonDipotong),kodeProj:r.ksbProj||''})),
     bonusItems:bonusItems.map(r=>({idKaryawan:r.idKaryawan,nama:r.nama||'',nominal:Number(r.bonusAmount),kodeProj:r.bonusProj||''}))
   });
   clsRekap=[];clsSel={};
