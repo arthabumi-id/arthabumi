@@ -604,7 +604,7 @@ function pgDashboard(){
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">${filterBar}</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-lbl">Kontrak</div><div class="kpi-val" style="color:#2563eb">${fRp(tK)}</div></div>
-      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+(tU-tPotong)+tSK+tKB)}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+tU+tSK+tKB)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Est. Laba</div><div class="kpi-val" style="color:${tL>=0?'#16a34a':'#dc2626'}">${fRp(tL)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Diterima</div><div class="kpi-val" style="color:#7c3aed">${fRp(tB)}</div></div>
     </div>
