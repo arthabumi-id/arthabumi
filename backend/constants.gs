@@ -18,7 +18,8 @@ var SHEET = {
   TOKO:       "MASTER TOKO",
   RAB:        "RAB",
   SUBKON:     "MASTER SUBKON",
-  LOG_SUBKON: "LOG SUBKON"
+  LOG_SUBKON: "LOG SUBKON",
+  REKAP:      "REKAP"           // Sheet rekap ringkasan semua proyek (v1.13)
 };
 
 // ── Batas Baris per Sheet {start, end} ────────────────────────────────

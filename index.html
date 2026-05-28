@@ -421,6 +421,11 @@ function saveCatatan(){
 // ── DASHBOARD
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
 function setDashView(v){S.tab.dashboard=v;go('dashboard');}
+function updateGSheetRekap(){
+  if(!S.webAppUrl){showToast('⚠️ URL GSheet belum diisi di Pengaturan','err');return;}
+  showToast('📊 Memperbarui REKAP di GSheet…','info');
+  doSync('updateRekap',{});
+}
 // ── FEATURE 4: Date Filter [v1.11]
 const filterByDate=(items,mode,fromDate,toDate)=>{
   if(!mode||mode==='all')return items;
@@ -513,32 +518,84 @@ function pgDashboard(){
     const alerts=[];
     if(upahBelum>0&&upahBelum>=(Number(p.nilaiKontrak)||0)*0.1)alerts.push('⚠️ Upah menumpuk');
     if(rabT>0&&biaya>rabT*0.9)alerts.push('⚠️ Biaya mendekati RAB');
-    return `<div class="card">
-      <div class="row" style="margin-bottom:8px">
-        <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}${p.catatan?' · 📝':''}</div></div>
-        <div style="display:flex;align-items:center;gap:6px">${bdg(p.status)}<button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋 Rekap</button></div></div>
-      ${alerts.length>0?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${alerts.map(a=>`<span style="background:#fef9c3;color:#854d0e;font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600">${a}</span>`).join('')}</div>`:''}
-      <div class="g3">
-        <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
-        <div class="chip"><div class="chip-lbl">Biaya</div><div class="chip-val" style="color:#ea580c">${fRp(biaya)}</div></div>
-        <div class="chip"><div class="chip-lbl">Laba</div><div class="chip-val" style="color:${laba>=0?'#16a34a':'#dc2626'}">${fRp(laba)}</div></div>
-        <div class="chip"><div class="chip-lbl">Bayar</div><div class="chip-val" style="color:#2563eb">${fRp(bayar)}</div></div>
-        <div class="chip" style="background:#f0fdf4;border-left:2px solid #10b981"><div class="chip-lbl">💰 Cashflow</div><div class="chip-val" style="color:${bayar-biaya>=0?'#16a34a':'#dc2626'};font-weight:700">${fRp(bayar-biaya)}</div></div>
-        <div class="chip" style="${piutang>0?'background:#fff7ed':''}"><div class="chip-lbl">Piutang</div><div class="chip-val" style="color:${piutang>0?'#dc2626':'#64748b'}">${fRp(piutang)}</div></div>
-        ${rabT>0?`<div class="chip" style="background:#eff6ff"><div class="chip-lbl">RAB</div><div class="chip-val" style="color:#1d4ed8">${fRp(rabT)}</div></div>`
-          :`<div class="chip" style="background:#fef9c3;cursor:pointer" onclick="S.rabKodeProj='${p.kode}';go('rab')"><div class="chip-lbl">RAB</div><div class="chip-val" style="color:#854d0e;font-size:10px">+ Buat</div></div>`}
+    const cf=bayar-biaya;
+    const marginPct=p.nilaiKontrak>0?(laba/p.nilaiKontrak*100):0;
+    return `<div class="card" style="padding:14px">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${alerts.length>0?'8':'10'}px">
+        <div style="flex:1;min-width:0">
+          <div class="item-name" style="font-size:14.5px">${esc(p.nama)}</div>
+          <div class="item-sub" style="margin-top:2px">${esc(p.kode)} · ${esc(p.jenis)}${p.catatan?' · 📝':''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
+          ${bdg(p.status)}
+          <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋 Rekap</button>
+        </div>
       </div>
-      ${rabT>0&&biaya>0?`<div style="margin-top:8px">
-        <div style="font-size:10px;color:#94a3b8;margin-bottom:3px">Realisasi vs RAB: ${pct}%</div>
+      ${alerts.length>0?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${alerts.map(a=>`<span style="background:#fef9c3;color:#854d0e;font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600">${a}</span>`).join('')}</div>`:''}
+
+      <!-- 2×2 Angka Utama -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
+        <div style="background:#eff6ff;border-radius:10px;padding:10px 12px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">KONTRAK</div>
+          <div style="font-size:14px;font-weight:800;color:#1d4ed8;margin-top:2px">${fRp(p.nilaiKontrak)}</div>
+        </div>
+        <div style="background:#fff7ed;border-radius:10px;padding:10px 12px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">TOTAL BIAYA</div>
+          <div style="font-size:14px;font-weight:800;color:#ea580c;margin-top:2px">${fRp(biaya)}</div>
+        </div>
+        <div style="background:${laba>=0?'#f0fdf4':'#fff1f2'};border-radius:10px;padding:10px 12px">
+          <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">EST. LABA <span style="font-weight:400">(${marginPct.toFixed(0)}%)</span></div>
+          <div style="font-size:14px;font-weight:800;color:${laba>=0?'#16a34a':'#dc2626'};margin-top:2px">${fRp(laba)}</div>
+        </div>
+        <div style="background:${cf>=0?'#f0fdf4':'#fff1f2'};border-radius:10px;padding:10px 12px;border:1.5px solid ${cf>=0?'#86efac':'#fca5a5'}">
+          <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">💰 CASHFLOW</div>
+          <div style="font-size:14px;font-weight:800;color:${cf>=0?'#16a34a':'#dc2626'};margin-top:2px">${fRp(cf)}</div>
+        </div>
+      </div>
+
+      <!-- Row Sekunder: Bayar + Piutang + RAB -->
+      <div style="display:flex;gap:6px;margin-bottom:${(rabT>0&&biaya>0)||p.progress>0?'9':'0'}px">
+        <div style="flex:1;background:#f8fafc;border-radius:9px;padding:8px 10px">
+          <div style="font-size:10px;color:#94a3b8;font-weight:600">BAYAR</div>
+          <div style="font-size:13px;font-weight:700;color:#2563eb;margin-top:1px">${fRp(bayar)}</div>
+        </div>
+        <div style="flex:1;background:${piutang>0?'#fff7ed':'#f0fdf4'};border-radius:9px;padding:8px 10px">
+          <div style="font-size:10px;color:#94a3b8;font-weight:600">PIUTANG</div>
+          <div style="font-size:13px;font-weight:700;color:${piutang>0?'#dc2626':'#16a34a'};margin-top:1px">${piutang>0?fRp(piutang):'Lunas ✓'}</div>
+        </div>
+        ${rabT>0
+          ?`<div style="flex:1;background:#eff6ff;border-radius:9px;padding:8px 10px">
+              <div style="font-size:10px;color:#94a3b8;font-weight:600">RAB</div>
+              <div style="font-size:13px;font-weight:700;color:#1d4ed8;margin-top:1px">${fRp(rabT)}</div>
+            </div>`
+          :`<div style="flex:1;background:#fef9c3;border-radius:9px;padding:8px 10px;cursor:pointer" onclick="S.rabKodeProj='${p.kode}';go('rab')">
+              <div style="font-size:10px;color:#92400e;font-weight:600">RAB</div>
+              <div style="font-size:12px;font-weight:700;color:#92400e;margin-top:1px">+ Buat RAB</div>
+            </div>`}
+      </div>
+
+      <!-- Progress Bars -->
+      ${rabT>0&&biaya>0?`<div style="margin-bottom:${p.progress>0?'7':'0'}px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-bottom:3px">
+          <span>Realisasi vs RAB</span><span style="font-weight:700;color:${biaya>rabT?'#ef4444':'#475569'}">${pct}%</span>
+        </div>
         <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${biaya>rabT?'#ef4444':'#10b981'}"></div></div>
       </div>`:''}
-      ${p.progress>0?`<div style="margin-top:8px">
-        <div style="font-size:10px;color:#94a3b8;margin-bottom:3px">Progress Pekerjaan: ${p.progress}%</div>
+      ${p.progress>0?`<div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-bottom:3px">
+          <span>Progress Pekerjaan</span><span style="font-weight:700;color:${p.progress>=75?'#16a34a':p.progress>=50?'#d97706':'#ef4444'}">${p.progress}%</span>
+        </div>
         <div class="prog-bar"><div class="prog-fill" style="width:${p.progress}%;background:${p.progress>=75?'#10b981':p.progress>=50?'#f59e0b':'#ef4444'}"></div></div>
       </div>`:''}
     </div>`;
   });
-  return `<div class="sec-title">${esc(S.companyName)}</div>
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <div class="sec-title" style="margin:0">${esc(S.companyName)}</div>
+    <button onclick="updateGSheetRekap()" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:11px;color:#475569;cursor:pointer;display:flex;align-items:center;gap:4px" title="Update sheet REKAP di GSheet">
+      📊 GSheet
+    </button>
+  </div>
     ${tabBar}
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">${filterBar}</div>
     <div class="kpi-grid">

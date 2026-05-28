@@ -122,6 +122,9 @@ function _apiHandleAction(ss, action, data) {
     case "updateLogSubkon":   _apiUpdateLogSubkon(ss, data);   break;
     case "deleteLogSubkon":   _apiDeleteLogSubkon(ss, data);   break;
 
+    // Rekap GSheet
+    case "updateRekap":      _apiUpdateRekap(ss);            break;
+
     default:
       throw new Error("Unknown action: " + action);
   }
