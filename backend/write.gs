@@ -413,9 +413,8 @@ function _apiFinalizeClosing(ss, d) {
       wsKsb.getRange(r, 5).setValue(_sanitizeNum(it.nominal)).setNumberFormat("#,##0");
       wsKsb.getRange(r, 6).setValue(_sanitizeStr(it.nama) || "");
       wsKsb.getRange(r, 7).setValue(noClosing);
-      wsKsb.getRange(r, 8).setValue("Potong kasbon — " + noClosing);
-      // kolom I (kodeProj) kosong untuk POTONG
-      wsKsb.getRange(r, 9).setValue("");
+      wsKsb.getRange(r, 8).setValue("Potong kasbon — " + noClosing + (it.kodeProj ? " → " + it.kodeProj : ""));
+      wsKsb.getRange(r, 9).setValue(_sanitizeStr(it.kodeProj) || ""); // I = kodeProj (v2: dibebankan ke proyek pilihan user)
     }
   }
 

@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — rekap.gs  v1.13
+// ARTHABUMI — rekap.gs  v1.14 (kasbon model v2)
 // Membuat / memperbarui sheet REKAP di GSheet
 //
 // Dipanggil via: action=updateRekap (dari config.gs)
@@ -41,9 +41,9 @@ function _apiUpdateRekap(ss) {
       .filter(function(ls){ return ls.kodeProj === kode; })
       .reduce(function(s, ls){ return s + (Number(ls.nilaiKontrak)||0); }, 0);
 
-    // Kasbon AMBIL (terkait proyek)
-    var ambil = logKasbon
-      .filter(function(k){ return k.kodeProj === kode && k.tipe === "AMBIL"; })
+    // Kasbon POTONG dibebankan ke proyek ini (v2 — kodeProj langsung, tidak via noClosing)
+    var potong = logKasbon
+      .filter(function(k){ return k.kodeProj === kode && k.tipe === "POTONG"; })
       .reduce(function(s, k){ return s + (Number(k.nominal)||0); }, 0);
 
     // Kasbon BONUS
@@ -51,27 +51,13 @@ function _apiUpdateRekap(ss) {
       .filter(function(k){ return k.kodeProj === kode && k.tipe === "BONUS"; })
       .reduce(function(s, k){ return s + (Number(k.nominal)||0); }, 0);
 
-    // Kasbon POTONG — link via worker+noClosing dari logAbsensi
-    var wc = logAbsensi
-      .filter(function(a){ return a.kodeProj === kode && a.noClosing && String(a.noClosing).trim() !== ""; })
-      .map(function(a){ return { w: a.idKaryawan, c: String(a.noClosing).trim() }; });
-    var potong = logKasbon
-      .filter(function(k) {
-        if (k.tipe !== "POTONG" || !k.noClosing) return false;
-        var kc = String(k.noClosing).trim();
-        return wc.some(function(p){ return p.w === k.idKaryawan && p.c === kc; });
-      })
-      .reduce(function(s, k){ return s + (Number(k.nominal)||0); }, 0);
-
     // Bayar dari klien
     var bayar = logPembayaran
       .filter(function(x){ return x.kodeProj === kode; })
       .reduce(function(s, x){ return s + (Number(x.nominal)||0); }, 0);
 
-    // Turunan
-    var hutang     = Math.max(0, ambil - potong);
-    var upahNet    = upahGross - potong;
-    var totalBiaya = mat + upahNet + subkon + bonus + ambil;
+    // Turunan — v2: biaya = material + upah gross + subkon + potong + bonus
+    var totalBiaya = mat + upahGross + subkon + potong + bonus;
     var laba       = (Number(p.nilaiKontrak)||0) - totalBiaya;
     var margin     = p.nilaiKontrak > 0 ? laba / p.nilaiKontrak : 0;
     var piutang    = (Number(p.nilaiKontrak)||0) - bayar;
@@ -79,8 +65,8 @@ function _apiUpdateRekap(ss) {
     return {
       kode: kode, nama: p.nama, jenis: p.jenis, status: p.status,
       nilaiKontrak: Number(p.nilaiKontrak)||0,
-      mat: mat, upahGross: upahGross, potong: potong, upahNet: upahNet,
-      subkon: subkon, ambil: ambil, bonus: bonus, hutang: hutang,
+      mat: mat, upahGross: upahGross, subkon: subkon,
+      potong: potong, bonus: bonus,
       totalBiaya: totalBiaya, laba: laba, margin: margin,
       bayar: bayar, piutang: piutang,
       progress: Number(p.progress)||0,
@@ -93,10 +79,8 @@ function _apiUpdateRekap(ss) {
   var tKontrak   = sumF(rows, "nilaiKontrak");
   var tMat       = sumF(rows, "mat");
   var tUpahGross = sumF(rows, "upahGross");
-  var tPotong    = sumF(rows, "potong");
-  var tUpahNet   = sumF(rows, "upahNet");
   var tSubkon    = sumF(rows, "subkon");
-  var tAmbil     = sumF(rows, "ambil");
+  var tPotong    = sumF(rows, "potong");
   var tBonus     = sumF(rows, "bonus");
   var tBiaya     = sumF(rows, "totalBiaya");
   var tLaba      = sumF(rows, "laba");
@@ -153,10 +137,14 @@ function _apiUpdateRekap(ss) {
   // ── 8. Row 8: Header Tabel ────────────────────────────────────────────
   var HDR = [
     "No","Kode","Nama Proyek","Jenis","Status",
-    "Nilai Kontrak","Material","Upah Gross","Potong Kasbon","Upah Net",
-    "Subkon","Kasbon Ambil","Bonus","Total Biaya",
+    "Nilai Kontrak","Material","Upah Gross","Subkon",
+    "Kasbon Potong","Kasbon Bonus","Total Biaya",
     "Est. Laba","Margin%","Sudah Bayar","Piutang","Progress%","Tgl Mulai"
   ];
+  // Kolom: 1=No 2=Kode 3=Nama 4=Jenis 5=Status
+  //        6=Kontrak 7=Mat 8=UpahGross 9=Subkon
+  //        10=KasbonPotong 11=KasbonBonus 12=TotalBiaya
+  //        13=Laba 14=Margin% 15=Bayar 16=Piutang 17=Progress% 18=TglMulai
   var HDR_ROW = 8;
   wsRekap.getRange(HDR_ROW, 1, 1, HDR.length)
     .setValues([HDR])
@@ -178,10 +166,8 @@ function _apiUpdateRekap(ss) {
       r.nilaiKontrak,
       r.mat,
       r.upahGross,
-      r.potong,
-      r.upahNet,
       r.subkon,
-      r.ambil,
+      r.potong,
       r.bonus,
       r.totalBiaya,
       r.laba,
@@ -197,22 +183,20 @@ function _apiUpdateRekap(ss) {
     var startRow = HDR_ROW + 1;
     wsRekap.getRange(startRow, 1, dataArr.length, HDR.length).setValues(dataArr);
 
-    // Format angka
+    // Format angka (kolom sesuai HDR 18-kolom v2)
     var fRp = "#,##0";
     wsRekap.getRange(startRow, 6,  dataArr.length, 1).setNumberFormat(fRp);  // Kontrak
     wsRekap.getRange(startRow, 7,  dataArr.length, 1).setNumberFormat(fRp);  // Material
     wsRekap.getRange(startRow, 8,  dataArr.length, 1).setNumberFormat(fRp);  // Upah Gross
-    wsRekap.getRange(startRow, 9,  dataArr.length, 1).setNumberFormat(fRp);  // Potong
-    wsRekap.getRange(startRow, 10, dataArr.length, 1).setNumberFormat(fRp);  // Upah Net
-    wsRekap.getRange(startRow, 11, dataArr.length, 1).setNumberFormat(fRp);  // Subkon
-    wsRekap.getRange(startRow, 12, dataArr.length, 1).setNumberFormat(fRp);  // Ambil
-    wsRekap.getRange(startRow, 13, dataArr.length, 1).setNumberFormat(fRp);  // Bonus
-    wsRekap.getRange(startRow, 14, dataArr.length, 1).setNumberFormat(fRp);  // Total Biaya
-    wsRekap.getRange(startRow, 15, dataArr.length, 1).setNumberFormat(fRp);  // Laba
-    wsRekap.getRange(startRow, 16, dataArr.length, 1).setNumberFormat("0.0%"); // Margin
-    wsRekap.getRange(startRow, 17, dataArr.length, 1).setNumberFormat(fRp);  // Bayar
-    wsRekap.getRange(startRow, 18, dataArr.length, 1).setNumberFormat(fRp);  // Piutang
-    wsRekap.getRange(startRow, 19, dataArr.length, 1).setNumberFormat("0%"); // Progress
+    wsRekap.getRange(startRow, 9,  dataArr.length, 1).setNumberFormat(fRp);  // Subkon
+    wsRekap.getRange(startRow, 10, dataArr.length, 1).setNumberFormat(fRp);  // Kasbon Potong
+    wsRekap.getRange(startRow, 11, dataArr.length, 1).setNumberFormat(fRp);  // Kasbon Bonus
+    wsRekap.getRange(startRow, 12, dataArr.length, 1).setNumberFormat(fRp);  // Total Biaya
+    wsRekap.getRange(startRow, 13, dataArr.length, 1).setNumberFormat(fRp);  // Laba
+    wsRekap.getRange(startRow, 14, dataArr.length, 1).setNumberFormat("0.0%"); // Margin
+    wsRekap.getRange(startRow, 15, dataArr.length, 1).setNumberFormat(fRp);  // Bayar
+    wsRekap.getRange(startRow, 16, dataArr.length, 1).setNumberFormat(fRp);  // Piutang
+    wsRekap.getRange(startRow, 17, dataArr.length, 1).setNumberFormat("0%"); // Progress
 
     // Warna per baris
     for (var i = 0; i < dataArr.length; i++) {
@@ -225,14 +209,14 @@ function _apiUpdateRekap(ss) {
       var sBg = STATUS_BG[dataArr[i][4]] || "#f1f5f9";
       wsRekap.getRange(rn, 5).setBackground(sBg).setFontWeight("bold").setHorizontalAlignment("center");
 
-      // Laba warna
-      wsRekap.getRange(rn, 15).setFontColor(dataArr[i][14] >= 0 ? "#15803d" : "#dc2626").setFontWeight("bold");
+      // Laba warna (col 13, index 12)
+      wsRekap.getRange(rn, 13).setFontColor(dataArr[i][12] >= 0 ? "#15803d" : "#dc2626").setFontWeight("bold");
 
-      // Piutang warna
-      if (dataArr[i][17] > 0) {
-        wsRekap.getRange(rn, 18).setFontColor("#dc2626").setFontWeight("bold");
+      // Piutang warna (col 16, index 15)
+      if (dataArr[i][15] > 0) {
+        wsRekap.getRange(rn, 16).setFontColor("#dc2626").setFontWeight("bold");
       } else {
-        wsRekap.getRange(rn, 18).setFontColor("#16a34a");
+        wsRekap.getRange(rn, 16).setFontColor("#16a34a");
       }
     }
 
@@ -242,31 +226,31 @@ function _apiUpdateRekap(ss) {
   }
 
   // ── 10. Total row ─────────────────────────────────────────────────────
-  // HDR columns: 1=No 2=Kode 3=Nama 4=Jenis 5=Status
-  //   6=Kontrak 7=Mat 8=UpahGross 9=Potong 10=UpahNet
-  //   11=Subkon 12=Ambil 13=Bonus 14=TotalBiaya 15=Laba 16=Margin
-  //   17=Bayar 18=Piutang 19=Progress 20=TglMulai
+  // HDR columns v2: 1=No 2=Kode 3=Nama 4=Jenis 5=Status
+  //   6=Kontrak 7=Mat 8=UpahGross 9=Subkon
+  //   10=KasbonPotong 11=KasbonBonus 12=TotalBiaya
+  //   13=Laba 14=Margin% 15=Bayar 16=Piutang 17=Progress% 18=TglMulai
   if (dataArr.length > 0) {
     var totRow = HDR_ROW + dataArr.length + 1;
     wsRekap.getRange(totRow, 1, 1, 5)
       .merge().setValue("TOTAL").setFontWeight("bold").setFontSize(10)
       .setBackground("#334155").setFontColor("#ffffff").setHorizontalAlignment("center");
-    // 13 nilai: col 6 → 18 (span=13)
-    var totVals = [tKontrak, tMat, tUpahGross, tPotong, tUpahNet,
-                   tSubkon, tAmbil, tBonus, tBiaya, tLaba,
+    // 11 nilai: col 6 → 16 (span=11); skip Margin% (col 14) → isi ""
+    var totVals = [tKontrak, tMat, tUpahGross, tSubkon,
+                   tPotong, tBonus, tBiaya, tLaba,
                    "", tBayar, tPiutang];
-    wsRekap.getRange(totRow, 6, 1, 13)
+    wsRekap.getRange(totRow, 6, 1, 11)
       .setValues([totVals])
       .setFontWeight("bold").setBackground("#f1f5f9").setFontSize(9);
-    // Format angka (skip col 16 = Margin% yang diisi "")
-    var totNumCols = [6,7,8,9,10,11,12,13,14,15,17,18];
+    // Format angka (skip col 14 = Margin% yang diisi "")
+    var totNumCols = [6,7,8,9,10,11,12,13,15,16];
     totNumCols.forEach(function(c){ wsRekap.getRange(totRow, c).setNumberFormat("#,##0"); });
-    wsRekap.getRange(totRow, 15).setFontColor(tLaba>=0?"#15803d":"#dc2626");
-    wsRekap.getRange(totRow, 18).setFontColor(tPiutang>0?"#dc2626":"#16a34a");
+    wsRekap.getRange(totRow, 13).setFontColor(tLaba>=0?"#15803d":"#dc2626");
+    wsRekap.getRange(totRow, 16).setFontColor(tPiutang>0?"#dc2626":"#16a34a");
   }
 
   // ── 11. Lebar kolom ───────────────────────────────────────────────────
-  var colW = [35,65,190,100,75,115,105,105,105,105,90,105,80,115,110,60,110,100,70,90];
+  var colW = [35,65,190,100,75,115,105,105,90,105,90,115,110,60,110,100,60,90]; // 18 kolom v2
   for (var c = 0; c < colW.length; c++) {
     wsRekap.setColumnWidth(c+1, colW[c]);
   }

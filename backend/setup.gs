@@ -440,12 +440,11 @@ function _setupSheetLogSubkon(ss) {
 //
 // Kolom REKAP:
 //   A=No  B=Kode  C=Nama  D=Jenis  E=Status  F=NilaiKontrak
-//   G=Material  H=UpahGross  I=Subkon  J=KasbonAmbil  K=KasbonBonus
+//   G=Material  H=UpahGross  I=Subkon  J=KasbonPotong  K=KasbonBonus
 //   L=TotalBiaya  M=Laba  N=Margin%  O=Bayar  P=Piutang  Q=Progress%
 //
-// ⚠️ Catatan: Kasbon POTONG tidak bisa dihitung otomatis di GSheet
-//    karena butuh logika noClosing (linkage kompleks). Untuk nilai presisi
-//    termasuk POTONG, buka app → klik 📋 Rekap per proyek.
+// v2: Kasbon POTONG sekarang langsung pakai SUMIFS kolom I LOG KASBON
+//    (kodeProj ditulis saat closing — tidak lagi butuh linkage noClosing)
 // ════════════════════════════════════════════════════════════════════════
 function setupRekapSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -470,14 +469,14 @@ function setupRekapSheet() {
   // ── Judul & Subtitle ──────────────────────────────────────────────────
   _formatTitle(wsRekap,
     "  📊  REKAP PROYEK ARTHABUMI",
-    "  Kalkulasi otomatis via rumus SUMIF — update real-time  |  ⚠️ Kasbon POTONG tidak termasuk (lihat Rekap di app untuk nilai presisi)",
+    "  Kalkulasi otomatis via rumus SUMIF — update real-time  |  Kasbon POTONG dibebankan langsung per proyek (v2)",
     LAST_COL);
 
   // ── Header ────────────────────────────────────────────────────────────
   _formatHeaders(wsRekap, [
     "No","Kode","Nama Proyek","Jenis","Status",
     "Nilai Kontrak","Material","Upah Gross","Subkon",
-    "Kasbon Ambil","Kasbon Bonus","Total Biaya",
+    "Kasbon Potong","Kasbon Bonus","Total Biaya",
     "Est. Laba","Margin %","Sudah Bayar","Piutang","Progress %"
   ]);
 
@@ -507,8 +506,8 @@ function setupRekapSheet() {
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG ABSENSI'!$F:$F," + b + ",'LOG ABSENSI'!$H:$H),0))",
       // I: Subkon
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG SUBKON'!$C:$C," + b + ",'LOG SUBKON'!$H:$H),0))",
-      // J: Kasbon AMBIL (terkait proyek via kolom I LOG KASBON)
-      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"AMBIL\"),0))",
+      // J: Kasbon POTONG dibebankan ke proyek (v2 — kodeProj di kolom I LOG KASBON)
+      "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"POTONG\"),0))",
       // K: Kasbon BONUS
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"BONUS\"),0))",
       // L: Total Biaya = G+H+I+J+K
@@ -586,7 +585,7 @@ function setupRekapSheet() {
   wsRekap.setColumnWidth(7, 120);  // Material
   wsRekap.setColumnWidth(8, 120);  // Upah
   wsRekap.setColumnWidth(9, 100);  // Subkon
-  wsRekap.setColumnWidth(10, 110); // Kasbon Ambil
+  wsRekap.setColumnWidth(10, 110); // Kasbon Potong (v2)
   wsRekap.setColumnWidth(11, 105); // Kasbon Bonus
   wsRekap.setColumnWidth(12, 125); // Total Biaya
   wsRekap.setColumnWidth(13, 120); // Laba
