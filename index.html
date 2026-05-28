@@ -486,8 +486,9 @@ const calcCashflow=(kodeProj)=>{
   const upah=S.logAbsensi.filter(a=>a.kodeProj===kodeProj).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kodeProj).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
   const kb=calcKasbonForProj(kodeProj);
-  // biaya v2 = pembelian + upah (gross) + subkon + POTONG_dibebankan_ke_proyek + bonus
-  return pembayaran-(pembelian+upah+subkon+kb.potong+kb.bonus);
+  // biaya v2 = pembelian + (upah_gross - potong) + subkon + bonus
+  // POTONG mengurangi upah yg harus dibayar boss — bukan biaya tambahan
+  return pembayaran-(pembelian+(upah-kb.potong)+subkon+kb.bonus);
 };
 function pgDashboard(){
   const view=S.tab.dashboard||'rekap';
@@ -505,10 +506,13 @@ function pgDashboard(){
   const tM=S.pembelian.filter(b=>b.status!=='ASET'&&filtered.find(p=>p.kode===b.kodeProj)).reduce((s,b)=>s+calcTotal(b),0);
   const tU=S.logAbsensi.filter(a=>filtered.find(p=>p.kode===a.kodeProj)).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const tSK=S.logSubkon.filter(ls=>filtered.find(p=>p.kode===ls.kodeProj)).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  // tKB = total kasbon dibebankan + bonus ke semua proyek terfilter
+  // tPotong = total kasbon dipotong dari gaji (mengurangi upah, bukan biaya tambahan)
+  // tBonus  = total bonus dibebankan ke proyek (biaya tambahan)
   const _allKb=filtered.map(p=>calcKasbonForProj(p.kode));
-  const tKB=_allKb.reduce((s,kb)=>s+kb.potong+kb.bonus,0);
-  const tL=tK-(tM+tU+tSK+tKB);
+  const tPotong=_allKb.reduce((s,kb)=>s+kb.potong,0);
+  const tBonus=_allKb.reduce((s,kb)=>s+kb.bonus,0);
+  // biaya = mat + (upah - potong) + subkon + bonus
+  const tL=tK-(tM+(tU-tPotong)+tSK+tBonus);
   const statuses=['Semua','Berjalan','Selesai','Hold','Batal'];
   const filterBar=statuses.map(s=>`<button onclick="setDashFilter('${s}')" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${S.dashFilter===s?'#10b981':'#f1f5f9'};color:${S.dashFilter===s?'#fff':'#64748b'};flex-shrink:0">${s}${S.dashFilter===s?' ('+filtered.length+')':''}</button>`).join('');
   const rows=filtered.map(p=>{
@@ -516,8 +520,8 @@ function pgDashboard(){
     const _mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
     const _upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
     const _subkon=S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-    // biaya v2 = material + upah (gross) + subkon + kasbon POTONG dibebankan + bonus
-    const biaya=_mat+_upah+_subkon+_kb.potong+_kb.bonus;
+    // biaya v2 = material + (upah_gross - potong) + subkon + bonus
+    const biaya=_mat+(_upah-_kb.potong)+_subkon+_kb.bonus;
     const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const laba=(Number(p.nilaiKontrak)||0)-biaya,piutang=(Number(p.nilaiKontrak)||0)-bayar;
     const rab=S.rab.find(r=>r.kodeProj===p.kode);
@@ -604,7 +608,7 @@ function pgDashboard(){
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">${filterBar}</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-lbl">Kontrak</div><div class="kpi-val" style="color:#2563eb">${fRp(tK)}</div></div>
-      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+tU+tSK+tKB)}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+(tU-tPotong)+tSK+tBonus)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Est. Laba</div><div class="kpi-val" style="color:${tL>=0?'#16a34a':'#dc2626'}">${fRp(tL)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Diterima</div><div class="kpi-val" style="color:#7c3aed">${fRp(tB)}</div></div>
     </div>
@@ -841,10 +845,11 @@ function openRekapProyek(kode){
   const upahSudah=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Sudah Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
   const subkonBiaya=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-  // Kasbon v2: POTONG eksplisit dibebankan ke proyek ini oleh user saat closing
+  // Kasbon v2: POTONG dipotong dari gaji → mengurangi upah yg harus dibayar
   const kb=calcKasbonForProj(kode);
-  // biaya = material + upah (gross) + subkon + POTONG dibebankan + BONUS
-  const totalBiaya=matBiaya+upahTotal+subkonBiaya+kb.potong+kb.bonus;
+  const upahNet=upahTotal-kb.potong; // upah yg benar-benar keluar cash
+  // biaya = material + (upah_gross - potong) + subkon + bonus
+  const totalBiaya=matBiaya+upahNet+subkonBiaya+kb.bonus;
   // Pembayaran klien
   const bayarRows=S.logPembayaran.filter(x=>x.kodeProj===kode).sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const bayarTotal=bayarRows.reduce((s,x)=>s+(Number(x.nominal)||0),0);
@@ -891,8 +896,9 @@ function openRekapProyek(kode){
     <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:12px">
       ${row2('🧱 '+(rab&&rab.labelMat?esc(rab.labelMat):'Material'),matBiaya)}
       ${row2('👷 Upah Tenaga (gross)',upahTotal)}
+      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:13px"><span style="color:#7c3aed">💼 Kasbon dipotong dari upah</span><span style="font-weight:700;color:#7c3aed">− ${fRp(kb.potong)}</span></div>`:''}
+      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:13px;background:#f0fdf4;margin:0 -2px;padding-left:10px;border-radius:4px"><span style="color:#16a34a;font-weight:600">  Net Upah (dibayar cash)</span><span style="font-weight:700;color:#16a34a">${fRp(upahNet)}</span></div>`:''}
       ${row2('🔨 '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
-      ${kb.potong>0?row2('💼 Kasbon dipotong (dibebankan ke proyek ini)',kb.potong,'color:#7c3aed'):''}
       ${kb.bonus>0?row2('🎁 Bonus Karyawan',kb.bonus,'color:#d97706'):''}
       <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
         <span style="color:#1e293b">Total</span><span style="color:#dc2626">${fRp(totalBiaya)}</span></div>
@@ -1518,7 +1524,8 @@ function kasbonLog(){
     const canDel=!k.noClosing||k.noClosing.trim()==='';
     const projNama=k.kodeProj?S.projects.find(p=>p.kode===k.kodeProj)?.nama||k.kodeProj:'';
     const projChip=projNama?(k.tipe==='BONUS'?` <span style="font-size:11px;color:#d97706;font-weight:500">🎁 ${esc(projNama)}</span>`
-      :k.tipe==='AMBIL'?` <span style="font-size:11px;color:#7c3aed;font-weight:500">💼 ${esc(projNama)}</span>`:''):'';
+      :k.tipe==='AMBIL'?` <span style="font-size:11px;color:#7c3aed;font-weight:500">💼 ${esc(projNama)}</span>`
+      :k.tipe==='POTONG'?` <span style="font-size:11px;color:#16a34a;font-weight:500">✂️ dipotong dari upah ${esc(projNama)}</span>`:''):'';
     return `<div class="card"><div class="row">
       <div style="flex:1;min-width:0">
         <div class="item-name">${esc(k.nama)}${projChip}</div>

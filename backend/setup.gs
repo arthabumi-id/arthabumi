@@ -506,12 +506,14 @@ function setupRekapSheet() {
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG ABSENSI'!$F:$F," + b + ",'LOG ABSENSI'!$H:$H),0))",
       // I: Subkon
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIF('LOG SUBKON'!$C:$C," + b + ",'LOG SUBKON'!$H:$H),0))",
-      // J: Kasbon POTONG dibebankan ke proyek (v2 — kodeProj di kolom I LOG KASBON)
+      // J: Kasbon POTONG dipotong dari upah (v2 — kodeProj di kolom I LOG KASBON)
+      //    Ini adalah PENGURANG upah, ditampilkan positif tapi dikurangi di Total Biaya
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"POTONG\"),0))",
       // K: Kasbon BONUS
       "=IF(" + b + "=\"\",\"\",IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I," + b + ",'LOG KASBON'!$D:$D,\"BONUS\"),0))",
-      // L: Total Biaya = G+H+I+J+K
-      "=IF(" + b + "=\"\",\"\",$G" + rr + "+$H" + rr + "+$I" + rr + "+$J" + rr + "+$K" + rr + ")",
+      // L: Total Biaya = G + (H - J) + I + K = G+H-J+I+K
+      //    POTONG mengurangi upah (bukan biaya tambahan) — tidak double-counting
+      "=IF(" + b + "=\"\",\"\",$G" + rr + "+$H" + rr + "-$J" + rr + "+$I" + rr + "+$K" + rr + ")",
       // M: Est. Laba = Kontrak - TotalBiaya
       "=IF(" + b + "=\"\",\"\",$F" + rr + "-$L" + rr + ")",
       // N: Margin %
