@@ -369,7 +369,7 @@ function buildPage(p){
 // ── CATATAN PROYEK ────────────────────────────────────────────────────
 function pgCatatan(){
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+
-    S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.catatanKode===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
+    S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.catatanKode===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const existing=S.projects.find(p=>p.kode===S.catatanKode);
   const currentTxt=existing?(existing.catatan||''):'';
   const hasCatatan=S.projects.filter(p=>p.catatan&&p.catatan.trim());
@@ -394,7 +394,7 @@ function pgCatatan(){
       :`<div class="sec-title" style="font-size:13px;color:#64748b;margin-bottom:8px">Tersimpan (${hasCatatan.length})</div>`+
         hasCatatan.map(p=>`<div class="card" style="margin-bottom:8px;cursor:pointer;border-left:3px solid #eab308" onclick="S.catatanKode='${esc(p.kode)}';go('catatan')">
           <div class="row" style="margin-bottom:6px">
-            <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.jenis)} · ${bdg(p.status)}</div></div>
+            <div><div class="item-name">${esc(p.nama)}</div><div class="item-sub">${esc(p.kode)} · ${bdg(p.status)}</div></div>
             <span style="font-size:11px;color:#94a3b8;flex-shrink:0">Tap edit</span>
           </div>
           <div style="background:#fefce8;border-radius:8px;padding:8px 10px;font-size:12.5px;color:#713f12;white-space:pre-line;line-height:1.5">${esc(p.catatan)}</div>
@@ -543,7 +543,7 @@ function pgDashboard(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${alerts.length>0?'8':'10'}px">
         <div style="flex:1;min-width:0">
           <div class="item-name" style="font-size:14.5px">${esc(p.nama)}</div>
-          <div class="item-sub" style="margin-top:2px">${esc(p.jenis)}${p.catatan?' · 📝':''}</div>
+          <div class="item-sub" style="margin-top:2px">${esc(p.kode)} · ${esc(p.jenis)}${p.catatan?' · 📝':''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
           ${bdg(p.status)}
@@ -650,7 +650,7 @@ function pgPiutang(){
       <div class="row" style="margin-bottom:8px">
         <div style="flex:1;min-width:0">
           <div class="item-name">${esc(p.nama)}</div>
-          <div class="item-sub">${esc(p.jenis)}</div>
+          <div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
           ${bdg(p.status)}
@@ -682,7 +682,7 @@ function pgProject(){
   ${S.projects.length===0?'<div class="empty">Belum ada proyek</div>':S.projects.map((p,i)=>`
   <div class="card"><div class="row">
     <div style="flex:1;min-width:0"><div class="item-name">${esc(p.nama)}</div>
-      <div class="item-sub">${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div></div>
+      <div class="item-sub">${esc(p.kode)} · ${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
       ${bdg(p.status)}
       <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
@@ -746,8 +746,7 @@ function saveProject(isEdit){
   doSync(isEdit?'updateProject':'addProject',d);
 }
 function delProject(kode){
-  const nama=S.projects.find(p=>p.kode===kode)?.nama||kode;
-  if(!confirm('Hapus proyek "'+nama+'"?'))return;
+  if(!confirm('Hapus proyek '+kode+'?'))return;
   S.projects=S.projects.filter(p=>p.kode!==kode);ss(KS.p,S.projects);go('project');
   showToast('🗑 Dihapus');doSync('deleteProject',{kode});
 }
@@ -958,7 +957,7 @@ function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const currentShop=S.formItems[0]?.toko||'';
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px">
@@ -1004,7 +1003,7 @@ function beliLog(){
   const dateMode=S.tab.beliDateMode||'all';
   const fromD=S.tab.beliDateFrom||'';
   const toD=S.tab.beliDateTo||'';
-  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.beliFilter===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
+  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.beliFilter===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setBeliFilter(this.value)">${prjFilterOpts}</select></div>
     <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -1382,7 +1381,7 @@ function absLog(){
   const dateMode=S.tab.absDateMode||'all';
   const fromD=S.tab.absDateFrom||'';
   const toD=S.tab.absDateTo||'';
-  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.absFilter===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
+  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.absFilter===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setAbsFilter(this.value)">${prjFilterOpts}</select></div>
     <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -1677,7 +1676,7 @@ function openClosingDetail(noClosing){
         <div>
           <span style="font-size:11px;color:#475569">${fDate(r.tgl)}</span>
           <span style="margin-left:6px;font-size:10px;padding:1px 6px;border-radius:9px;font-weight:600;background:${r.status==='Hadir'?'#dcfce7':r.status==='Setengah Hari'?'#fef9c3':'#f1f5f9'};color:${r.status==='Hadir'?'#15803d':r.status==='Setengah Hari'?'#854d0e':'#475569'}">${r.status}</span>
-          ${r.kodeProj?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">${esc(S.projects.find(p=>p.kode===r.kodeProj)?.nama||r.kodeProj)}</span>`:''}
+          ${r.kodeProj?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">${esc(r.kodeProj)}</span>`:''}
           ${(Number(r.jamLembur)>0)?`<span style="font-size:10px;color:#d97706;margin-left:4px;font-weight:700">⏰${r.jamLembur}j</span>`:''}
         </div>
         <span style="font-size:12px;font-weight:600;color:#16a34a">${fRp(r.upahHariIni)}</span>
@@ -1982,7 +1981,7 @@ function pgBayar(){
 }
 function bayarInput(){
   if(!S.payItems||!S.payItems.length)S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const items=S.payItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:#64748b">Pembayaran ${i+1}</span>
       ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">✕</button>`:''}</div>
@@ -2048,7 +2047,7 @@ function pgRAB(){
     </div></div>${tab==='input'?rabInput():rabPerbandingan()}`;
 }
 function rabInput(){
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.rabKodeProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.rabKodeProj===p.kode?'selected':''}>${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
   const nom=S.rabNominal;
   const total=(Number(nom.material)||0)+(Number(nom.upah)||0)+(Number(nom.subkon)||0)+(Number(nom.overhead)||0);
   const proj=S.projects.find(p=>p.kode===S.rabKodeProj);
@@ -2136,7 +2135,7 @@ function deleteRAB(){
   doSync('deleteRAB',{kodeProj});
 }
 function rabPerbandingan(){
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.rabKodeProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.rabKodeProj===p.kode?'selected':''}>${esc(p.kode)} -- ${esc(p.nama)}</option>`).join('');
   if(!S.rabKodeProj)return `<div class="card"><div class="fg"><label class="fl">Pilih Proyek</label><select class="fc" onchange="S.rabKodeProj=this.value;go('rab')">${prjOpts}</select></div></div><div class="empty">Pilih proyek untuk melihat perbandingan</div>`;
   const rab=S.rab.find(r=>r.kodeProj===S.rabKodeProj);
   const proj=S.projects.find(p=>p.kode===S.rabKodeProj);
@@ -2206,7 +2205,7 @@ function pgSubkon(){
 }
 function subkonInput(){
   if(!S.masterSubkon.length)return `<div class="info-box">💡 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}">${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
   return `<div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="sk-tgl" value="${today()}"></div>
