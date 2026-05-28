@@ -90,11 +90,18 @@ function _apiUpdateRekap(ss) {
 
   // ── 3. Hitung KPI total ───────────────────────────────────────────────
   function sumF(arr, f){ return arr.reduce(function(s,r){ return s+(Number(r[f])||0); }, 0); }
-  var tKontrak = sumF(rows, "nilaiKontrak");
-  var tBiaya   = sumF(rows, "totalBiaya");
-  var tLaba    = sumF(rows, "laba");
-  var tBayar   = sumF(rows, "bayar");
-  var tPiutang = sumF(rows, "piutang");
+  var tKontrak   = sumF(rows, "nilaiKontrak");
+  var tMat       = sumF(rows, "mat");
+  var tUpahGross = sumF(rows, "upahGross");
+  var tPotong    = sumF(rows, "potong");
+  var tUpahNet   = sumF(rows, "upahNet");
+  var tSubkon    = sumF(rows, "subkon");
+  var tAmbil     = sumF(rows, "ambil");
+  var tBonus     = sumF(rows, "bonus");
+  var tBiaya     = sumF(rows, "totalBiaya");
+  var tLaba      = sumF(rows, "laba");
+  var tBayar     = sumF(rows, "bayar");
+  var tPiutang   = sumF(rows, "piutang");
 
   // ── 4. Get / Create sheet REKAP ───────────────────────────────────────
   var wsRekap = ss.getSheetByName(REKAP_SHEET);
@@ -235,16 +242,25 @@ function _apiUpdateRekap(ss) {
   }
 
   // ── 10. Total row ─────────────────────────────────────────────────────
+  // HDR columns: 1=No 2=Kode 3=Nama 4=Jenis 5=Status
+  //   6=Kontrak 7=Mat 8=UpahGross 9=Potong 10=UpahNet
+  //   11=Subkon 12=Ambil 13=Bonus 14=TotalBiaya 15=Laba 16=Margin
+  //   17=Bayar 18=Piutang 19=Progress 20=TglMulai
   if (dataArr.length > 0) {
     var totRow = HDR_ROW + dataArr.length + 1;
     wsRekap.getRange(totRow, 1, 1, 5)
       .merge().setValue("TOTAL").setFontWeight("bold").setFontSize(10)
       .setBackground("#334155").setFontColor("#ffffff").setHorizontalAlignment("center");
-    var totVals = [tKontrak,0,0,0,0,0,0,0,tBiaya,tLaba,0,tBayar,tPiutang];
-    // Kolom 6..18 (index 0-based = 5..17)
-    wsRekap.getRange(totRow, 6, 1, 14)
+    // 13 nilai: col 6 → 18 (span=13)
+    var totVals = [tKontrak, tMat, tUpahGross, tPotong, tUpahNet,
+                   tSubkon, tAmbil, tBonus, tBiaya, tLaba,
+                   "", tBayar, tPiutang];
+    wsRekap.getRange(totRow, 6, 1, 13)
       .setValues([totVals])
-      .setNumberFormat("#,##0").setFontWeight("bold").setBackground("#f1f5f9").setFontSize(9);
+      .setFontWeight("bold").setBackground("#f1f5f9").setFontSize(9);
+    // Format angka (skip col 16 = Margin% yang diisi "")
+    var totNumCols = [6,7,8,9,10,11,12,13,14,15,17,18];
+    totNumCols.forEach(function(c){ wsRekap.getRange(totRow, c).setNumberFormat("#,##0"); });
     wsRekap.getRange(totRow, 15).setFontColor(tLaba>=0?"#15803d":"#dc2626");
     wsRekap.getRange(totRow, 18).setFontColor(tPiutang>0?"#dc2626":"#16a34a");
   }

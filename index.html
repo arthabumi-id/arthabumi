@@ -590,20 +590,18 @@ function pgDashboard(){
       </div>`:''}
     </div>`;
   });
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-    <div class="sec-title" style="margin:0">${esc(S.companyName)}</div>
-    <button onclick="updateGSheetRekap()" style="background:none;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:11px;color:#475569;cursor:pointer;display:flex;align-items:center;gap:4px" title="Update sheet REKAP di GSheet">
-      📊 GSheet
-    </button>
-  </div>
+  return `<div class="sec-title">${esc(S.companyName)}</div>
     ${tabBar}
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none">${filterBar}</div>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-lbl">Kontrak</div><div class="kpi-val" style="color:#2563eb">${fRp(tK)}</div></div>
-      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+tU+tSK+tKB)}</div></div>
+      <div class="kpi"><div class="kpi-lbl">Total Biaya</div><div class="kpi-val" style="color:#ea580c">${fRp(tM+(tU-tPotong)+tSK+tKB)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Est. Laba</div><div class="kpi-val" style="color:${tL>=0?'#16a34a':'#dc2626'}">${fRp(tL)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Diterima</div><div class="kpi-val" style="color:#7c3aed">${fRp(tB)}</div></div>
     </div>
+    <button onclick="updateGSheetRekap()" style="width:100%;margin-bottom:12px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:10px;padding:10px;font-size:12px;color:#475569;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600">
+      📊 Update Rekap ke Google Sheets
+    </button>
     ${rows.length===0?'<div class="empty">Tidak ada proyek '+esc(S.dashFilter)+'</div>':rows.join('')}`;
 }
 

@@ -29,8 +29,11 @@ function setupAllSheets() {
 
   SpreadsheetApp.flush();
   Logger.log("════════════════════════════════════════");
-  Logger.log("✅ SELESAI! Semua 11 sheet sudah diformat.");
+  Logger.log("✅ SELESAI! Semua 11 sheet sudah diformat (v1.13).");
   Logger.log("   Timezone: " + TZ);
+  Logger.log("   Langkah berikutnya:");
+  Logger.log("   1. Jalankan fixAllProjectFormulas() → update formula di MASTER PROJECT");
+  Logger.log("   2. Buka app → Dashboard → klik '📊 Update Rekap ke Google Sheets' → buat sheet REKAP");
 }
 
 // ── Jalankan ini untuk setup 3 sheet baru saja (RAB, SUBKON, LOG SUBKON)
@@ -130,30 +133,37 @@ function _addStatusCF(ws, range, rulesMap) {
 
 function _setupSheetMasterProject(ss) {
   var ws      = _getOrCreateSheet(ss, SHEET.PROJECT);
-  var lastCol = 14;
+  var lastCol = 16; // v1.13: tambah O=Catatan, P=Progress
   _formatTitle(ws,
     "  🏗️  MASTER PROJECT",
-    "  Daftar semua proyek — max 50 proyek (baris 4–53)", lastCol);
-  _formatHeaders(ws, ["No","Kode Proyek","Nama Proyek","Jenis","Status","Nilai Kontrak (Rp)",
+    "  Daftar semua proyek — max 50 proyek (baris 4–53)  |  Kolom G-K, M-N otomatis dari formula", lastCol);
+  _formatHeaders(ws, [
+    "No","Kode Proyek","Nama Proyek","Jenis","Status","Nilai Kontrak (Rp)",
     "Biaya Material (Rp)","Biaya Upah (Rp)","Total Biaya (Rp)","Est. Laba (Rp)","Margin %",
-    "Tgl Mulai","Pembayaran (Rp)","Piutang (Rp)"]);
+    "Tgl Mulai","Pembayaran (Rp)","Piutang (Rp)","Catatan","Progress (%)"
+  ]);
   _formatDataArea(ws, ROWS.PROJECT.start, ROWS.PROJECT.end, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 110); ws.setColumnWidth(3, 220);
   ws.setColumnWidth(4, 120); ws.setColumnWidth(5, 100); ws.setColumnWidth(6, 150);
-  ws.setColumnWidth(7, 150); ws.setColumnWidth(8, 140); ws.setColumnWidth(9, 150);
-  ws.setColumnWidth(10,140); ws.setColumnWidth(11, 90); ws.setColumnWidth(12,110);
-  ws.setColumnWidth(13,150); ws.setColumnWidth(14,140);
+  ws.setColumnWidth(7, 155); ws.setColumnWidth(8, 145); ws.setColumnWidth(9, 155);
+  ws.setColumnWidth(10,145); ws.setColumnWidth(11, 90); ws.setColumnWidth(12,110);
+  ws.setColumnWidth(13,150); ws.setColumnWidth(14,140); ws.setColumnWidth(15,220);
+  ws.setColumnWidth(16, 90);
 
   ws.getRange("F4:F53").setNumberFormat("#,##0");
   ws.getRange("G4:I53").setNumberFormat("#,##0");
   ws.getRange("J4:J53").setNumberFormat('#,##0;[Red](#,##0);"-"');
-  ws.getRange("K4:K53").setNumberFormat("0.0%");
+  ws.getRange("K4:K53").setNumberFormat("0.0%").setHorizontalAlignment("center");
   ws.getRange("L4:L53").setNumberFormat("dd/MM/yyyy").setHorizontalAlignment("center");
   ws.getRange("M4:N53").setNumberFormat("#,##0");
+  ws.getRange("P4:P53").setNumberFormat("#,##0").setHorizontalAlignment("center"); // Progress 0-100
   ws.getRange("A4:B53").setHorizontalAlignment("center");
   ws.getRange("D4:E53").setHorizontalAlignment("center");
-  ws.getRange("K4:K53").setHorizontalAlignment("center");
+
+  // Highlight kolom formula dengan background beda (read-only visual cue)
+  ws.getRange("G3:N3").setBackground("#1e3a5f"); // header formula area lebih gelap
+  ws.getRange("G4:N53").setBackground("#f0f7ff"); // data formula area biru muda
 
   _addStatusCF(ws, ws.getRange("E4:E53"), {
     "Berjalan": {bg:"#dbeafe", fg:"#1d4ed8"},
@@ -161,7 +171,7 @@ function _setupSheetMasterProject(ss) {
     "Hold":     {bg:"#fef9c3", fg:"#854d0e"},
     "Batal":    {bg:"#fee2e2", fg:"#b91c1c"}
   });
-  Logger.log("  ✓ MASTER PROJECT");
+  Logger.log("  ✓ MASTER PROJECT (v1.13 — 16 kolom A-P)");
 }
 
 function _setupSheetPembelian(ss) {
@@ -171,17 +181,17 @@ function _setupSheetPembelian(ss) {
     "  🛒  PEMBELIAN MATERIAL",
     "  Log semua pembelian bahan per proyek — max 300 baris (baris 4–303)", lastCol);
   _formatHeaders(ws, ["No","Tanggal","Kode Proyek","Nama Barang","Kategori","Satuan",
-    "Qty","Harga Satuan (Rp)","Diskon %","Status","Toko / Supplier","Total (Rp)"]);
+    "Qty","Harga Satuan (Rp)","Diskon (Rp)","Status","Toko / Supplier","Total (Rp)"]);
   _formatDataArea(ws, ROWS.PEMBELIAN.start, ROWS.PEMBELIAN.end, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 200); ws.setColumnWidth(5, 110); ws.setColumnWidth(6, 80);
-  ws.setColumnWidth(7, 60);  ws.setColumnWidth(8, 150); ws.setColumnWidth(9, 80);
+  ws.setColumnWidth(7, 60);  ws.setColumnWidth(8, 150); ws.setColumnWidth(9, 120);
   ws.setColumnWidth(10,100); ws.setColumnWidth(11,160); ws.setColumnWidth(12,140);
 
   ws.getRange("B4:B303").setNumberFormat("dd/MM/yyyy").setHorizontalAlignment("center");
   ws.getRange("H4:H303").setNumberFormat("#,##0");
-  ws.getRange("I4:I303").setNumberFormat("0.0%").setHorizontalAlignment("center");
+  ws.getRange("I4:I303").setNumberFormat("#,##0").setFontColor("#16a34a"); // Diskon nominal Rp (v1.6+)
   ws.getRange("L4:L303").setNumberFormat("#,##0").setFontWeight("bold");
   ws.getRange("A4:C303").setHorizontalAlignment("center");
   ws.getRange("F4:G303").setHorizontalAlignment("center");
@@ -223,22 +233,28 @@ function _setupSheetMasterKaryawan(ss) {
 
 function _setupSheetLogAbsensi(ss) {
   var ws      = _getOrCreateSheet(ss, SHEET.ABSENSI);
-  var lastCol = 12;
+  var lastCol = 14; // v1.12: tambah M=Jam Lembur, N=Upah Lembur
   _formatTitle(ws,
     "  📋  LOG ABSENSI HARIAN",
-    "  Rekap absensi harian karyawan — max 1000 baris (baris 4–1003)", lastCol);
-  _formatHeaders(ws, ["No","Tanggal","ID Karyawan","Nama","Status Hadir","Kode Proyek",
-    "Nama Proyek","Upah Hari Ini (Rp)","Status Bayar","No Closing","Tgl Bayar","Keterangan"]);
+    "  Rekap absensi harian karyawan — max 1000 baris (baris 4–1003)  |  M-N = data lembur (v1.12)", lastCol);
+  _formatHeaders(ws, [
+    "No","Tanggal","ID Karyawan","Nama","Status Hadir","Kode Proyek",
+    "Nama Proyek","Upah Hari Ini (Rp)","Status Bayar","No Closing",
+    "Tgl Bayar","Keterangan","Jam Lembur","Upah Lembur (Rp)"
+  ]);
   _formatDataArea(ws, ROWS.ABSENSI.start, ROWS.ABSENSI.end, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 180); ws.setColumnWidth(5, 110); ws.setColumnWidth(6, 110);
   ws.setColumnWidth(7, 200); ws.setColumnWidth(8, 150); ws.setColumnWidth(9, 120);
   ws.setColumnWidth(10,120); ws.setColumnWidth(11,100); ws.setColumnWidth(12,200);
+  ws.setColumnWidth(13, 90); ws.setColumnWidth(14,140);
 
   ws.getRange("B4:B1003").setNumberFormat("dd/MM/yyyy").setHorizontalAlignment("center");
   ws.getRange("H4:H1003").setNumberFormat("#,##0").setFontWeight("bold").setFontColor("#16a34a");
   ws.getRange("K4:K1003").setNumberFormat("dd/MM/yyyy").setHorizontalAlignment("center");
+  ws.getRange("M4:M1003").setNumberFormat("0.0").setHorizontalAlignment("center").setFontColor("#7c3aed");
+  ws.getRange("N4:N1003").setNumberFormat("#,##0").setFontColor("#7c3aed");
   ws.getRange("A4:C1003").setHorizontalAlignment("center");
   ws.getRange("E4:F1003").setHorizontalAlignment("center");
   ws.getRange("J4:J1003").setHorizontalAlignment("center");
@@ -253,32 +269,36 @@ function _setupSheetLogAbsensi(ss) {
     "Sudah Dibayar": {bg:"#dcfce7", fg:"#15803d"},
     "Belum Dibayar": {bg:"#fee2e2", fg:"#b91c1c"}
   });
-  Logger.log("  ✓ LOG ABSENSI");
+  Logger.log("  ✓ LOG ABSENSI (v1.12 — 14 kolom A-N)");
 }
 
 function _setupSheetLogKasbon(ss) {
   var ws      = _getOrCreateSheet(ss, SHEET.KASBON);
-  var lastCol = 8;
+  var lastCol = 9; // v1.13: tambah I=Kode Proyek
   _formatTitle(ws,
     "  💸  LOG KASBON",
-    "  Riwayat kasbon & potongan karyawan — max 1000 baris (baris 4–1003)", lastCol);
-  _formatHeaders(ws, ["No","Tanggal","ID Karyawan","Tipe","Nominal (Rp)","Nama","No Closing","Keterangan"]);
+    "  Riwayat kasbon & potongan karyawan — max 1000 baris (baris 4–1003)  |  I = kode proyek untuk AMBIL & BONUS (v1.13)", lastCol);
+  _formatHeaders(ws, [
+    "No","Tanggal","ID Karyawan","Tipe","Nominal (Rp)","Nama","No Closing","Keterangan","Kode Proyek"
+  ]);
   _formatDataArea(ws, ROWS.KASBON.start, ROWS.KASBON.end, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 90);  ws.setColumnWidth(5, 150); ws.setColumnWidth(6, 180);
-  ws.setColumnWidth(7, 140); ws.setColumnWidth(8, 250);
+  ws.setColumnWidth(7, 140); ws.setColumnWidth(8, 250); ws.setColumnWidth(9, 110);
 
   ws.getRange("B4:B1003").setNumberFormat("dd/MM/yyyy").setHorizontalAlignment("center");
   ws.getRange("E4:E1003").setNumberFormat("#,##0").setFontWeight("bold");
   ws.getRange("A4:D1003").setHorizontalAlignment("center");
   ws.getRange("G4:G1003").setHorizontalAlignment("center");
+  ws.getRange("I4:I1003").setHorizontalAlignment("center").setFontColor("#1d4ed8");
 
   _addStatusCF(ws, ws.getRange("D4:D1003"), {
     "AMBIL":  {bg:"#fed7aa", fg:"#c2410c"},
-    "POTONG": {bg:"#ede9fe", fg:"#7c3aed"}
+    "POTONG": {bg:"#ede9fe", fg:"#7c3aed"},
+    "BONUS":  {bg:"#fef9c3", fg:"#854d0e"}
   });
-  Logger.log("  ✓ LOG KASBON");
+  Logger.log("  ✓ LOG KASBON (v1.13 — 9 kolom A-I)");
 }
 
 function _setupSheetLogPembayaran(ss) {
@@ -417,6 +437,19 @@ function _setupSheetLogSubkon(ss) {
 // UTILITY — Perbaiki semua formula di MASTER PROJECT
 // Jalankan kalau formula project tiba-tiba hilang atau salah
 // ════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════
+// fixAllProjectFormulas — v1.13
+// Kolom MASTER PROJECT:
+//   A=No  B=Kode  C=Nama  D=Jenis  E=Status  F=NilaiKontrak
+//   G=BiayaMat(formula)  H=BiayaUpah(formula)  I=TotalBiaya(formula)
+//   J=Laba(formula)  K=Margin(formula)  L=TglMulai
+//   M=Pembayaran(formula)  N=Piutang(formula)
+//   O=Catatan(manual)  P=Progress(manual, 0-100)
+//
+// ⚠️ Catatan: Formula totalBiaya (I) di GSheet = Material+Upah+Subkon+BONUS
+//    Kasbon AMBIL-POTONG tidak bisa dihitung otomatis di GSheet (butuh logika
+//    noClosing linkage). Nilai presisi ada di sheet REKAP yang dibuat via app.
+// ════════════════════════════════════════════════════════════════════════
 function fixAllProjectFormulas() {
   var ss  = SpreadsheetApp.getActiveSpreadsheet();
   var ws  = ss.getSheetByName(SHEET.PROJECT);
@@ -427,29 +460,49 @@ function fixAllProjectFormulas() {
   for (var i = 0; i < colB.length; i++) {
     if (String(colB[i][0]).trim() === "") continue;
     var r = i + R.start;
-    // Pakai setFormula (English locale, koma) — bukan setFormulaLocal
+
+    // G = Biaya Material (dari PEMBELIAN, exclude ASET)
     ws.getRange(r, 7).setFormula(
-      "=IFERROR(SUMIF(PEMBELIAN!$C:$C,B" + r + ",PEMBELIAN!$L:$L),0)"
+      "=IFERROR(SUMIFS(PEMBELIAN!$L:$L,PEMBELIAN!$C:$C,B" + r + ",PEMBELIAN!$J:$J,\"<>ASET\"),0)"
     ).setNumberFormat("#,##0");
+
+    // H = Biaya Upah Gross (dari LOG ABSENSI — sudah inklusif lembur v1.12)
     ws.getRange(r, 8).setFormula(
-      "=IFERROR(SUMIFS('LOG ABSENSI'!$H:$H,'LOG ABSENSI'!$F:$F,B" + r + "),0)"
+      "=IFERROR(SUMIF('LOG ABSENSI'!$F:$F,B" + r + ",'LOG ABSENSI'!$H:$H),0)"
     ).setNumberFormat("#,##0");
+
+    // I = Total Biaya = Material + Upah + Subkon + BONUS
+    //     (Kasbon AMBIL-POTONG tidak bisa formula GSheet — lihat sheet REKAP untuk nilai presisi)
     ws.getRange(r, 9).setFormula(
-      "=G" + r + "+H" + r + "+IFERROR(SUMIF('LOG SUBKON'!$C:$C,B" + r + ",'LOG SUBKON'!$H:$H),0)"
+      "=G" + r + "+H" + r +
+      "+IFERROR(SUMIF('LOG SUBKON'!$C:$C,B" + r + ",'LOG SUBKON'!$H:$H),0)" +
+      "+IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I,B" + r + ",'LOG KASBON'!$D:$D,\"BONUS\"),0)"
     ).setNumberFormat("#,##0");
+
+    // J = Laba Estimasi = NilaiKontrak - TotalBiaya
     ws.getRange(r, 10).setFormula(
       '=IF(F' + r + '="","",F' + r + '-I' + r + ')'
     ).setNumberFormat('#,##0;[Red](#,##0);"-"');
+
+    // K = Margin %
     ws.getRange(r, 11).setFormula(
       '=IF(OR(F' + r + '=0,F' + r + '=""),"",J' + r + '/F' + r + ')'
     ).setNumberFormat("0.0%");
+
+    // M = Total Pembayaran dari Klien
     ws.getRange(r, 13).setFormula(
       "=IFERROR(SUMIF('LOG PEMBAYARAN'!$C:$C,B" + r + ",'LOG PEMBAYARAN'!$E:$E),0)"
     ).setNumberFormat("#,##0");
+
+    // N = Piutang = NilaiKontrak - Pembayaran
     ws.getRange(r, 14).setFormula(
       '=IF(F' + r + '="","",F' + r + '-IF(M' + r + '="",0,M' + r + '))'
     ).setNumberFormat('#,##0;[Red](#,##0);"-"');
+
     count++;
   }
-  Logger.log("fixAllProjectFormulas: " + count + " proyek diupdate");
+  SpreadsheetApp.flush();
+  Logger.log("fixAllProjectFormulas (v1.13): " + count + " proyek diupdate");
+  Logger.log("  ✅ G=Material  H=Upah  I=Mat+Upah+Subkon+BONUS  J=Laba  K=Margin  M=Bayar  N=Piutang");
+  Logger.log("  ℹ️  Kolom O (Catatan) & P (Progress) diisi manual oleh app — tidak ada formula");
 }
