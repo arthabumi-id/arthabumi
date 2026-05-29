@@ -31,7 +31,7 @@ var ROWS = {
   ABSENSI:    { start: 4,  end: 1003 },  // max 1000 absensi
   KASBON:     { start: 4,  end: 1003 },  // max 1000 kasbon
   PEMBAYARAN: { start: 4,  end: 503  },  // max 500 pembayaran
-  BARANG:     { start: 5,  end: 104  },  // max 100 barang (start=5, baris 4 = header tambahan)
+  BARANG:     { start: 5,  end: 1004 },  // max 1000 barang (start=5, baris 4 = header tambahan)
   TOKO:       { start: 4,  end: 103  },  // max 100 toko
   RAB:        { start: 4,  end: 103  },  // max 100 entri RAB
   SUBKON:     { start: 4,  end: 103  },  // max 100 subkontraktor

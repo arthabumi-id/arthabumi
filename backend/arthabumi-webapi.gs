@@ -407,7 +407,7 @@ function _apiReadLogPembayaran(ss) {
 function _apiReadBarang(ss) {
   var ws = ss.getSheetByName("MASTER BARANG");
   if (!ws) return [];
-  var data = ws.getRange("B5:G104").getValues();
+  var data = ws.getRange("B5:G1004").getValues();
   var out = [];
   for (var i = 0; i < data.length; i++) {
     if (String(data[i][1]).trim() === "") continue; // C = nama (index 1 from B)
@@ -509,7 +509,7 @@ function _apiAddPembelian(ss, items) {
 
   // Update MASTER BARANG
   if (wsBarang) {
-    var barangData = wsBarang.getRange("C5:G104").getValues();
+    var barangData = wsBarang.getRange("C5:G1004").getValues();
     for (var k = 0; k < items.length; k++) {
       var it2  = items[k];
       var found= false;

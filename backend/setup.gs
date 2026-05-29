@@ -344,10 +344,10 @@ function _setupSheetMasterBarang(ss) {
   ws.setColumnWidth(4, 130); ws.setColumnWidth(5, 80);  ws.setColumnWidth(6, 150);
   ws.setColumnWidth(7, 160);
 
-  ws.getRange("F5:G104").setNumberFormat("#,##0");
-  ws.getRange("G5:G104").setFontWeight("bold").setFontColor("#16a34a");
-  ws.getRange("A5:B104").setHorizontalAlignment("center");
-  ws.getRange("D5:E104").setHorizontalAlignment("center");
+  ws.getRange("F5:G1004").setNumberFormat("#,##0");
+  ws.getRange("G5:G1004").setFontWeight("bold").setFontColor("#16a34a");
+  ws.getRange("A5:B1004").setHorizontalAlignment("center");
+  ws.getRange("D5:E1004").setHorizontalAlignment("center");
   Logger.log("  ✓ MASTER BARANG");
 }
 
