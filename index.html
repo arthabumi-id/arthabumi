@@ -1141,6 +1141,9 @@ function submitBeli(){
   const kodeProj=document.getElementById('beli-prj').value;
   if(!kodeProj){showToast('Pilih proyek','err');return;}
   if(S.formItems.some(it=>!it.namaBarang||!it.harga)){showToast('Lengkapi nama & harga','err');return;}
+  // Sinkron toko dari global input ke semua item (fix: item baru yg ditambah setelah toko diketik)
+  const tokoGlobal=document.getElementById('beli-toko')?.value||'';
+  if(tokoGlobal) S.formItems.forEach(x=>{if(!x.toko)x.toko=tokoGlobal;});
   const total=S.formItems.reduce((s,it)=>s+calcTotal(it),0);
   showBeliConfirmation(S.formItems,total);
 }
