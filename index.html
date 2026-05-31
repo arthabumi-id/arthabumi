@@ -1809,10 +1809,16 @@ function genClosing(){
     const am=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='AMBIL').reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const pt=S.logKasbon.filter(x=>x.idKaryawan===k.id&&x.tipe==='POTONG').reduce((s,x)=>s+(Number(x.nominal)||0),0);
     const sisaKasbon=Math.max(0,am-pt);
+    // Breakdown hari & lembur
+    const hariHadir=abs.filter(a=>a.status==='Hadir').length;
+    const hariSetengah=abs.filter(a=>a.status==='Setengah Hari').length;
+    const jamLembur=abs.reduce((s,a)=>s+(Number(a.jamLembur)||0),0);
+    const upahLembur=abs.reduce((s,a)=>s+(Number(a.upahLembur)||0),0);
+    const upahPokok=tu-upahLembur;
     // Hitung proyek mayoritas (default proyek untuk bonus)
     const projCount={};abs.forEach(a=>{if(a.kodeProj)projCount[a.kodeProj]=(projCount[a.kodeProj]||0)+1;});
     const majorityProj=Object.keys(projCount).sort((a,b)=>projCount[b]-projCount[a])[0]||'';
-    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,totalUpah:tu,sisaKasbon,kasbonDipotong:sisaKasbon,ksbProj:majorityProj,bonusAmount:0,bonusProj:majorityProj};
+    return{idKaryawan:k.id,nama:k.nama,hari:abs.length,hariHadir,hariSetengah,jamLembur,upahPokok,upahLembur,totalUpah:tu,sisaKasbon,kasbonDipotong:sisaKasbon,ksbProj:majorityProj,bonusAmount:0,bonusProj:majorityProj};
   }).filter(r=>r!==null);
   clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
   if(!clsRekap.length){showToast('Tidak ada absensi "Belum Dibayar" di periode ini','err');return;}
@@ -1873,14 +1879,29 @@ function buildClsRekap(){
           style="width:22px;height:22px;cursor:pointer;accent-color:#10b981">
         <div style="flex:1">
           <div class="item-name">${esc(r.nama)}</div>
-          <div class="item-sub">${r.hari} hari kerja · ${fRp(r.totalUpah/r.hari)}/hari</div>
+          <div class="item-sub">${r.hariHadir} Hadir${r.hariSetengah>0?' · '+r.hariSetengah+'× ½ Hari':''}${r.jamLembur>0?' · ⏰ '+r.jamLembur+'j lembur':''}</div>
         </div>
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;background:${isSel?'#dcfce7':'#f1f5f9'};color:${isSel?'#15803d':'#94a3b8'}">${isSel?'✓ Dibayar':'— Skip'}</span>
       </div>
-      <div class="g2" style="margin-bottom:8px">
-        <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Total Upah</div><div class="chip-val" style="color:#16a34a">${fRp(r.totalUpah)}</div></div>
-        <div class="chip" style="background:${r.sisaKasbon>0?'#fef2f2':'#f0fdf4'}"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:${r.sisaKasbon>0?'#dc2626':'#16a34a'}">${fRp(r.sisaKasbon)}</div></div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:8px;margin-bottom:8px;font-size:11px">
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9">
+          <span style="color:#64748b">Hari Kerja</span>
+          <span style="font-weight:600;color:#1e293b">${r.hariHadir} Hadir${r.hariSetengah>0?' + '+r.hariSetengah+'× ½':''}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9">
+          <span style="color:#64748b">Upah Pokok</span>
+          <span style="font-weight:600;color:#16a34a">${fRp(r.upahPokok)}</span>
+        </div>
+        ${r.jamLembur>0?`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9">
+          <span style="color:#92400e">⏰ Lembur (${r.jamLembur} jam)</span>
+          <span style="font-weight:600;color:#d97706">+ ${fRp(r.upahLembur)}</span>
+        </div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:4px 0;margin-top:1px">
+          <span style="color:#1e293b;font-weight:700">Total Upah</span>
+          <span style="font-weight:800;color:#16a34a;font-size:13px">${fRp(r.totalUpah)}</span>
+        </div>
       </div>
+      <div class="chip" style="background:${r.sisaKasbon>0?'#fef2f2':'#f0fdf4'};margin-bottom:8px"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:${r.sisaKasbon>0?'#dc2626':'#16a34a'}">${fRp(r.sisaKasbon)}</div></div>
       ${hutangInfo}<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:9px;margin-bottom:8px">
         <div style="font-size:10px;font-weight:700;color:#15803d;margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">💼 Potong Kasbon</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
