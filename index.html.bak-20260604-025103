@@ -1012,7 +1012,7 @@ function beliLog(){
       <input class="fc" type="date" value="${toD}" oninput="S.tab.beliDateTo=this.value;go('beli')">
     </div>
     </div>`;
-  const all=[...S.pembelian].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const all=[...S.pembelian].reverse();
   let list=S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all;
   list=filterByDate(list,dateMode,fromD,toD).slice(0,60);
   const namaProj=S.beliFilter?(S.projects.find(p=>p.kode===S.beliFilter)?.nama||S.beliFilter):'';
@@ -1393,7 +1393,7 @@ function absLog(){
       <input class="fc" type="date" value="${toD}" oninput="S.tab.absDateTo=this.value;go('absensi')">
     </div>
     </div>`;
-  const all=[...S.logAbsensi].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const all=[...S.logAbsensi].reverse();
   let list=S.absFilter?all.filter(a=>a.kodeProj===S.absFilter):all;
   list=filterByDate(list,dateMode,fromD,toD).slice(0,80);
   const namaProj=S.absFilter?(S.projects.find(p=>p.kode===S.absFilter)?.nama||S.absFilter):'';
@@ -1571,7 +1571,7 @@ function kasbonHutang(){
   return aktifSection+lunasSection;
 }
 function kasbonLog(){
-  const list=[...S.logKasbon].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||''))).slice(0,60);
+  const list=[...S.logKasbon].reverse().slice(0,60);
   return list.length===0?'<div class="empty">Belum ada data</div>':list.map(k=>{
     const ri=S.logKasbon.findIndex(x=>x.id===k.id);
     const canDel=!k.noClosing||k.noClosing.trim()==='';
@@ -2097,7 +2097,7 @@ function submitPay(){
   doSync('addPembayaran',ni.map(it=>({tgl,kodeProj:it.kodeProj,namaProj:it.namaProj||'',nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
 }
 function bayarLog(){
-  const list=[...S.logPembayaran].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||''))).slice(0,60);
+  const list=[...S.logPembayaran].reverse().slice(0,60);
   return list.length===0?'<div class="empty">Belum ada data</div>':list.map(p=>{
     const ri=S.logPembayaran.findIndex(x=>x.id===p.id);
     return `<div class="card"><div class="row">
@@ -2316,7 +2316,7 @@ function submitSubkon(){
   doSync('addLogSubkon',newLS);
 }
 function subkonLog(){
-  const list=[...S.logSubkon].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||''))).slice(0,60);
+  const list=[...S.logSubkon].reverse().slice(0,60);
   if(!list.length)return '<div class="empty">Belum ada pekerjaan subkon</div>';
   return list.map(ls=>{
     const ri=S.logSubkon.findIndex(x=>x.id===ls.id);
