@@ -668,29 +668,21 @@ function pgPiutang(){
 }
 // ── PROYEK
 function pgProject(){
-  const STS=['Berjalan','Selesai','Hold','Batal'];
-  let f=S.tab.project; if(!STS.includes(f))f='Berjalan';
-  const cnt=s=>S.projects.filter(p=>(p.status||'Berjalan')===s).length;
-  const tabs=STS.map(s=>`<button class="tab ${f===s?'tab-on':'tab-off'} btn-sm" onclick="setTab('project','${s}')">${s}${cnt(s)>0?' ('+cnt(s)+')':''}</button>`).join('');
-  const list=S.projects.filter(p=>(p.status||'Berjalan')===f);
   return `<div class="row" style="margin-bottom:11px">
     <div class="sec-title" style="margin:0">Master Proyek</div>
     <button class="btn btn-p btn-sm" onclick="openAddProject()">+ Tambah</button></div>
-  <div class="tabs" style="margin-bottom:11px;flex-wrap:wrap;gap:6px">${tabs}</div>
-  ${list.length===0?`<div class="empty">Tidak ada proyek berstatus "${esc(f)}"</div>`:list.map(p=>{
-    const gi=S.projects.indexOf(p);
-    return `<div class="card"><div class="row">
+  ${S.projects.length===0?'<div class="empty">Belum ada proyek</div>':S.projects.map((p,i)=>`
+  <div class="card"><div class="row">
     <div style="flex:1;min-width:0"><div class="item-name">${esc(p.nama)}</div>
       <div class="item-sub">${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
       ${bdg(p.status)}
       <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
-      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${gi})">✏️</button>
+      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${i})">✏️</button>
       <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">🗑</button>
     </div></div>
     ${p.catatan?`<div style="margin-top:7px;padding:7px 10px;background:#fefce8;border-radius:8px;border-left:3px solid #eab308;font-size:12px;color:#713f12;white-space:pre-line;line-height:1.5">${esc(p.catatan)}</div>`:''}
-    </div>`;
-  }).join('')}`;
+    </div>`).join('')}`;
 }
 function openAddProject(){
   const kode=padId('PRJ',S.projects,'kode');
@@ -2085,7 +2077,7 @@ function pgBayar(){
 }
 function bayarInput(){
   if(!S.payItems||!S.payItems.length)S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.filter(p=>(p.status||'Berjalan')==='Berjalan').map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
   const items=S.payItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:#64748b">Pembayaran ${i+1}</span>
       ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">✕</button>`:''}</div>
@@ -2513,18 +2505,4 @@ window.addEventListener('DOMContentLoaded',async()=>{
   document.title=S.companyName;
   go('dashboard');
   document.getElementById('nav').innerHTML=buildNav();
-  setTimeout(()=>{const spl=document.getElementById('spl');if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}},300);
-  updateSyncBadge();
-  if(S.webAppUrl){await doFetch();startPoll();}
-  // Inject PWA manifest
-  try{
-    const mf={name:S.companyName,short_name:S.companyName.split(' ')[0],description:'Sistem Manajemen Proyek Kontraktor',start_url:'.',display:'standalone',background_color:'#0f172a',theme_color:'#0f172a',icons:[{src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjI1NiIgeT0iMzMwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzEwYjk4MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUI8L3RleHQ+PC9zdmc+',sizes:'512x512',type:'image/svg+xml'}]};
-    const blob=new Blob([JSON.stringify(mf)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement('link');link.rel='manifest';link.href=url;
-    document.head.appendChild(link);
-  }catch(e){}
-});
-</script>
-</body>
-</html>
+  setTimeout(()=>{const spl=document.getElementById('spl');if(spl){spl.classList.add('out');setTim
