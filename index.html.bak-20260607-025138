@@ -1281,14 +1281,14 @@ function absInput(){
         <span style="font-size:11px;color:#92400e;font-weight:600;flex-shrink:0">⏰ Lembur</span>
         <input type="number" min="0" max="24" step="0.5" value="${jamLembur||''}" placeholder="0"
           style="width:62px;padding:4px 7px;border:1px solid #fcd34d;border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:#fff"
-          oninput="setLembur(${i},this.value)">
+          oninput="setAbsRow(${i},'jamLembur',parseFloat(this.value)||0);go('absensi')">
         <span style="font-size:11px;color:#78350f">jam &nbsp;·&nbsp; ${fRp(tarifLembur)}/jam</span>
-        <span id="abs-lem-${i}" style="font-size:12px;font-weight:700;color:#d97706;margin-left:auto;display:${upahLembur>0?'':'none'}">+${fRp(upahLembur)}</span>
+        ${upahLembur>0?`<span style="font-size:12px;font-weight:700;color:#d97706;margin-left:auto">+${fRp(upahLembur)}</span>`:''}
       </div>`:'';
     return `<div class="card" style="margin-bottom:8px">
       <div class="row" style="margin-bottom:8px">
         <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${k.jabatan} · ${fRp(k.upahHarian)}/hr</div></div>
-        ${upahHariIni>0?`<div style="text-align:right;flex-shrink:0"><div id="abs-base-${i}" style="font-size:10px;color:#94a3b8;text-decoration:line-through;display:${upahLembur>0?'':'none'}">${fRp(baseUpah)}</div><span id="abs-net-${i}" style="font-weight:700;color:#10b981;font-size:14px">${fRp(upahHariIni)}</span></div>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
+        ${upahHariIni>0?`<div style="text-align:right;flex-shrink:0">${upahLembur>0?`<div style="font-size:10px;color:#94a3b8;text-decoration:line-through">${fRp(baseUpah)}</div>`:''}<span style="font-weight:700;color:#10b981;font-size:14px">${fRp(upahHariIni)}</span></div>`:'<span style="font-size:11px;color:#94a3b8">Belum pilih</span>'}
       </div>
       <div style="display:flex;gap:5px;margin-bottom:8px">${stsBtns}</div>
       ${lemburRow}
@@ -1310,21 +1310,6 @@ function absInput(){
   <button class="btn btn-p btn-w" onclick="submitAbsensi()">💾 Simpan Absensi</button>`:''}`;
 }
 function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:'',jamLembur:0};if(key==='status'&&S.absRows[i].status===val){S.absRows[i].status='';S.absRows[i].jamLembur=0;go('absensi');return;}S.absRows[i][key]=val;if(key==='status')go('absensi');}
-function setLembur(i,val){
-  const k=S.karyawan[i];if(!k)return;
-  if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:'',jamLembur:0};
-  const jam=parseFloat(val)||0;S.absRows[i].jamLembur=jam;
-  const st=S.absRows[i].status;
-  const base=st==='Hadir'?k.upahHarian:st==='Setengah Hari'?k.upahHarian*0.5:0;
-  const upahLembur=Math.round(jam*k.upahHarian/8);
-  const net=base+upahLembur;
-  const lemEl=document.getElementById('abs-lem-'+i);
-  if(lemEl){lemEl.textContent='+'+fRp(upahLembur);lemEl.style.display=upahLembur>0?'':'none';}
-  const baseEl=document.getElementById('abs-base-'+i);
-  if(baseEl)baseEl.style.display=upahLembur>0?'':'none';
-  const netEl=document.getElementById('abs-net-'+i);
-  if(netEl)netEl.textContent=fRp(net);
-}
 function submitAbsensi(){
   const tgl=document.getElementById('abs-tgl')?.value||today();
   const defProj=document.getElementById('abs-prj')?.value||'';
@@ -1751,7 +1736,7 @@ function openClosingDetail(noClosing){
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:#64748b">Upah: <strong style="color:#16a34a">${fRp(kr.totalUpah)}</strong></div>
-          ${bonus!==0?`<div style="font-size:11px;color:${bonus>0?'#d97706':'#dc2626'}">${bonus>0?'🎁 Bonus: + '+fRp(bonus):'↩️ Koreksi: - '+fRp(Math.abs(bonus))}</div>`:''}
+          ${bonus>0?`<div style="font-size:11px;color:#d97706">🎁 Bonus: +${fRp(bonus)}</div>`:''}
           ${potong>0?`<div style="font-size:11px;color:#7c3aed">Potong: -${fRp(potong)}</div>`:''}
           <div style="font-size:13px;font-weight:800;color:${net>=0?'#1d4ed8':'#dc2626'}">Net: ${fRp(net)}</div>
         </div>
@@ -1781,9 +1766,9 @@ function openClosingDetail(noClosing){
         <span style="color:#94a3b8;font-size:11px">Total Upah</span>
         <span style="color:#34d399;font-weight:700">${fRp(totalUpah)}</span>
       </div>
-      ${totalBonus!==0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-        <span style="color:#94a3b8;font-size:11px">${totalBonus>0?'🎁 Total Bonus':'↩️ Koreksi Bonus'}</span>
-        <span style="color:${totalBonus>0?'#fbbf24':'#f87171'};font-weight:600">${totalBonus>0?'+ '+fRp(totalBonus):'- '+fRp(Math.abs(totalBonus))}</span>
+      ${totalBonus>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="color:#94a3b8;font-size:11px">🎁 Total Bonus</span>
+        <span style="color:#fbbf24;font-weight:600">+ ${fRp(totalBonus)}</span>
       </div>`:''}
       ${totalPotong>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
         <span style="color:#94a3b8;font-size:11px">Kasbon Dipotong</span>
@@ -1858,7 +1843,7 @@ function toggleSatuCls(idKaryawan,checked){
 }
 function updateClsNet(i){
   const ksbRaw=(document.getElementById('cls-ksb-'+i)?.value||'').replace(/[^0-9]/g,'');
-  const bonRaw=(document.getElementById('cls-bon-'+i)?.value||'').replace(/[^0-9-]/g,'');
+  const bonRaw=(document.getElementById('cls-bon-'+i)?.value||'').replace(/[^0-9]/g,'');
   const projEl=document.getElementById('cls-bonproj-'+i);
   const ksbProjEl=document.getElementById('cls-ksbproj-'+i);
   clsRekap[i].kasbonDipotong=parseInt(ksbRaw)||0;
@@ -1934,12 +1919,13 @@ function buildClsRekap(){
           </select>
         </div>
       </div>
+      </div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 9px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px">
         <span style="font-size:11px;color:#92400e;font-weight:700;white-space:nowrap;flex-shrink:0">🎁 Bonus:</span>
-        <input class="fc" type="text" inputmode="text" id="cls-bon-${i}"
+        <input class="fc" type="text" inputmode="numeric" id="cls-bon-${i}"
           value="${r.bonusAmount?Number(r.bonusAmount).toLocaleString('id-ID'):''}"
-          style="flex:1;border-color:#fcd34d" placeholder="0 / -"
-          oninput="let rv=this.value.replace(/[^0-9-]/g,'').replace(/(?!^)-/g,'');let n=parseInt(rv);this.value=isNaN(n)?(rv==='-'?'-':''):n.toLocaleString('id-ID');updateClsNet(${i})">
+          style="flex:1;border-color:#fcd34d" placeholder="0"
+          oninput="let rv=this.value.replace(/[^0-9]/g,'');this.value=rv?parseInt(rv).toLocaleString('id-ID'):'';updateClsNet(${i})">
         <select id="cls-bonproj-${i}" style="font-size:11px;padding:5px 5px;border:1px solid #fcd34d;border-radius:7px;background:#fff;max-width:130px;min-width:80px" onchange="updateClsNet(${i})">${projOpts}</select>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #f1f5f9">
@@ -1986,7 +1972,7 @@ function finalizeClosing(){
     const ksbInp=document.getElementById('cls-ksb-'+i);
     if(ksbInp){r.kasbonDipotong=parseInt((ksbInp.value||'').replace(/[^0-9]/g,''))||0;}
     const bonInp=document.getElementById('cls-bon-'+i);
-    if(bonInp){r.bonusAmount=parseInt((bonInp.value||'').replace(/[^0-9-]/g,''))||0;}
+    if(bonInp){r.bonusAmount=parseInt((bonInp.value||'').replace(/[^0-9]/g,''))||0;}
     const projSel=document.getElementById('cls-bonproj-'+i);
     if(projSel){r.bonusProj=projSel.value;}
     const ksbProjSel=document.getElementById('cls-ksbproj-'+i);
@@ -2016,7 +2002,7 @@ function finalizeClosing(){
   });
 
   // Tambah BONUS kasbon
-  const bonusItems=clsRekap.filter(r=>clsSel[r.idKaryawan]&&Number(r.bonusAmount)!==0);
+  const bonusItems=clsRekap.filter(r=>clsSel[r.idKaryawan]&&Number(r.bonusAmount)>0);
   bonusItems.forEach(r=>{
     S.logKasbon.push({
       id:'KSB-BON-'+Date.now()+'-'+r.idKaryawan,
