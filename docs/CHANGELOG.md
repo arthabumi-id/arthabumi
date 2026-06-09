@@ -13,6 +13,36 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 8 (v1.15) — 2026-06-09
+
+## [2026-06-09] v1.15 — Log Per Toko + Kerja Tambah/Kurang + Cleanup
+
+### Fitur 1 — Log Pembelian Per Toko (index.html, UI-only)
+- ✨ Toggle **📅 Per Tanggal / 🏪 Per Toko** di tab Log Pembelian (`beliLog`)
+- ✨ Mode Per Toko: tiap toko diringkas (total belanja + jumlah item), diurut transaksi terbaru, tekan untuk expand rincian item
+- ✨ Fungsi baru: `setBeliView()`, `toggleBeliToko()`, `beliItemCard()`
+- Filter Proyek & Tanggal lama tetap berlaku. Tidak ada perubahan backend/sheet (field `toko` sudah ada).
+
+### Fitur 2 — Kerja Tambah / Kurang per Proyek
+- ✨ Data variasi disimpan **ringan sebagai JSON di kolom Q** MASTER PROJECT: `p.variasi=[{tgl,jenis:'tambah'|'kurang',nominal,catatan}]`
+- ✨ `vSum(p)` → `{tambah,kurang,n,final}`; **Nilai Final = nilaiKontrak(awal) + Σtambah − Σkurang**
+- ✨ Modal detail proyek (`openRekapProyek`): bagian Kerja Tambah/Kurang + tombol tambah/hapus; kartu proyek bisa diklik untuk membukanya
+- ✨ Fungsi baru: `openVariasiForm()`, `saveVariasi()`, `delVariasi()`, `_projPayload()`
+- ✨ Backend: `read.gs` range proyek B→Q + `_apiParseVariasi`; `write.gs` tulis kolom 17 + `_apiVariasiStr`; numpang action `updateProject` (tanpa action baru)
+- ✨ Dashboard, tab Piutang, kartu proyek semua pakai `vSum(p).final`
+
+### Bug Fix
+- 🐛 **Dashboard/Piutang tidak ikut kerja tambah** → bukan rumus GSheet; `pgDashboard`/`pgPiutang` hitung di app dari `p.nilaiKontrak` (awal). Diperbaiki ke `vSum(p).final`.
+
+### Cleanup
+- 🧹 Hapus monolit lama `arthabumi-webapi.gs` (root & backend/) — backend live = file terpisah dgn `config.gs` router
+- 🧹 Hapus 4 file `index.html.bak-*` (ada git history + backup Drive)
+
+### ⚠️ Known limitation (open)
+- Sheet/tab REKAP & formula M/N (piutang/laba) masih pakai nilai AWAL kolom F — belum baca variasi kolom Q. Perlu ubah `rekap.gs` kalau mau angka di Google Sheet ikut final.
+
+---
+
 # 🔧 SESSION 7 (v1.14) — 2026-05-28
 
 ## [2026-05-28] v1.14 — Kasbon Hutang Riwayat Pelunasan + Biaya Model Final

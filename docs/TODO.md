@@ -5,15 +5,11 @@ Versi kode saat ini: v1.8.1
 
 ---
 
-## 🧹 CLEANUP (reminder — belum dikerjakan, nunggu approval Eddy)
+## 🧹 CLEANUP — ✅ SELESAI 2026-06-09
 
-Ditemukan 2026-06-09. Tidak dihapus karena perlu izin.
-
-- **Hapus backend monolit lama** `arthabumi-webapi.gs` di **root** dan di **backend/**.
-  Ini versi LAWAS (skema beda: catatan=kolom L, tanpa progress) dan BUKAN yang live.
-  Yang live = file terpisah: `config.gs` (router) + `read.gs` + `write.gs` + dll.
-  Monolit ini cuma jadi jebakan / bikin bingung saat edit. Saran: hapus atau rename `_LEGACY_*.txt`.
-- **Hapus 4 file** `index.html.bak-*` (28 Mei–7 Jun). Sudah ada git history + backup Drive.
+- ✅ **Dihapus** monolit lama `arthabumi-webapi.gs` (root & backend/). Backend live = file terpisah dgn `config.gs` router. (Masih bisa dipulihkan dari git history bila perlu.)
+- ✅ **Dihapus** 4 file `index.html.bak-*` (ada git history + backup Drive).
+- ⏳ **Tinggal**: commit + push penghapusan ini & file backend yg ter-update lewat **GitHub Desktop**.
 
 ## 🟡 FOLLOW-UP — REKAP sheet belum ikut Kerja Tambah/Kurang (variasi)
 

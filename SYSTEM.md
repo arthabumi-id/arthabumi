@@ -5,32 +5,36 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.10 (Latest)
+- **Versi aktif:** v1.15 (Latest) — 2026-06-09
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
+- **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
+- **Deploy backend:** paste file `.gs` ke editor Google Apps Script (TERPISAH dari GitHub), lalu Deploy → New version.
 
 ---
 
 ## FILE STRUKTUR
 ```
 arthabumi/
-├── index.html                    ← App utama (v1.10)
+├── index.html                    ← App utama (v1.15)
 ├── SYSTEM.md                     ← File ini (briefing Claude)
-├── backend/
-│   ├── arthabumi-webapi.gs       ← Main GSheet API (paste ke Apps Script)
-│   ├── backup.gs
-│   ├── config.gs
-│   ├── constants.gs
-│   ├── diagnostic.gs
-│   ├── helpers.gs
-│   ├── read.gs
-│   ├── setup.gs
-│   └── write.gs
+├── backend/                      ← Backend LIVE = kumpulan file terpisah (paste SEMUA ke Apps Script)
+│   ├── config.gs                 ← ROUTER (doGet + _apiHandleAction switch) — entry point API
+│   ├── read.gs                   ← Semua fungsi _apiRead* (GSheet → app)
+│   ├── write.gs                  ← Semua fungsi _apiAdd/_apiUpdate/_apiDelete* (app → GSheet)
+│   ├── constants.gs              ← SHEET.* + ROWS.* (nama sheet & batas baris)
+│   ├── helpers.gs                ← _sanitizeStr/_sanitizeNum/_apiParseDate/_apiSerDate dll
+│   ├── setup.gs                  ← setupAllSheets() + perbaikan formula
+│   ├── rekap.gs                  ← Sheet REKAP ringkasan (action updateRekap)
+│   ├── backup.gs                 ← backupToJSON / restore
+│   └── diagnostic.gs             ← cek fungsi
 └── docs/
     ├── CHANGELOG.md              ← Riwayat versi lengkap
     ├── HANDOFF.md                ← Project status & TODO
-    └── TODO.md                   ← Backlog fitur
+    └── TODO.md                   ← Backlog fitur + cleanup notes
 ```
+> ⚠️ **PENTING soal backend:** yang LIVE adalah file terpisah di atas, dengan **`config.gs` sebagai router**.
+> File `arthabumi-webapi.gs` (monolit lama, skema beda) sudah DIHAPUS — jangan dipakai/di-paste lagi.
 
 ---
 
@@ -93,9 +97,9 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 
 | Page | Render | Sub-fungsi penting |
 |---|---|---|
-| dashboard | `pgDashboard()` | `setDashFilter(v)` |
-| project | `pgProject()` | `openAddProject()`, `saveProject()`, `delProject()` |
-| beli | `pgBeli()` | `beliInput()`, `beliLog()`, `submitBeli()`, `delPembelian()`, `openPasteBeli()` |
+| dashboard | `pgDashboard()` | `setDashFilter(v)`, `pgPiutang()`, `pgHutang()` — semua pakai `vSum(p).final` |
+| project | `pgProject()` | `openAddProject()`, `saveProject()`, `delProject()`, `openRekapProyek()`, `openVariasiForm()`, `saveVariasi()`, `delVariasi()` |
+| beli | `pgBeli()` | `beliInput()`, `beliLog()` (toggle Per Tanggal/Per Toko: `setBeliView()`, `toggleBeliToko()`, `beliItemCard()`), `submitBeli()`, `delPembelian()`, `openPasteBeli()` |
 | karyawan | `pgKaryawan()` | `saveKaryawan()`, `delKaryawan()` |
 | absensi | `pgAbsensi()` | `absInput()`, `absLog()`, `submitAbsensi()`, `delAbsensi()` |
 | kasbon | `pgKasbon()` | `kasbonInput()`, `kasbonRekap()`, `submitKasbon()` |
@@ -112,6 +116,8 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 | `doFetch(url?)` | Ambil data dari GSheet |
 | `applyGS(data)` | Apply data GSheet ke state + localStorage |
 | `showToast(msg, type)` | Notifikasi toast ('ok'/'err'/'info') |
+| `vSum(p)` | **Hitung kerja tambah/kurang.** Return `{tambah,kurang,n,final}`. `final = nilaiKontrak(awal) + Σtambah − Σkurang`. SUMBER TUNGGAL nilai kontrak efektif — dipakai di Dashboard, Piutang, Rekap proyek, kartu proyek. ⚠️ `p.nilaiKontrak` tetap = nilai AWAL (editable); jangan ditimpa global. |
+| `_projPayload(p)` | Bentuk payload bersih utk `doSync('updateProject', ...)` termasuk `variasi`. |
 
 ---
 
@@ -120,7 +126,7 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 ### Actions yang tersedia
 | Action | Payload |
 |---|---|
-| `addProject` / `updateProject` / `deleteProject` | `{kode, nama, jenis, status, nilaiKontrak, tglMulai}` |
+| `addProject` / `updateProject` / `deleteProject` | `{kode, nama, jenis, status, nilaiKontrak, tglMulai, catatan, progress, variasi[]}` |
 | `addPembelian` | `[{tgl, kodeProj, namaBarang, kategori, satuan, qty, harga, diskon, status, toko}]` |
 | `deletePembelian` | `{tgl, kodeProj, namaBarang}` |
 | `addKaryawan` / `updateKaryawan` / `deleteKaryawan` | `{id, nama, jabatan, upahHarian, noHP}` |
@@ -133,8 +139,8 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 ### Sheet → Kolom Kunci
 | Sheet | Kolom penting |
 |---|---|
-| MASTER PROJECT | B=kode, C=nama, F=nilaiKontrak |
-| PEMBELIAN | B=tgl, C=kodeProj, D=namaBarang, G=qty, H=harga |
+| MASTER PROJECT | B=kode, C=nama, F=nilaiKontrak(awal), O=catatan, P=progress, **Q=variasi (JSON kerja tambah/kurang)** |
+| PEMBELIAN | B=tgl, C=kodeProj, D=namaBarang, G=qty, H=harga, K=toko |
 | MASTER KARYAWAN | B=id, C=nama, E=upahHarian |
 | LOG ABSENSI | B=tgl, C=idKaryawan, E=status, I=statusBayar |
 | LOG KASBON | B=tgl, C=idKaryawan, D=tipe, E=nominal |
@@ -185,18 +191,25 @@ Tab:     tabs, tab tab-on/tab-off
 | Tanggal shift + ada jam di GSheet | `new Date(yr,mo,dy)` pakai timezone Script bukan Spreadsheet | `Utilities.parseDate(s, sstz, "yyyy-MM-dd")` ✅ v1.6b |
 | POST ke Apps Script gagal | CORS redirect | Gunakan GET dengan `?action=X&payload=Y` ✅ |
 | Tanggal shift 1 hari di app | `toISOString()` pakai UTC | `today()` dengan local time ✅ |
+| Dashboard/Piutang tidak ikut kerja tambah/kurang | `pgDashboard`/`pgPiutang` hitung di app dari `p.nilaiKontrak` (awal), BUKAN bug rumus GSheet | Pakai `vSum(p).final` di semua tampilan ✅ v1.15 |
+
+> 🟡 **Belum diperbaiki (lihat docs/TODO.md):** Sheet/tab REKAP & formula M/N (piutang/laba) masih pakai nilai AWAL — belum baca variasi kolom Q. App sudah final; sheet-side perlu ubah `rekap.gs`.
 
 ---
 
-## VERSI AKTIF: v1.10
-Perubahan terakhir (2026-05-26):
-- ✅ Progress % per Proyek (0-100%) dengan color-coded progress bar
-- ✅ Alert System: Upah Menumpuk & Biaya Mendekati RAB
-- ✅ Dashboard filtering & Rekap modal improvements
-- ✅ Backup & deployment system (automated scripts)
-- ✅ Reorganized project structure (backend/, docs/ folders)
+## VERSI AKTIF: v1.15 — 2026-06-09
+Perubahan terakhir:
+- ✅ **Log Pembelian Per Toko** — toggle 📅 Per Tanggal / 🏪 Per Toko; tiap toko diringkas (total + jumlah item), tekan untuk expand rincian. Filter Proyek & Tanggal tetap jalan.
+- ✅ **Kerja Tambah / Kurang per Proyek** — disimpan ringan sebagai JSON di **kolom Q** MASTER PROJECT (`p.variasi=[{tgl,jenis,nominal,catatan}]`). Nilai Final = awal ± variasi, dipakai di Dashboard, Piutang, Rekap proyek, kartu proyek (via `vSum`). Kartu proyek bisa diklik → modal detail. Numpang di action `updateProject` (tanpa action API baru).
+- ✅ **Fix:** Dashboard & tab Piutang sekarang ikut nilai final.
+- 🧹 **Cleanup:** hapus monolit `arthabumi-webapi.gs` (root & backend/) + 4 `index.html.bak-*`. Backend live = file terpisah dengan `config.gs` sebagai router.
 
-**Lihat:** `docs/CHANGELOG.md` untuk riwayat lengkap app development & deployment history
+### Versi sebelumnya
+- v1.14 (2026-05-28) — Kasbon Hutang Riwayat Pelunasan + Biaya Model Final
+- v1.11 — Cashflow per proyek, Single Shop Name, Confirmation Modal, Date Filter
+- v1.10 — Progress %, Alert System, Dashboard filtering, Backup system
+
+**Lihat:** `docs/CHANGELOG.md` untuk riwayat lengkap.
 
 ---
 
