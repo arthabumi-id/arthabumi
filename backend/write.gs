@@ -9,6 +9,10 @@
 // MASTER PROJECT
 // ════════════════════════════════════════════════════════════════════════
 
+function _apiVariasiStr(v) {
+  try { return JSON.stringify(v || []); } catch (e) { return "[]"; }
+}
+
 function _apiAddProject(ss, d) {
   var ws = ss.getSheetByName(SHEET.PROJECT);
   var R  = ROWS.PROJECT;
@@ -22,6 +26,7 @@ function _apiAddProject(ss, d) {
   ws.getRange(r, 6).setValue(_sanitizeNum(d.nilaiKontrak)).setNumberFormat("#,##0");
   ws.getRange(r,15).setValue(_sanitizeStr(d.catatan) || ""); // O = catatan
   ws.getRange(r,16).setValue(_sanitizeNum(d.progress || 0)).setNumberFormat("0"); // P = progress (%)
+  ws.getRange(r,17).setValue(_apiVariasiStr(d.variasi)); // Q = kerja tambah/kurang (JSON)
 
   var tgl = _apiParseDate(d.tglMulai);
   if (tgl) ws.getRange(r, 12).setValue(tgl).setNumberFormat("dd/MM/yyyy");
@@ -62,6 +67,7 @@ function _apiUpdateProject(ss, d) {
   ws.getRange(r, 6).setValue(_sanitizeNum(d.nilaiKontrak)).setNumberFormat("#,##0");
   ws.getRange(r,15).setValue(_sanitizeStr(d.catatan)     || ""); // O = catatan
   ws.getRange(r,16).setValue(_sanitizeNum(d.progress || 0)).setNumberFormat("0"); // P = progress (%)
+  ws.getRange(r,17).setValue(_apiVariasiStr(d.variasi)); // Q = kerja tambah/kurang (JSON)
   var tgl = _apiParseDate(d.tglMulai);
   if (tgl) ws.getRange(r, 12).setValue(tgl).setNumberFormat("dd/MM/yyyy");
 }

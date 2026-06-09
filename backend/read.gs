@@ -29,11 +29,16 @@
 //                     G=uraian  H=nilaiKontrak  I=statusBayar  J=nominalBayar  K=tglBayar  L=ket
 // ════════════════════════════════════════════════════════════════════════
 
+function _apiParseVariasi(v) {
+  try { var a = JSON.parse(String(v || "")); return (a && a.length) ? a : []; }
+  catch (e) { return []; }
+}
+
 function _apiReadProjects(ss) {
   var ws = ss.getSheetByName(SHEET.PROJECT);
   if (!ws) return [];
   var R    = ROWS.PROJECT;
-  var data = ws.getRange("B" + R.start + ":P" + R.end).getValues();
+  var data = ws.getRange("B" + R.start + ":Q" + R.end).getValues();
   var out  = [];
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
@@ -53,7 +58,8 @@ function _apiReadProjects(ss) {
       pembayaran:   Number(r[11]) || 0,
       piutang:      Number(r[12]) || 0,
       catatan:      String(r[13] || ""),   // O = catatan bebas
-      progress:     Number(r[14]) || 0     // P = progress (0-100%)
+      progress:     Number(r[14]) || 0,    // P = progress (0-100%)
+      variasi:      _apiParseVariasi(r[15])// Q = kerja tambah/kurang (JSON)
     });
   }
   return out;

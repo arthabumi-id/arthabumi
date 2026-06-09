@@ -678,10 +678,10 @@ function pgProject(){
     <button class="btn btn-p btn-sm" onclick="openAddProject()">+ Tambah</button></div>
   <div class="tabs" style="margin-bottom:11px;flex-wrap:wrap;gap:6px">${tabs}</div>
   ${list.length===0?`<div class="empty">Tidak ada proyek berstatus "${esc(f)}"</div>`:list.map(p=>{
-    const gi=S.projects.indexOf(p);
+    const gi=S.projects.indexOf(p);const vs=vSum(p);
     return `<div class="card"><div class="row">
-    <div style="flex:1;min-width:0"><div class="item-name">${esc(p.nama)}</div>
-      <div class="item-sub">${esc(p.jenis)} · ${fRp(p.nilaiKontrak)}</div></div>
+    <div style="flex:1;min-width:0;cursor:pointer" onclick="openRekapProyek('${esc(p.kode)}')"><div class="item-name">${esc(p.nama)}</div>
+      <div class="item-sub">${esc(p.jenis)} · ${fRp(vs.final)}${vs.n>0?` <span style="color:#94a3b8">(awal ${fRp(p.nilaiKontrak)})</span>`:''}</div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
       ${bdg(p.status)}
       <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
@@ -732,14 +732,23 @@ function openEditProject(i){
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveProject(true)">💾 Simpan</button></div>`);
 }
+// Hitung total kerja tambah/kurang & nilai final proyek
+function vSum(p){
+  const v=(p&&p.variasi)||[];let t=0,k=0;
+  v.forEach(x=>{const n=Number(x.nominal)||0;if(x.jenis==='kurang')k+=n;else t+=n;});
+  return{tambah:t,kurang:k,n:v.length,final:(Number(p.nilaiKontrak)||0)+t-k};
+}
+function _projPayload(p){return{kode:p.kode,nama:p.nama,jenis:p.jenis,status:p.status,nilaiKontrak:p.nilaiKontrak,tglMulai:p.tglMulai||'',catatan:p.catatan||'',progress:p.progress||0,variasi:p.variasi||[]};}
 function saveProject(isEdit){
   const kode=document.getElementById('p-kode').value.trim();
   const nama=document.getElementById('p-nama').value.trim();
   const kontrak=getNum('p-kontrak');
   const progress=Math.min(100,Math.max(0,parseInt(document.getElementById('p-progress').value)||0));
   if(!kode||!nama||!kontrak){showToast('Lengkapi field wajib','err');return;}
-  const existingCatatan=isEdit?(S.projects[Number(document.getElementById('p-idx').value)]?.catatan||''):'';
-  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value,catatan:existingCatatan,progress};
+  const _ei=isEdit?Number(document.getElementById('p-idx').value):-1;
+  const existingCatatan=isEdit?(S.projects[_ei]?.catatan||''):'';
+  const existingVariasi=isEdit?(S.projects[_ei]?.variasi||[]):[];
+  const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value,catatan:existingCatatan,progress,variasi:existingVariasi};
   if(isEdit){const i=Number(document.getElementById('p-idx').value);S.projects[i]=d;}else S.projects.push(d);
   ss(KS.p,S.projects);closeModal();go('project');
   showToast(isEdit?'✅ Proyek diperbarui':'✅ Proyek ditambahkan');
@@ -858,9 +867,10 @@ function openRekapProyek(kode){
   // Pembayaran klien
   const bayarRows=S.logPembayaran.filter(x=>x.kodeProj===kode).sort((a,b)=>b.tgl.localeCompare(a.tgl));
   const bayarTotal=bayarRows.reduce((s,x)=>s+(Number(x.nominal)||0),0);
-  const piutang=(Number(p.nilaiKontrak)||0)-bayarTotal;
-  const laba=(Number(p.nilaiKontrak)||0)-totalBiaya;
-  const margin=p.nilaiKontrak>0?(laba/p.nilaiKontrak*100):0;
+  const vs=vSum(p);const nilaiFinal=vs.final;
+  const piutang=nilaiFinal-bayarTotal;
+  const laba=nilaiFinal-totalBiaya;
+  const margin=nilaiFinal>0?(laba/nilaiFinal*100):0;
   // RAB
   const rab=S.rab.find(r=>r.kodeProj===kode);
   const rabT=rab?(rab.material||0)+(rab.upah||0)+(rab.subkon||0)+(rab.overhead||0):0;
@@ -888,7 +898,7 @@ function openRekapProyek(kode){
       <div class="prog-bar"><div class="prog-fill" style="width:${p.progress}%;background:${p.progress>=75?'#10b981':p.progress>=50?'#f59e0b':'#ef4444'}"></div></div>
     </div>`:''}
     <div class="g2" style="margin-bottom:12px">
-      <div class="chip" style="background:#eff6ff"><div class="chip-lbl">Nilai Kontrak</div><div class="chip-val" style="color:#1d4ed8">${fRp(p.nilaiKontrak)}</div></div>
+      <div class="chip" style="background:#eff6ff"><div class="chip-lbl">Nilai Kontrak${vs.n>0?' (Final)':''}</div><div class="chip-val" style="color:#1d4ed8">${fRp(nilaiFinal)}</div>${vs.n>0?`<div style="font-size:10px;color:#64748b;margin-top:2px">Awal ${fRp(p.nilaiKontrak)}${vs.tambah>0?` · ▲${fRp(vs.tambah)}`:''}${vs.kurang>0?` · ▼${fRp(vs.kurang)}`:''}</div>`:''}</div>
       <div class="chip" style="${piutang>0?'background:#fff7ed':'background:#f0fdf4'}"><div class="chip-lbl">Piutang Klien</div><div class="chip-val" style="color:${piutang>0?'#dc2626':'#16a34a'}">${piutang>0?fRp(piutang):'Lunas ✓'}</div></div>
       <div class="chip" style="background:#fef2f2"><div class="chip-lbl">Total Biaya</div><div class="chip-val" style="color:#dc2626">${fRp(totalBiaya)}</div></div>
       <div class="chip" style="${laba>=0?'background:#f0fdf4':'background:#fff1f2'}"><div class="chip-lbl">Est. Laba (${margin.toFixed(1)}%)</div><div class="chip-val" style="color:${laba>=0?'#16a34a':'#dc2626'}">${fRp(laba)}</div></div>
@@ -896,6 +906,22 @@ function openRekapProyek(kode){
     ${upahBelum>0&&upahBelum>=(Number(p.nilaiKontrak)||0)*0.1?`<div style="background:#fef9c3;border:1px solid #fef08a;border-radius:11px;padding:10px;margin-bottom:12px;font-size:12px;color:#854d0e">⚠️ <strong>Upah menumpuk</strong> – ${fRp(upahBelum)} belum dibayar. Segera lakukan pembayaran.</div>`:''}
     ${rabT>0&&totalBiaya>rabT*0.9?`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:11px;padding:10px;margin-bottom:12px;font-size:12px;color:#b91c1c">⚠️ <strong>Biaya mendekati RAB</strong> – Sudah ${Math.round(totalBiaya/rabT*100)}% dari RAB ${fRp(rabT)}. Perhatikan pengeluaran selanjutnya.</div>`:''}
 
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px">🔧 KERJA TAMBAH / KURANG</div>
+      <button class="btn btn-o btn-sm" style="font-size:11px;padding:4px 9px" onclick="openVariasiForm('${esc(p.kode)}')">+ Tambah</button>
+    </div>
+    ${(p.variasi&&p.variasi.length)?`<div style="background:#f8fafc;border-radius:10px;padding:8px 10px;margin-bottom:12px">
+      ${p.variasi.map((v,vi)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #eef2f7">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;font-weight:600">${v.jenis==='kurang'?'<span style="color:#dc2626">▼ Kurang</span>':'<span style="color:#16a34a">▲ Tambah</span>'} · ${fRp(v.nominal)}</div>
+          <div style="font-size:11.5px;color:#64748b;white-space:pre-line">${fDate(v.tgl)}${v.catatan?' · '+esc(v.catatan):''}</div>
+        </div>
+        <button style="background:#fee2e2;border:none;border-radius:6px;padding:3px 7px;font-size:12px;cursor:pointer;color:#b91c1c;flex-shrink:0" onclick="delVariasi('${esc(p.kode)}',${vi})">🗑</button>
+      </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:7px 0 2px;font-size:12.5px;font-weight:800">
+        <span style="color:#1e293b">Penyesuaian Bersih</span><span style="color:${nilaiFinal>=(Number(p.nilaiKontrak)||0)?'#16a34a':'#dc2626'}">${nilaiFinal-(Number(p.nilaiKontrak)||0)>=0?'+':''}${fRp(nilaiFinal-(Number(p.nilaiKontrak)||0))}</span></div>
+    </div>`:`<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;padding:4px 0">Belum ada catatan. Tekan "+ Tambah" untuk mencatat kerja tambah/kurang.</div>`}
 
     <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">BREAKDOWN BIAYA</div>
     <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-bottom:12px">
@@ -937,7 +963,49 @@ function openRekapProyek(kode){
     <div class="prog-bar" style="margin-bottom:4px"><div class="prog-fill" style="width:${pctRAB}%;background:${totalBiaya>rabT?'#ef4444':'#10b981'}"></div></div>
     <div style="font-size:11px;color:#94a3b8;margin-bottom:12px">${totalBiaya>rabT?'⚠️ Biaya melebihi RAB':'✅ Masih dalam batas RAB'} (RAB ${fRp(rabT)})</div>`:''}
 
-    <button class="btn btn-g btn-w" onclick="closeModal()">Tutup</button>`);
+    <div class="act-row" style="gap:8px">
+      <button class="btn btn-o" style="flex:1" onclick="const i=S.projects.findIndex(x=>x.kode==='${esc(p.kode)}');closeModal();openEditProject(i)">✏️ Edit Nilai/Info</button>
+      <button class="btn btn-g" style="flex:1" onclick="closeModal()">Tutup</button>
+    </div>`);
+}
+function openVariasiForm(kode){
+  const p=S.projects.find(x=>x.kode===kode);if(!p)return;
+  openModal(`<div class="modal-title">🔧 Kerja Tambah / Kurang</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px">${esc(p.nama)} · ${esc(p.kode)}</div>
+    <div class="fg"><label class="fl">Jenis</label>
+      <select class="fc" id="v-jenis">
+        <option value="tambah">▲ Kerja Tambah (nilai bertambah)</option>
+        <option value="kurang">▼ Kerja Kurang (nilai berkurang)</option>
+      </select></div>
+    <div class="fg"><label class="fl">Nominal (Rp)<span class="req">*</span></label>
+      ${numInp('v-nominal',0,'5.000.000')}</div>
+    <div class="fg"><label class="fl">Tanggal</label><input class="fc" id="v-tgl" type="date" value="${today()}"></div>
+    <div class="fg"><label class="fl">Catatan</label>
+      <textarea class="fc" id="v-catatan" rows="2" placeholder="mis. tambah kanopi belakang / kurang pasang keramik teras"></textarea></div>
+    <div class="act-row" style="justify-content:flex-end">
+      <button class="btn btn-g" onclick="openRekapProyek('${esc(kode)}')">Batal</button>
+      <button class="btn btn-p" onclick="saveVariasi('${esc(kode)}')">💾 Simpan</button></div>`);
+}
+function saveVariasi(kode){
+  const p=S.projects.find(x=>x.kode===kode);if(!p)return;
+  const nominal=getNum('v-nominal');
+  if(!nominal){showToast('Isi nominal dulu','err');return;}
+  const entry={tgl:document.getElementById('v-tgl').value||today(),jenis:document.getElementById('v-jenis').value,nominal,catatan:document.getElementById('v-catatan').value.trim()};
+  if(!Array.isArray(p.variasi))p.variasi=[];
+  p.variasi.push(entry);
+  ss(KS.p,S.projects);
+  showToast('✅ Tersimpan');
+  openRekapProyek(kode);
+  doSync('updateProject',_projPayload(p));
+}
+function delVariasi(kode,idx){
+  const p=S.projects.find(x=>x.kode===kode);if(!p||!Array.isArray(p.variasi))return;
+  if(!confirm('Hapus catatan kerja tambah/kurang ini?'))return;
+  p.variasi.splice(idx,1);
+  ss(KS.p,S.projects);
+  showToast('🗑 Dihapus');
+  openRekapProyek(kode);
+  doSync('updateProject',_projPayload(p));
 }
 // ── PEMBELIAN
 function pgBeli(){
