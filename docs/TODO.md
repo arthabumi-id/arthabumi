@@ -5,6 +5,27 @@ Versi kode saat ini: v1.8.1
 
 ---
 
+## 🧹 CLEANUP (reminder — belum dikerjakan, nunggu approval Eddy)
+
+Ditemukan 2026-06-09. Tidak dihapus karena perlu izin.
+
+- **Hapus backend monolit lama** `arthabumi-webapi.gs` di **root** dan di **backend/**.
+  Ini versi LAWAS (skema beda: catatan=kolom L, tanpa progress) dan BUKAN yang live.
+  Yang live = file terpisah: `config.gs` (router) + `read.gs` + `write.gs` + dll.
+  Monolit ini cuma jadi jebakan / bikin bingung saat edit. Saran: hapus atau rename `_LEGACY_*.txt`.
+- **Hapus 4 file** `index.html.bak-*` (28 Mei–7 Jun). Sudah ada git history + backup Drive.
+
+## 🟡 FOLLOW-UP — REKAP sheet belum ikut Kerja Tambah/Kurang (variasi)
+
+Fitur Kerja Tambah/Kurang (2026-06-09) disimpan sebagai JSON di **kolom Q** MASTER PROJECT.
+APP sudah hitung Nilai Final (awal ± variasi) di Dashboard, Piutang, Rekap proyek.
+TAPI: formula sheet (Piutang/Laba kolom M/N) & tombol "📊 Update Rekap ke GSheet" (action `updateRekap` / `rekap.gs`)
+masih pakai **nilai awal** (kolom F), belum tambah variasi dari kolom Q.
+→ Kalau mau angka di Google Sheet / tab REKAP ikut final: ubah `rekap.gs` (+ mungkin formula MASTER PROJECT)
+  untuk parse JSON kolom Q dan tambahkan Σtambah − Σkurang ke nilai kontrak. (Backend, perlu redeploy.)
+
+---
+
 ## 🔴 TODO #1 — Filter Nama Project di Log Pembelian & Log Absensi (Mobile)
 
 **Permintaan:** Di halaman Log Pembelian dan Log Absensi pada tampilan HP,
