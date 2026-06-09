@@ -997,11 +997,36 @@ function beliInput(){
 }
 function setBeliFilter(v){S.beliFilter=v;go('beli');}
 function setBeliDateFilter(v){S.tab.beliDateMode=v;if(v==='custom'){document.getElementById('beli-date-from').style.display='block';document.getElementById('beli-date-to').style.display='block';}else{document.getElementById('beli-date-from').style.display='none';document.getElementById('beli-date-to').style.display='none';}go('beli');}
+function setBeliView(v){ S.tab.beliView=v; go('beli'); }
+function toggleBeliToko(name){
+  const o=S.tab.beliOpenToko||(S.tab.beliOpenToko=[]);
+  const i=o.indexOf(name);
+  if(i>=0)o.splice(i,1); else o.push(name);
+  go('beli');
+}
+function beliItemCard(b,showToko){
+  const ri=S.pembelian.findIndex(x=>x.id===b.id);
+  const namaP=S.projects.find(p=>p.kode===b.kodeProj)?.nama||b.kodeProj;
+  const sub=showToko?`${fDate(b.tgl)} · ${esc(namaP)} · ${esc(b.toko||'')}`:`${fDate(b.tgl)} · ${esc(namaP)}`;
+  return `<div class="card"><div class="row" style="margin-bottom:6px">
+      <div style="flex:1;min-width:0"><div class="item-name">${esc(b.namaBarang)}</div>
+        <div class="item-sub">${sub}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
+        <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
+        <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
+      </div></div>
+      <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
+}
 function beliLog(){
+  const view=S.tab.beliView||'date';
   const dateMode=S.tab.beliDateMode||'all';
   const fromD=S.tab.beliDateFrom||'';
   const toD=S.tab.beliDateTo||'';
   const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.beliFilter===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
+  const viewBar=`<div style="display:flex;gap:6px;margin-bottom:10px">
+      <button class="tab ${view==='date'?'tab-on':'tab-off'} btn-sm" onclick="setBeliView('date')">📅 Per Tanggal</button>
+      <button class="tab ${view==='toko'?'tab-on':'tab-off'} btn-sm" onclick="setBeliView('toko')">🏪 Per Toko</button>
+    </div>`;
   const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setBeliFilter(this.value)">${prjFilterOpts}</select></div>
     <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -1020,23 +1045,39 @@ function beliLog(){
       <input class="fc" type="date" value="${toD}" oninput="S.tab.beliDateTo=this.value;go('beli')">
     </div>
     </div>`;
-  const all=[...S.pembelian].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
-  let list=S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all;
-  list=filterByDate(list,dateMode,fromD,toD).slice(0,60);
+  const all=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  let filtered=S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all;
+  filtered=filterByDate(filtered,dateMode,fromD,toD);
   const namaProj=S.beliFilter?(S.projects.find(p=>p.kode===S.beliFilter)?.nama||S.beliFilter):'';
   const emptyMsg=S.beliFilter?`<div class="empty">Tidak ada pembelian untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
-  return filterBar+(list.length===0?emptyMsg:list.map(b=>{
-    const ri=S.pembelian.findIndex(x=>x.id===b.id);
-    const namaP=S.projects.find(p=>p.kode===b.kodeProj)?.nama||b.kodeProj;
-    return `<div class="card"><div class="row" style="margin-bottom:6px">
-      <div style="flex:1;min-width:0"><div class="item-name">${esc(b.namaBarang)}</div>
-        <div class="item-sub">${fDate(b.tgl)} · ${esc(namaP)} · ${esc(b.toko||'')}</div></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
-        <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
-        <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
-      </div></div>
-      <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
-  }).join(''));
+  const head=viewBar+filterBar;
+  if(filtered.length===0)return head+emptyMsg;
+  if(view==='toko'){
+    const open=S.tab.beliOpenToko||[];
+    const groups={};
+    filtered.forEach(b=>{
+      const k=(b.toko||'').trim()||'(Tanpa Toko)';
+      (groups[k]||(groups[k]={items:[],total:0,last:''})).items.push(b);
+      groups[k].total+=calcTotal(b);
+      const t=String(b.tgl||''); if(t>groups[k].last)groups[k].last=t;
+    });
+    const sorted=Object.keys(groups).sort((a,b)=>groups[b].last.localeCompare(groups[a].last));
+    const cards=sorted.map(name=>{
+      const g=groups[name]; const isOpen=open.includes(name);
+      const detail=isOpen?`<div style="margin-top:8px">${g.items.map(b=>beliItemCard(b,false)).join('')}</div>`:'';
+      return `<div class="card">
+        <div class="row" style="cursor:pointer;align-items:center" data-toko="${esc(name)}" onclick="toggleBeliToko(this.dataset.toko)">
+          <div style="flex:1;min-width:0">
+            <div class="item-name">${isOpen?'▾':'▸'} 🏪 ${esc(name)}</div>
+            <div class="item-sub">${g.items.length} item · belanja terakhir ${fDate(g.last)}</div>
+          </div>
+          <div style="font-weight:700;font-size:14px;color:#10b981;margin-left:8px;flex-shrink:0">${fRp(g.total)}</div>
+        </div>${detail}</div>`;
+    }).join('');
+    return head+cards;
+  }
+  const list=filtered.slice(0,60);
+  return head+list.map(b=>beliItemCard(b,true)).join('');
 }
 // ── CEK HARGA ─────────────────────────────────────────────────────────
 function beliCekHarga(){
