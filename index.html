@@ -501,7 +501,7 @@ function pgDashboard(){
   if(view==='hutang')return `<div class="sec-title">${esc(S.companyName)}</div>${tabBar}${pgHutang()}`;
 
   const filtered=S.dashFilter==='Semua'?S.projects:S.projects.filter(p=>p.status===S.dashFilter);
-  const tK=filtered.reduce((s,p)=>s+(Number(p.nilaiKontrak)||0),0);
+  const tK=filtered.reduce((s,p)=>s+vSum(p).final,0);
   const tB=S.logPembayaran.filter(x=>filtered.find(p=>p.kode===x.kodeProj)).reduce((s,p)=>s+(Number(p.nominal)||0),0);
   const tM=S.pembelian.filter(b=>b.status!=='ASET'&&filtered.find(p=>p.kode===b.kodeProj)).reduce((s,b)=>s+calcTotal(b),0);
   const tU=S.logAbsensi.filter(a=>filtered.find(p=>p.kode===a.kodeProj)).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
@@ -513,23 +513,23 @@ function pgDashboard(){
   const statuses=['Semua','Berjalan','Selesai','Hold','Batal'];
   const filterBar=statuses.map(s=>`<button onclick="setDashFilter('${s}')" style="padding:6px 12px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:${S.dashFilter===s?'#10b981':'#f1f5f9'};color:${S.dashFilter===s?'#fff':'#64748b'};flex-shrink:0">${s}${S.dashFilter===s?' ('+filtered.length+')':''}</button>`).join('');
   const rows=filtered.map(p=>{
-    const _kb=calcKasbonForProj(p.kode);
+    const _kb=calcKasbonForProj(p.kode);const nk=vSum(p).final;
     const _mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
     const _upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
     const _subkon=S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
     // biaya = upah_gross + mat + subkon + bonus
     const biaya=_mat+_upah+_subkon+_kb.bonus;
     const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
-    const laba=(Number(p.nilaiKontrak)||0)-biaya,piutang=(Number(p.nilaiKontrak)||0)-bayar;
+    const laba=nk-biaya,piutang=nk-bayar;
     const rab=S.rab.find(r=>r.kodeProj===p.kode);
     const rabT=rab?(rab.material||0)+(rab.upah||0)+(rab.subkon||0)+(rab.overhead||0):0;
     const pct=rabT>0?Math.min(100,Math.round(biaya/rabT*100)):0;
     const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===p.kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
     const alerts=[];
-    if(upahBelum>0&&upahBelum>=(Number(p.nilaiKontrak)||0)*0.1)alerts.push('⚠️ Upah menumpuk');
+    if(upahBelum>0&&upahBelum>=nk*0.1)alerts.push('⚠️ Upah menumpuk');
     if(rabT>0&&biaya>rabT*0.9)alerts.push('⚠️ Biaya mendekati RAB');
     const cf=bayar-biaya;
-    const marginPct=p.nilaiKontrak>0?(laba/p.nilaiKontrak*100):0;
+    const marginPct=nk>0?(laba/nk*100):0;
     return `<div class="card" style="padding:14px">
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${alerts.length>0?'8':'10'}px">
@@ -547,8 +547,9 @@ function pgDashboard(){
       <!-- 2×2 Angka Utama -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px">
         <div style="background:#eff6ff;border-radius:10px;padding:10px 12px">
-          <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">KONTRAK</div>
-          <div style="font-size:14px;font-weight:800;color:#1d4ed8;margin-top:2px">${fRp(p.nilaiKontrak)}</div>
+          <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">KONTRAK${nk!==(Number(p.nilaiKontrak)||0)?' (Final)':''}</div>
+          <div style="font-size:14px;font-weight:800;color:#1d4ed8;margin-top:2px">${fRp(nk)}</div>
+          ${nk!==(Number(p.nilaiKontrak)||0)?`<div style="font-size:9px;color:#94a3b8;margin-top:1px">awal ${fRp(p.nilaiKontrak)}</div>`:''}
         </div>
         <div style="background:#fff7ed;border-radius:10px;padding:10px 12px">
           <div style="font-size:10px;color:#64748b;font-weight:600;letter-spacing:.3px">TOTAL BIAYA</div>
@@ -620,8 +621,9 @@ function pgPiutang(){
   const projs=S.projects
     .map(p=>{
       const bayar=S.logPembayaran.filter(x=>x.kodeProj===p.kode).reduce((s,x)=>s+(Number(x.nominal)||0),0);
-      const piutang=(Number(p.nilaiKontrak)||0)-bayar;
-      return{...p,bayar,piutang};
+      const nk=vSum(p).final;
+      const piutang=nk-bayar;
+      return{...p,bayar,piutang,nk};
     })
     .filter(p=>p.piutang>0)
     .sort((a,b)=>b.piutang-a.piutang);
@@ -632,12 +634,12 @@ function pgPiutang(){
     <div style="font-size:13px;color:#94a3b8">Semua proyek sudah lunas.</div></div>`;
 
   const totalPiutang=projs.reduce((s,p)=>s+p.piutang,0);
-  const totalKontrak=projs.reduce((s,p)=>s+(Number(p.nilaiKontrak)||0),0);
+  const totalKontrak=projs.reduce((s,p)=>s+(Number(p.nk)||0),0);
   const totalBayar=projs.reduce((s,p)=>s+p.bayar,0);
 
   const cards=projs.map(p=>{
-    const pct=p.nilaiKontrak>0?Math.round(p.bayar/p.nilaiKontrak*100):0;
-    const isHigh=p.piutang>=(Number(p.nilaiKontrak)||0)*0.5;
+    const pct=p.nk>0?Math.round(p.bayar/p.nk*100):0;
+    const isHigh=p.piutang>=(Number(p.nk)||0)*0.5;
     return `<div class="card" style="border-left:3px solid ${isHigh?'#ef4444':'#f97316'}">
       <div class="row" style="margin-bottom:8px">
         <div style="flex:1;min-width:0">
@@ -650,7 +652,7 @@ function pgPiutang(){
         </div>
       </div>
       <div class="g3">
-        <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nilaiKontrak)}</div></div>
+        <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(p.nk)}</div></div>
         <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Sudah Bayar (${pct}%)</div><div class="chip-val" style="color:#16a34a">${fRp(p.bayar)}</div></div>
         <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Tagih</div><div class="chip-val" style="color:#dc2626;font-size:13px">${fRp(p.piutang)}</div></div>
       </div>
