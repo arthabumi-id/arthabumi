@@ -258,12 +258,12 @@ setInterval(async()=>{
 const NAV_MAIN=[
   {id:'dashboard',label:'Dashboard',icon:'📊'},
   {id:'project',label:'Proyek',icon:'🏗️'},
+  {id:'beli',label:'Pembelian',icon:'🛒'},
   {id:'absensi',label:'Absensi',icon:'📋'},
   {id:'kasbon',label:'Kasbon',icon:'💸'},
-  {id:'closing',label:'Closing',icon:'🔒'},
 ];
 const NAV_LAIN=[
-  {id:'beli',label:'Pembelian',icon:'🛒'},
+  {id:'closing',label:'Closing',icon:'🔒'},
   {id:'karyawan',label:'Karyawan',icon:'👷'},
   {id:'bayar',label:'Bayar',icon:'💰'},
   {id:'rab',label:'RAB',icon:'📐'},
@@ -2655,15 +2655,35 @@ function subkonRekap(){
               </div>
             </summary>
             <div style="padding:8px 4px 4px">
-              ${pg.logs.map(ls=>`<div class="sub-card" style="margin-bottom:6px"><div class="row">
-                <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(ls.uraian)}</div>
-                  <div class="item-sub">📅 ${fDate(ls.tgl)}</div></div>
-                <div style="text-align:right;flex-shrink:0;margin-left:8px">
-                  <div style="font-size:12px;font-weight:700">${fRp(ls.nilaiKontrak)}</div>
-                  ${bdg(ls.statusBayar)}
-                  ${ls.nominalBayar>0?`<div style="font-size:10px;color:#16a34a;margin-top:2px">Bayar: ${fRp(ls.nominalBayar)}</div>`:''}
-                </div>
-              </div></div>`).join('')}
+              ${pg.logs.map(ls=>{
+                const rw=S.riwayatBayarSubkon[ls.id]||[];
+                const cicilan=rw.length>0
+                  ?`<details style="margin-top:7px"><summary style="list-style:none;display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#0369a1;padding:2px 0"><span>▾</span><span>${rw.length} cicilan pembayaran</span></summary>
+                    <div style="margin-top:6px;background:#f0f9ff;border-radius:8px;padding:8px">
+                      ${rw.map((r,ri)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0${ri<rw.length-1?';border-bottom:1px dashed #bae6fd':''}">
+                        <span style="color:#64748b">📅 ${fDate(r.tgl)}</span>
+                        <span style="font-weight:700;color:#16a34a">+${fRp(r.nominal)}</span>
+                      </div>`).join('')}
+                      <div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0 0;border-top:1px solid #7dd3fc;margin-top:2px">
+                        <span style="color:#0369a1;font-weight:600">Total dibayar</span>
+                        <span style="font-weight:700;color:#0369a1">${fRp(ls.nominalBayar||0)}</span>
+                      </div>
+                    </div></details>`
+                  :ls.nominalBayar>0
+                    ?`<div style="font-size:11px;color:#64748b;margin-top:5px">💰 Dibayar: <strong style="color:#16a34a">${fRp(ls.nominalBayar)}</strong>${ls.tglBayar?' · '+fDate(ls.tglBayar):''}</div>`
+                    :'';
+                return `<div class="sub-card" style="margin-bottom:6px">
+                  <div class="row">
+                    <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(ls.uraian)}</div>
+                      <div class="item-sub">📅 ${fDate(ls.tgl)}</div></div>
+                    <div style="text-align:right;flex-shrink:0;margin-left:8px">
+                      <div style="font-size:12px;font-weight:700">${fRp(ls.nilaiKontrak)}</div>
+                      ${bdg(ls.statusBayar)}
+                    </div>
+                  </div>
+                  ${cicilan}
+                </div>`;
+              }).join('')}
             </div>
           </details>`;
         }).join('');
