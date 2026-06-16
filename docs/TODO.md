@@ -1,7 +1,7 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: 2026-05-22
-Versi kode saat ini: v1.8.1
+Terakhir diupdate: 2026-06-16
+Versi kode saat ini: v1.19
 
 ---
 
@@ -22,7 +22,7 @@ masih pakai **nilai awal** (kolom F), belum tambah variasi dari kolom Q.
 
 ---
 
-## 🔴 TODO #1 — Filter Nama Project di Log Pembelian & Log Absensi (Mobile)
+## ✅ TODO #1 — Filter Nama Project di Log Pembelian & Log Absensi (Mobile) — SELESAI
 
 **Permintaan:** Di halaman Log Pembelian dan Log Absensi pada tampilan HP,
 tambahkan filter dropdown berdasarkan nama proyek.
@@ -47,7 +47,7 @@ tambahkan filter dropdown berdasarkan nama proyek.
 
 ---
 
-## 🔴 TODO #2 — Input Pembelian: Tampilkan Nama Project, Bukan Kode
+## ✅ TODO #2 — Input Pembelian: Tampilkan Nama Project, Bukan Kode — SELESAI (v1.19: format "Nama (KODE)")
 
 **Permintaan:** Di form input pembelian, field "Proyek" saat ini menampilkan
 kode proyek (SPL-01, BSI-02 dst). Ubah agar menampilkan nama proyek.

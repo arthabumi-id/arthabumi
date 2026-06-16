@@ -127,7 +127,7 @@ const S={
   projects:[],pembelian:[],karyawan:[],
   logAbsensi:[],logKasbon:[],logPembayaran:[],
   masterBarang:[],masterToko:[],
-  rab:[],masterSubkon:[],logSubkon:[],riwayatBayarSubkon:{},
+  rab:[],masterSubkon:[],logSubkon:[],
   webAppUrl:'',pollInterval:60,
   syncing:false,lastSync:null,syncError:null,
   countdown:0,retryQ:[],
@@ -140,14 +140,14 @@ const S={
   beliFilter:'',absFilter:'',beliSearchQ:'',catatanKode:'',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
-const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
+const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co'};
 const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 function loadLocal(){
   S.projects=sg(KS.p,[]);S.pembelian=sg(KS.beli,[]);S.karyawan=sg(KS.kr,[]);
   S.logAbsensi=sg(KS.abs,[]);S.logKasbon=sg(KS.ksb,[]);S.logPembayaran=sg(KS.bayar,[]);
   S.masterBarang=sg(KS.brg,[]);S.masterToko=sg(KS.toko,[]);
-  S.rab=sg(KS.rab,[]);S.masterSubkon=sg(KS.sk,[]);S.logSubkon=sg(KS.lsk,[]);S.riwayatBayarSubkon=sg(KS.rbsk,{});
+  S.rab=sg(KS.rab,[]);S.masterSubkon=sg(KS.sk,[]);S.logSubkon=sg(KS.lsk,[]);
   const co=sg(KS.co,null);
   if(co){S.companyName=co.name||'Arthabumi';S.companyTagline=co.tagline||'';}
 }
@@ -255,44 +255,25 @@ setInterval(async()=>{
   finally{S.syncing=false;updateSyncBadge();}
 },30000);
 // ── Navigation
-const NAV_MAIN=[
+const NAV=[
   {id:'dashboard',label:'Dashboard',icon:'📊'},
   {id:'project',label:'Proyek',icon:'🏗️'},
+  {id:'beli',label:'Pembelian',icon:'🛒'},
+  {id:'karyawan',label:'Karyawan',icon:'👷'},
   {id:'absensi',label:'Absensi',icon:'📋'},
   {id:'kasbon',label:'Kasbon',icon:'💸'},
   {id:'closing',label:'Closing',icon:'🔒'},
-];
-const NAV_LAIN=[
-  {id:'beli',label:'Pembelian',icon:'🛒'},
-  {id:'karyawan',label:'Karyawan',icon:'👷'},
   {id:'bayar',label:'Bayar',icon:'💰'},
   {id:'rab',label:'RAB',icon:'📐'},
   {id:'subkon',label:'Subkon',icon:'🔨'},
   {id:'catatan',label:'Catatan',icon:'📝'},
 ];
-const NAV=[...NAV_MAIN,...NAV_LAIN];
 function buildNav(){
-  const lainActive=NAV_LAIN.some(n=>n.id===S.page);
-  const mainBtns=NAV_MAIN.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
+  return NAV.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
     <span style="font-size:19px;line-height:1">${n.icon}</span>
     <span style="font-size:9.5px;font-weight:500">${n.label}</span>
     ${S.page===n.id?'<div class="nav-dot"></div>':''}
   </button>`).join('');
-  const lainBtn=`<button class="nav-btn${lainActive?' on':''}" onclick="openLainnya()">
-    <span style="font-size:22px;line-height:1;font-weight:700">···</span>
-    <span style="font-size:9.5px;font-weight:500">Lainnya</span>
-    ${lainActive?'<div class="nav-dot"></div>':''}
-  </button>`;
-  return mainBtns+lainBtn;
-}
-function openLainnya(){
-  openModal(`<div class="modal-title" style="margin-bottom:14px">Menu Lainnya</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-      ${NAV_LAIN.map(n=>`<button onclick="closeModal();go('${n.id}')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:14px 8px;border-radius:13px;border:2px solid ${S.page===n.id?'#10b981':'#e2e8f0'};background:${S.page===n.id?'#f0fdf4':'#f8fafc'};color:${S.page===n.id?'#065f46':'#0f172a'};cursor:pointer">
-        <span style="font-size:24px;line-height:1">${n.icon}</span>
-        <span style="font-size:11px;font-weight:600">${n.label}</span>
-      </button>`).join('')}
-    </div>`);
 }
 function go(page){
   S.page=page;if(!S.tab[page])S.tab[page]='input';
@@ -1044,7 +1025,7 @@ function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
   const currentShop=S.formItems[0]?.toko||'';
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px">
@@ -1413,7 +1394,7 @@ function absInput(){
     const upahHariIni=baseUpah+upahLembur;
     const stsBtns=STS.map(s=>{const full=STS_FULL[s],active=curFull===full,col=STS_COLOR[s];
       return `<button type="button" onclick="setAbsRow(${i},'status','${full}')" style="flex:1;padding:8px 2px;border-radius:9px;border:2px solid ${active?col:'#e2e8f0'};background:${active?col:'#fff'};color:${active?'#fff':'#64748b'};font-size:11px;font-weight:600;cursor:pointer">${s}</button>`;}).join('');
-    const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)"><option value="">-- Default --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.kodeProj===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select>`;
+    const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)"><option value="">-- Default --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.kodeProj===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('')}</select>`;
     const lemburRow=(curFull==='Hadir'||curFull==='Setengah Hari')?`
       <div style="display:flex;align-items:center;gap:6px;margin-top:7px;padding:7px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:9px">
         <span style="font-size:11px;color:#92400e;font-weight:600;flex-shrink:0">⏰ Lembur</span>
@@ -1436,7 +1417,7 @@ function absInput(){
   return `<div class="card" style="margin-bottom:10px">
     <div class="g2">
       <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${today()}"></div>
-      <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select></div></div>
+      <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('')}</select></div></div>
     <div style="font-size:11px;color:#94a3b8;margin-top:-4px">💡 Proyek default untuk karyawan yang belum pilih</div>
   </div>
   ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':rows}
@@ -2215,7 +2196,7 @@ function pgBayar(){
 }
 function bayarInput(){
   if(!S.payItems||!S.payItems.length)S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.filter(p=>(p.status||'Berjalan')==='Berjalan').map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.filter(p=>(p.status||'Berjalan')==='Berjalan').map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
   const items=S.payItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px"><span style="font-size:11px;font-weight:600;color:#64748b">Pembayaran ${i+1}</span>
       ${S.payItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delPayRow(${i})">✕</button>`:''}</div>
@@ -2439,7 +2420,7 @@ function pgSubkon(){
 }
 function subkonInput(){
   if(!S.masterSubkon.length)return `<div class="info-box">💡 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}">${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
   return `<div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="sk-tgl" value="${today()}"></div>
@@ -2486,23 +2467,10 @@ function subkonLog(){
           <div style="font-weight:700;font-size:13px">${fRp(ls.nilaiKontrak)}</div>
           ${bdg(isLunas?'Lunas':sudahBayar>0?'DP':'Belum Dibayar')}
         </div></div>
-      ${sudahBayar>0?(()=>{
-        const rw=S.riwayatBayarSubkon[ls.id]||[];
-        const riwayatHtml=rw.length>0
-          ?`<details style="margin-top:4px"><summary style="list-style:none;display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#64748b;padding:2px 0"><span>▾</span><span>${rw.length} transaksi pembayaran</span></summary>
-            <div style="margin-top:6px;background:#f0fdf4;border-radius:8px;padding:8px">
-              ${rw.map((r,ri)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0${ri<rw.length-1?';border-bottom:1px dashed #bbf7d0':''}">
-                <span style="color:#64748b">📅 ${fDate(r.tgl)}</span>
-                <span style="font-weight:700;color:#16a34a">+${fRp(r.nominal)}</span>
-              </div>`).join('')}
-            </div></details>`
-          :ls.tglBayar?`<div style="font-size:11px;color:#64748b;margin-top:2px">📅 Dibayar: ${fDate(ls.tglBayar)}</div>`:'';
-        return `<div style="font-size:12px;color:#64748b;margin-bottom:8px">
-          Dibayar: <strong style="color:#16a34a">${fRp(sudahBayar)}</strong>
-          ${!isLunas?` · Sisa: <strong style="color:#dc2626">${fRp(sisa)}</strong>`:' · <span style="color:#16a34a;font-weight:600">✓ Lunas</span>'}
-          ${riwayatHtml}
-        </div>`;
-      })():''}
+      ${sudahBayar>0?`<div style="font-size:12px;color:#64748b;margin-bottom:8px">
+        Dibayar: <strong style="color:#16a34a">${fRp(sudahBayar)}</strong>
+        ${!isLunas?` · Sisa: <strong style="color:#dc2626">${fRp(sisa)}</strong>`:' · <span style="color:#16a34a;font-weight:600">✓ Lunas</span>'}
+      </div>`:''}
       ${!isLunas?`<div style="margin-bottom:6px">
         <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(sudahBayar/ls.nilaiKontrak*100)}%;background:#10b981"></div></div>
         <div style="font-size:10px;color:#94a3b8;margin-top:2px">${Math.round(sudahBayar/ls.nilaiKontrak*100)}% terbayar</div>
@@ -2540,9 +2508,6 @@ function saveBayarSubkon(idx){
   const sisa=ls.nilaiKontrak-totalBayar;
   const sts=sisa<=0?'Lunas':totalBayar>0?'DP':'Belum Dibayar';
   S.logSubkon[idx].nominalBayar=totalBayar;S.logSubkon[idx].statusBayar=sts;S.logSubkon[idx].tglBayar=tgl;
-  if(!S.riwayatBayarSubkon[ls.id])S.riwayatBayarSubkon[ls.id]=[];
-  S.riwayatBayarSubkon[ls.id].push({tgl,nominal:nom});
-  ss(KS.rbsk,S.riwayatBayarSubkon);
   ss(KS.lsk,S.logSubkon);closeModal();
   showToast(sts==='Lunas'?'✅ Lunas! Pembayaran selesai':'✅ Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
   go('subkon');
@@ -2638,36 +2603,11 @@ function subkonRekap(){
         <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(totalB)}</div></div>
         <div class="chip" style="background:${sisa>0?'#fff7ed':'#f0fdf4'}"><div class="chip-lbl">Sisa</div><div class="chip-val" style="color:${sisa>0?'#c2410c':'#64748b'}">${fRp(sisa)}</div></div>
       </div>
-      ${(()=>{
-        const byProj={};
-        logs.forEach(ls=>{const k=ls.kodeProj||'__none__';if(!byProj[k])byProj[k]={nama:ls.namaProj||ls.kodeProj||'Tanpa Proyek',logs:[]};byProj[k].logs.push(ls);});
-        return Object.values(byProj).map(pg=>{
-          const pK=pg.logs.reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
-          const pB=pg.logs.reduce((s,ls)=>s+(Number(ls.nominalBayar)||0),0);
-          const pS=pK-pB;
-          return `<details style="margin-bottom:7px">
-            <summary style="list-style:none;display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:9px 11px;background:#f1f5f9;border-radius:10px">
-              <span style="font-size:12px;font-weight:600;color:#0f172a;flex:1;min-width:0;margin-right:8px">${esc(pg.nama)}</span>
-              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-                <span style="font-size:12px;font-weight:700">${fRp(pK)}</span>
-                ${pS>0?`<span style="background:#fee2e2;color:#b91c1c;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:600">Sisa ${fRp(pS)}</span>`:`<span style="color:#16a34a;font-size:11px;font-weight:700">✓ Lunas</span>`}
-                <span style="color:#94a3b8;font-size:11px">▾</span>
-              </div>
-            </summary>
-            <div style="padding:8px 4px 4px">
-              ${pg.logs.map(ls=>`<div class="sub-card" style="margin-bottom:6px"><div class="row">
-                <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(ls.uraian)}</div>
-                  <div class="item-sub">📅 ${fDate(ls.tgl)}</div></div>
-                <div style="text-align:right;flex-shrink:0;margin-left:8px">
-                  <div style="font-size:12px;font-weight:700">${fRp(ls.nilaiKontrak)}</div>
-                  ${bdg(ls.statusBayar)}
-                  ${ls.nominalBayar>0?`<div style="font-size:10px;color:#16a34a;margin-top:2px">Bayar: ${fRp(ls.nominalBayar)}</div>`:''}
-                </div>
-              </div></div>`).join('')}
-            </div>
-          </details>`;
-        }).join('');
-      })()}
+      ${logs.map(ls=>`<div class="sub-card" style="margin-bottom:6px"><div class="row">
+        <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(ls.uraian)}</div>
+          <div class="item-sub">${esc(ls.namaProj||ls.kodeProj)} · ${fDate(ls.tgl)}</div></div>
+        <div style="text-align:right;flex-shrink:0;margin-left:8px"><div style="font-size:12px;font-weight:700">${fRp(ls.nilaiKontrak)}</div>${bdg(ls.statusBayar)}</div>
+      </div></div>`).join('')}
     </div>`;
   }).filter(Boolean).join('');
   return header+(rows||'<div class="empty">Belum ada pekerjaan subkon</div>');
