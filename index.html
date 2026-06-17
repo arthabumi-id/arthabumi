@@ -2962,38 +2962,76 @@ async function exportRekapProyek(){
   const wsSum=_makeWS(kpiRows,[36,26],[{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}]);
   wsSum['!rows']=[{hpt:26},{hpt:14}];
 
-  // ── Sheet 3: Detail Material (semua proyek) ───────────────────────
-  const beliAll=[...S.pembelian].filter(b=>b.status!=='ASET').sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
-  const beliHdr=['Kode Proyek','Nama Proyek','Tanggal','Nama Barang','Kategori','Toko','Qty','Satuan','Harga Satuan','Diskon','Total (Rp)'];
-  const beliRows=[
-    [_C(`LOG PEMBELIAN MATERIAL — SEMUA PROYEK`,_ST.title),..._eRow(10)],
-    [_C(`${S.companyName}  —  Export ${tgl}  |  ${beliAll.length} transaksi`,_ST.info),..._eRow(10)],
-    _eRow(11),
-    beliHdr.map((h,i)=>_C(h,i>=6?_ST.hdrR:_ST.hdr)),
-    ...beliAll.map((b,ri)=>{
-      const e=ri%2===0;
-      const proj=S.projects.find(x=>x.kode===b.kodeProj);
-      return[
-        _C(b.kodeProj||'-',e?_ST.ce:_ST.co),
-        _C(proj?proj.nama:'-',e?_ST.le:_ST.lo),
-        _C(b.tgl||'-',e?_ST.ce:_ST.co),
-        _C(b.namaBarang||'-',e?_ST.le:_ST.lo),
-        _C(b.kategori||'-',e?_ST.ce:_ST.co),
-        _C(b.toko||'-',e?_ST.le:_ST.lo),
-        _C(fNum(b.qty),e?_ST.ne:_ST.no),
-        _C(b.satuan||'-',e?_ST.ce:_ST.co),
-        _C(fNum(b.harga),e?_ST.ne:_ST.no),
-        _C(fNum(b.diskon),e?_ST.ne:_ST.no),
-        _C(calcTotal(b),e?_ST.ne:_ST.no),
-      ];
-    }),
-    _eRow(11),
-    [..._eRow(10),_C(beliAll.reduce((s,b)=>s+calcTotal(b),0),_ST.netPos)],
-  ];
-  const wsBeli=_makeWS(beliRows,[14,28,12,28,16,20,8,8,18,12,18],
-    [{s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}}]);
+  // ── Sheet 3: Log Material per Proyek ─────────────────────────────
+  const matHdr=['No','Tanggal','Nama Barang','Kategori','Toko','Qty','Satuan','Harga Satuan (Rp)','Diskon (Rp)','Total (Rp)'];
+  const matColW=[5,12,30,16,20,7,8,18,14,18];
+  const beliRows=[];
+  const beliMerges=[];
+  let beliTotalAll=0;
+  let allBeliCount=0;
+  // Title sheet
+  beliRows.push([_C(`LOG PEMBELIAN MATERIAL — PER PROYEK`,_ST.title),..._eRow(9)]);
+  beliRows.push([_C(`${S.companyName}  —  Export ${tgl}`,_ST.info),..._eRow(9)]);
+  beliMerges.push({s:{r:0,c:0},e:{r:0,c:9}},{s:{r:1,c:0},e:{r:1,c:9}});
+  beliRows.push(_eRow(10));
+  // Group per proyek
+  S.projects.forEach(p=>{
+    const items=[...S.pembelian].filter(b=>b.kodeProj===p.kode&&b.status!=='ASET')
+      .sort((a,b)=>String(a.tgl||'').localeCompare(String(b.tgl||'')));
+    const projTotal=items.reduce((s,b)=>s+calcTotal(b),0);
+    beliTotalAll+=projTotal;
+    allBeliCount+=items.length;
+    const projR=beliRows.length;
+    // Header proyek — satu baris berwarna navy + info kanan
+    const projStyle={font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'left',vertical:'center'}};
+    const projStyleR={font:{bold:true,sz:10,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'right',vertical:'center'}};
+    beliRows.push([
+      _C(`${p.kode}  —  ${p.nama}`,projStyle),
+      _C('',projStyle),_C('',projStyle),_C('',projStyle),_C('',projStyle),_C('',projStyle),_C('',projStyle),
+      _C(p.jenis||'-',{font:{sz:10,color:{rgb:'CCDDEE'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'right'}}),
+      _C(p.status,_ST.sts(p.status)),
+      _C(projTotal,{...projStyleR,numFmt:'#,##0'}),
+    ]);
+    beliMerges.push({s:{r:projR,c:0},e:{r:projR,c:6}});
+    if(!items.length){
+      beliRows.push([_C('(belum ada pembelian)',{font:{italic:true,color:{rgb:'9AA5B4'}},fill:{patternType:'solid',fgColor:{rgb:'F5F7FA'}},alignment:{horizontal:'center'}}),..._eRow(9)]);
+      beliMerges.push({s:{r:beliRows.length-1,c:0},e:{r:beliRows.length-1,c:9}});
+    } else {
+      // Header kolom
+      beliRows.push(matHdr.map((h,i)=>_C(h,i>=5?_ST.hdrR:_ST.hdr)));
+      // Data rows zebra
+      items.forEach((b,ri)=>{
+        const e=ri%2===0;
+        beliRows.push([
+          _C(ri+1,e?_ST.ce:_ST.co),
+          _C(b.tgl||'-',e?_ST.ce:_ST.co),
+          _C(b.namaBarang||'-',e?_ST.le:_ST.lo),
+          _C(b.kategori||'-',e?_ST.ce:_ST.co),
+          _C(b.toko||'-',e?_ST.le:_ST.lo),
+          _C(fNum(b.qty),e?_ST.ne:_ST.no),
+          _C(b.satuan||'-',e?_ST.ce:_ST.co),
+          _C(fNum(b.harga),e?_ST.ne:_ST.no),
+          _C(fNum(b.diskon),e?_ST.ne:_ST.no),
+          _C(calcTotal(b),e?_ST.ne:_ST.no),
+        ]);
+      });
+      // Subtotal proyek
+      const subTotStyle={font:{bold:true,color:{rgb:'1F4E79'}},fill:{patternType:'solid',fgColor:{rgb:'DEEAF1'}},numFmt:'#,##0',alignment:{horizontal:'right'}};
+      const subLblStyle={font:{bold:true,color:{rgb:'1F4E79'}},fill:{patternType:'solid',fgColor:{rgb:'DEEAF1'}},alignment:{horizontal:'right'}};
+      beliRows.push([..._eRow(8),_C(`Subtotal ${items.length} item`,subLblStyle),_C(projTotal,subTotStyle)]);
+    }
+    beliRows.push(_eRow(10)); // spasi antar proyek
+  });
+  // Grand Total
+  const gtStyle={font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},numFmt:'#,##0',alignment:{horizontal:'right'}};
+  const gtLbl={font:{bold:true,sz:11,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'left'}};
+  beliRows.push([
+    _C(`GRAND TOTAL — ${allBeliCount} transaksi dari ${S.projects.length} proyek`,gtLbl),
+    ..._eRow(8),_C(beliTotalAll,gtStyle),
+  ]);
+  beliMerges.push({s:{r:beliRows.length-1,c:0},e:{r:beliRows.length-1,c:8}});
+  const wsBeli=_makeWS(beliRows,matColW,beliMerges);
   wsBeli['!rows']=[{hpt:26},{hpt:14}];
-  wsBeli['!freeze']={xSplit:0,ySplit:4};
 
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,wsMain,'Rekap Proyek');
@@ -3642,32 +3680,6 @@ function printRekapProyek(kode){
     new Chart(document.getElementById('compChart'),{type:'doughnut',data:{labels:['Material','Upah','Subkon','Kasbon Bonus'],datasets:[{data:[${Math.round(mat/1000)},${Math.round(upah/1000)},${Math.round(subkon/1000)},${Math.round(kb.bonus/1000)}],backgroundColor:['#1F4E79','#2E75B6','#42A5F5','#90CAF9'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});`;
   closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html,chartScripts);
 }
-
-// ── Tab helper
-function setTab(page,tab){S.tab[page]=tab;go(page);}
-// ── Init
-window.addEventListener('DOMContentLoaded',async()=>{
-  loadLocal();
-  S.webAppUrl=sg(KS.url,'');S.pollInterval=Number(sg(KS.poll,60))||60;
-  // Update nama perusahaan di header
-  const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
-  const sn=document.getElementById('spl-name');if(sn)sn.textContent=S.companyName;
-  document.title=S.companyName;
-  go('dashboard');
-  document.getElementById('nav').innerHTML=buildNav();
-  setTimeout(()=>{const spl=document.getElementById('spl');if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}},300);
-  updateSyncBadge();
-  if(S.webAppUrl){await doFetch();startPoll();}
-  // Inject PWA manifest
-  try{
-    const mf={name:S.companyName,short_name:S.companyName.split(' ')[0],description:'Sistem Manajemen Proyek Kontraktor',start_url:'.',display:'standalone',background_color:'#0f172a',theme_color:'#0f172a',icons:[{src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjI1NiIgeT0iMzMwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzEwYjk4MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUI8L3RleHQ+PC9zdmc+',sizes:'512x512',type:'image/svg+xml'}]};
-    const blob=new Blob([JSON.stringify(mf)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement('link');link.rel='manifest';link.href=url;
-    document.head.appendChild(link);
-  }catch(e){}
-});
 </script>
-<div id="print-area"></div>
 </body>
 </html>
