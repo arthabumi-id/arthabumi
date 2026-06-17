@@ -2837,7 +2837,10 @@ function _makeWS(rows,colW,merges){
 async function exportRekapProyek(){
   showToast('Menyiapkan Excel…','info');
   try{await _loadXlsx();}catch(e){showToast(e.message,'err');return;}
-  const rows=S.projects.map(p=>{
+  const tgl=today();
+  const COL_W=[5,14,32,18,14,24,24,20,18,18,18,20,18,12,14,14,22,18,32];
+  // Hitung data per proyek
+  const data=S.projects.map((p,i)=>{
     const vs=vSum(p);
     const mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
     const upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
@@ -2846,50 +2849,158 @@ async function exportRekapProyek(){
     const totalBiaya=mat+upah+subkon+kb.bonus;
     const laba=vs.final-totalBiaya;
     const bayar=S.logPembayaran.filter(b=>b.kodeProj===p.kode).reduce((s,b)=>s+(Number(b.nominal)||0),0);
-    return{
-      'Kode Proyek':p.kode,
-      'Nama Proyek':p.nama,
-      'Jenis':p.jenis||'-',
-      'Status':p.status,
-      'Nilai Kontrak Awal (Rp)':fNum(p.nilaiKontrak),
-      'Nilai Kontrak Final (Rp)':fNum(vs.final),
-      'Total Material (Rp)':fNum(mat),
-      'Total Upah (Rp)':fNum(upah),
-      'Total Subkon (Rp)':fNum(subkon),
-      'Kasbon Bonus (Rp)':fNum(kb.bonus),
-      'Total Biaya (Rp)':fNum(totalBiaya),
-      'Laba (Rp)':fNum(laba),
-      'Margin (%)':vs.final?parseFloat((laba/vs.final*100).toFixed(1)):0,
-      'Progress (%)':fNum(p.progress),
-      'Tanggal Mulai':p.tglMulai||'-',
-      'Total Pembayaran (Rp)':fNum(bayar),
-      'Piutang (Rp)':fNum(vs.final-bayar),
-      'Catatan':p.catatan||''
-    };
+    return{i:i+1,p,vs,mat,upah,subkon,kb,totalBiaya,laba,bayar,piutang:vs.final-bayar,
+      margin:vs.final?parseFloat((laba/vs.final*100).toFixed(1)):0};
   });
-  const ws=XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:14},{wch:30},{wch:16},{wch:12},{wch:22},{wch:22},{wch:20},{wch:18},{wch:18},{wch:18},{wch:20},{wch:18},{wch:12},{wch:14},{wch:14},{wch:22},{wch:18},{wch:30}];
+  // TOTAL row
+  const sumNk=data.reduce((s,d)=>s+fNum(d.vs.final),0);
+  const sumMat=data.reduce((s,d)=>s+d.mat,0);
+  const sumUpah=data.reduce((s,d)=>s+d.upah,0);
+  const sumSub=data.reduce((s,d)=>s+d.subkon,0);
+  const sumBonus=data.reduce((s,d)=>s+d.kb.bonus,0);
+  const sumBiaya=data.reduce((s,d)=>s+d.totalBiaya,0);
+  const sumLaba=data.reduce((s,d)=>s+d.laba,0);
+  const sumBayar=data.reduce((s,d)=>s+d.bayar,0);
+  const sumPiutang=data.reduce((s,d)=>s+d.piutang,0);
+  const avgMargin=sumNk?parseFloat((sumLaba/sumNk*100).toFixed(1)):0;
+
+  const HDR=['No','Kode','Nama Proyek','Jenis','Status',
+    'Nilai Kontrak Awal','Nilai Kontrak Final',
+    'Material','Upah','Subkon','Kasbon Bonus','Total Biaya',
+    'Laba / Rugi','Margin %','Progress %','Tgl Mulai',
+    'Pembayaran Masuk','Piutang','Catatan'];
+
+  const mainRows=[
+    // Title
+    [_C(`REKAP SEMUA PROYEK — ${S.companyName}`,_ST.title),..._eRow(18)],
+    [_C(`Diekspor: ${tgl}  |  Jumlah Proyek: ${data.length}`,_ST.info),..._eRow(18)],
+    _eRow(19),
+    HDR.map((h,i)=>_C(h,i>=5&&i<=17?_ST.hdrR:_ST.hdr)),
+    // Data rows
+    ...data.map((d,ri)=>{
+      const e=ri%2===0;
+      return[
+        _C(d.i,e?_ST.ce:_ST.co),
+        _C(d.p.kode,e?_ST.ce:_ST.co),
+        _C(d.p.nama,e?_ST.le:_ST.lo),
+        _C(d.p.jenis||'-',e?_ST.ce:_ST.co),
+        _C(d.p.status,_ST.sts(d.p.status)),
+        _C(fNum(d.p.nilaiKontrak),e?_ST.ne:_ST.no),
+        _C(fNum(d.vs.final),e?_ST.ne:_ST.no),
+        _C(d.mat,e?_ST.ne:_ST.no),
+        _C(d.upah,e?_ST.ne:_ST.no),
+        _C(d.subkon,e?_ST.ne:_ST.no),
+        _C(d.kb.bonus,e?_ST.ne:_ST.no),
+        _C(d.totalBiaya,e?_ST.ne:_ST.no),
+        _C(d.laba,d.laba>=0?_ST.pos(e):_ST.neg(e)),
+        _C(d.margin,_ST.pct(e)),
+        _C(fNum(d.p.progress),_ST.pct(e)),
+        _C(d.p.tglMulai||'-',e?_ST.ce:_ST.co),
+        _C(d.bayar,e?_ST.ne:_ST.no),
+        _C(d.piutang,d.piutang>0?_ST.neg(e):_ST.pos(e)),
+        _C(d.p.catatan||'',e?_ST.le:_ST.lo),
+      ];
+    }),
+    _eRow(19),
+    // TOTAL footer
+    [_C('TOTAL',{font:{bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'center'}}),
+     _C('',{fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}}}),
+     _C(`${data.length} Proyek`,{font:{bold:true,color:{rgb:'FFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}},alignment:{horizontal:'left'}}),
+     _C('',{fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}}}),
+     _C('',{fill:{patternType:'solid',fgColor:{rgb:'1F4E79'}}}),
+     _C('',_ST.val),
+     _C(sumNk,_ST.val),
+     _C(sumMat,_ST.val),
+     _C(sumUpah,_ST.val),
+     _C(sumSub,_ST.val),
+     _C(sumBonus,_ST.val),
+     _C(sumBiaya,_ST.val),
+     _C(sumLaba,sumLaba>=0?_ST.netPos:_ST.netNeg),
+     _C(avgMargin,{font:{bold:true},numFmt:'0.0',fill:{patternType:'solid',fgColor:{rgb:'D6DCE4'}},alignment:{horizontal:'center'}}),
+     _C('',{fill:{patternType:'solid',fgColor:{rgb:'D6DCE4'}}}),
+     _C('',{fill:{patternType:'solid',fgColor:{rgb:'D6DCE4'}}}),
+     _C(sumBayar,_ST.val),
+     _C(sumPiutang,sumPiutang>0?_ST.netNeg:_ST.netPos),
+     _C('',{fill:{patternType:'solid',fgColor:{rgb:'D6DCE4'}}}),
+    ],
+  ];
+  const mergesMain=[
+    {s:{r:0,c:0},e:{r:0,c:18}},
+    {s:{r:1,c:0},e:{r:1,c:18}},
+  ];
+  const wsMain=_makeWS(mainRows,COL_W,mergesMain);
+  wsMain['!rows']=[{hpt:26},{hpt:14},{hpt:6},{hpt:22}];
+  wsMain['!freeze']={xSplit:0,ySplit:4};
+
+  // ── Sheet 2: Ringkasan KPI ─────────────────────────────────────────
+  const kpiRows=[
+    [_C('RINGKASAN BISNIS',_ST.title),_C('',_ST.title)],
+    [_C(`${S.companyName}  —  Export ${tgl}`,_ST.info),_C('',_ST.info)],
+    _eRow(2),
+    [_C('Indikator',_ST.hdr),_C('Nilai',_ST.hdrR)],
+    [_C('Jumlah Proyek',_ST.le),_C(data.length,_ST.ce)],
+    [_C('— Berjalan',_ST.le),_C(data.filter(d=>d.p.status==='Berjalan').length,_ST.jalan)],
+    [_C('— Selesai',_ST.le),_C(data.filter(d=>d.p.status==='Selesai').length,_ST.lunas)],
+    [_C('— Hold',_ST.le),_C(data.filter(d=>d.p.status==='Hold').length,_ST.hold)],
+    [_C('— Batal',_ST.le),_C(data.filter(d=>d.p.status==='Batal').length,_ST.batal)],
+    _eRow(2),
+    [_C('Total Nilai Kontrak Final',_ST.lbl),_C(sumNk,_ST.val)],
+    [_C('Total Material',_ST.le),_C(sumMat,_ST.ne)],
+    [_C('Total Upah',_ST.le),_C(sumUpah,_ST.ne)],
+    [_C('Total Subkon',_ST.le),_C(sumSub,_ST.ne)],
+    [_C('Total Kasbon Bonus',_ST.le),_C(sumBonus,_ST.ne)],
+    [_C('Total Biaya',_ST.lbl),_C(sumBiaya,_ST.val)],
+    _eRow(2),
+    [_C('Total Laba / Rugi',_ST.lbl),_C(sumLaba,sumLaba>=0?_ST.netPos:_ST.netNeg)],
+    [_C('Margin Rata-rata (%)',_ST.le),_C(avgMargin,{numFmt:'0.0',fill:{patternType:'solid',fgColor:{rgb:'DEEAF1'}},alignment:{horizontal:'right'}})],
+    _eRow(2),
+    [_C('Total Pembayaran Masuk',_ST.lbl),_C(sumBayar,_ST.val)],
+    [_C('Total Piutang',_ST.lbl),_C(sumPiutang,sumPiutang>0?_ST.netNeg:_ST.netPos)],
+    _eRow(2),
+    [_C('Tanggal Export',_ST.le),_C(tgl,_ST.ce)],
+  ];
+  const wsSum=_makeWS(kpiRows,[36,26],[{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}]);
+  wsSum['!rows']=[{hpt:26},{hpt:14}];
+
+  // ── Sheet 3: Detail Material (semua proyek) ───────────────────────
+  const beliAll=[...S.pembelian].filter(b=>b.status!=='ASET').sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const beliHdr=['Kode Proyek','Nama Proyek','Tanggal','Nama Barang','Kategori','Toko','Qty','Satuan','Harga Satuan','Diskon','Total (Rp)'];
+  const beliRows=[
+    [_C(`LOG PEMBELIAN MATERIAL — SEMUA PROYEK`,_ST.title),..._eRow(10)],
+    [_C(`${S.companyName}  —  Export ${tgl}  |  ${beliAll.length} transaksi`,_ST.info),..._eRow(10)],
+    _eRow(11),
+    beliHdr.map((h,i)=>_C(h,i>=6?_ST.hdrR:_ST.hdr)),
+    ...beliAll.map((b,ri)=>{
+      const e=ri%2===0;
+      const proj=S.projects.find(x=>x.kode===b.kodeProj);
+      return[
+        _C(b.kodeProj||'-',e?_ST.ce:_ST.co),
+        _C(proj?proj.nama:'-',e?_ST.le:_ST.lo),
+        _C(b.tgl||'-',e?_ST.ce:_ST.co),
+        _C(b.namaBarang||'-',e?_ST.le:_ST.lo),
+        _C(b.kategori||'-',e?_ST.ce:_ST.co),
+        _C(b.toko||'-',e?_ST.le:_ST.lo),
+        _C(fNum(b.qty),e?_ST.ne:_ST.no),
+        _C(b.satuan||'-',e?_ST.ce:_ST.co),
+        _C(fNum(b.harga),e?_ST.ne:_ST.no),
+        _C(fNum(b.diskon),e?_ST.ne:_ST.no),
+        _C(calcTotal(b),e?_ST.ne:_ST.no),
+      ];
+    }),
+    _eRow(11),
+    [..._eRow(10),_C(beliAll.reduce((s,b)=>s+calcTotal(b),0),_ST.netPos)],
+  ];
+  const wsBeli=_makeWS(beliRows,[14,28,12,28,16,20,8,8,18,12,18],
+    [{s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}}]);
+  wsBeli['!rows']=[{hpt:26},{hpt:14}];
+  wsBeli['!freeze']={xSplit:0,ySplit:4};
+
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Rekap Proyek');
-  // Sheet ringkasan
-  const tNk=rows.reduce((s,r)=>s+r['Nilai Kontrak Final (Rp)'],0);
-  const tBiaya=rows.reduce((s,r)=>s+r['Total Biaya (Rp)'],0);
-  const tLaba=rows.reduce((s,r)=>s+r['Laba (Rp)'],0);
-  const tBayar=rows.reduce((s,r)=>s+r['Total Pembayaran (Rp)'],0);
-  const sumWs=XLSX.utils.json_to_sheet([
-    {'Keterangan':'Jumlah Proyek','Nilai':rows.length},
-    {'Keterangan':'Total Nilai Kontrak Final (Rp)','Nilai':tNk},
-    {'Keterangan':'Total Biaya (Rp)','Nilai':tBiaya},
-    {'Keterangan':'Total Laba (Rp)','Nilai':tLaba},
-    {'Keterangan':'Margin Rata-rata (%)','Nilai':tNk?parseFloat((tLaba/tNk*100).toFixed(1)):0},
-    {'Keterangan':'Total Pembayaran Masuk (Rp)','Nilai':tBayar},
-    {'Keterangan':'Total Piutang (Rp)','Nilai':tNk-tBayar},
-    {'Keterangan':'Tanggal Export','Nilai':today()},
-  ]);
-  sumWs['!cols']=[{wch:32},{wch:22}];
-  XLSX.utils.book_append_sheet(wb,sumWs,'Ringkasan');
+  XLSX.utils.book_append_sheet(wb,wsMain,'Rekap Proyek');
+  XLSX.utils.book_append_sheet(wb,wsSum,'Ringkasan KPI');
+  XLSX.utils.book_append_sheet(wb,wsBeli,'Log Material Semua');
   const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
-  _dlFile(new Blob([buf],{type:'application/octet-stream'}),`${S.companyName}_Rekap_Proyek_${today()}.xlsx`);
+  _dlFile(new Blob([buf],{type:'application/octet-stream'}),`${S.companyName}_Rekap_Proyek_${tgl}.xlsx`);
   showToast('✅ Excel berhasil diunduh!');
 }
 
@@ -3185,7 +3296,7 @@ function _openReport(title,bodyHtml,chartScripts){
     .bdg-green{background:#E8F5E9;color:#1B5E20}.bdg-orange{background:#FFF3E0;color:#E65100}
     .bdg-blue{background:#E3F2FD;color:#0D47A1}.bdg-red{background:#FFEBEE;color:#C62828}
     .bdg-brown{background:#EFEBE9;color:#5D4037}
-    /* Accordion */
+    /* Accordion level 1 */
     .acc-row td{cursor:pointer;user-select:none}
     .acc-row td:first-child::before{content:"▶ ";font-size:10px;color:#2E75B6}
     .acc-row.open td:first-child::before{content:"▼ "}
@@ -3194,6 +3305,16 @@ function _openReport(title,bodyHtml,chartScripts){
     .detail-inner table{font-size:11px}
     .detail-inner th{background:#DEEAF1;color:#1F4E79;padding:5px 8px}
     .detail-inner td{padding:5px 8px;border-bottom:1px solid #D6DCE4}
+    /* Accordion level 2 (nested dalam detail-inner) */
+    .acc-row2 td{cursor:pointer;user-select:none;background:#E8EFF8!important}
+    .acc-row2 td:first-child::before{content:"▶ ";font-size:9px;color:#1F4E79}
+    .acc-row2.open td:first-child::before{content:"▼ "}
+    .detail-row2{display:none}.detail-row2.open{display:table-row}
+    .detail-inner2{background:#fff;border-left:3px solid #42A5F5;padding:8px 10px;margin:4px 0}
+    .detail-inner2 table{font-size:10px;width:100%}
+    .detail-inner2 th{background:#DEEAF1;color:#1F4E79;padding:4px 7px;font-size:10px}
+    .detail-inner2 td{padding:4px 7px;border-bottom:1px solid #EEF2F7;font-size:10px}
+    .detail-inner2 tfoot td{background:#DEEAF1!important;font-weight:700}
     /* Header */
     .rpt-header{text-align:center;margin-bottom:20px}
     .rpt-title{font-size:22px;font-weight:800;color:#1F4E79;letter-spacing:-.5px}
@@ -3219,12 +3340,21 @@ function _openReport(title,bodyHtml,chartScripts){
     }`;
   const scripts=chartScripts||'';
   win.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script><style>${css}</style></head><body><div id="tb"><div class="tb-info"><div class="tb-t">${title}</div><div class="tb-s">Arthabumi · ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div></div><button class="tb-b" onclick="window.print()">🖨️ Cetak / Simpan PDF</button></div><div id="wrap">${bodyHtml}</div><script>
-// Accordion toggle
+// Accordion level 1
 document.querySelectorAll('.acc-row').forEach(function(row){
   row.addEventListener('click',function(){
     var next=row.nextElementSibling;
     row.classList.toggle('open');
     if(next&&next.classList.contains('detail-row'))next.classList.toggle('open');
+  });
+});
+// Accordion level 2 (nested)
+document.querySelectorAll('.acc-row2').forEach(function(row){
+  row.addEventListener('click',function(e){
+    e.stopPropagation();
+    var next=row.nextElementSibling;
+    row.classList.toggle('open');
+    if(next&&next.classList.contains('detail-row2'))next.classList.toggle('open');
   });
 });
 ${scripts}<\/script></body></html>`);
@@ -3304,17 +3434,55 @@ function printAllProyek(){
             <td class="r" style="color:${(r.vs.final-r.bayar)>0?'#C62828':'#1B5E20'}">${fRp(r.vs.final-r.bayar)}</td>
           </tr>
           <tr class="detail-row"><td colspan="10"><div class="detail-inner">
-            <table>
-              <thead><tr><th>Komponen Biaya</th><th class="r">Jumlah (Rp)</th></tr></thead>
-              <tbody>
-                <tr><td>Material</td><td class="r">${fRp(r.mat)}</td></tr>
-                <tr><td>Upah</td><td class="r">${fRp(r.upah)}</td></tr>
-                <tr><td>Subkon</td><td class="r">${fRp(r.subkon)}</td></tr>
-                <tr><td>Kasbon Bonus</td><td class="r">${fRp(r.kb.bonus)}</td></tr>
-              </tbody>
-              <tfoot><tr><td><strong>Total Biaya</strong></td><td class="r"><strong>${fRp(r.tBiaya)}</strong></td></tr></tfoot>
-            </table>
-            ${r.p.catatan?`<div style="margin-top:8px;font-size:11px;color:#475569"><strong>Catatan:</strong> ${esc(r.p.catatan)}</div>`:''}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+              <div>
+                <div style="font-size:10px;font-weight:700;color:#1F4E79;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Biaya</div>
+                <table>
+                  <thead><tr><th>Komponen</th><th class="r">Jumlah (Rp)</th><th class="r">%</th></tr></thead>
+                  <tbody>
+                    <tr class="acc-row2"><td>Material (${S.pembelian.filter(b=>b.kodeProj===r.p.kode&&b.status!=='ASET').length} item)</td><td class="r">${fRp(r.mat)}</td><td class="r">${r.tBiaya?((r.mat/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                    <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
+                      <table>
+                        <thead><tr><th>Tgl</th><th>Barang</th><th>Kategori</th><th>Toko</th><th class="r">Qty</th><th class="r">Total (Rp)</th></tr></thead>
+                        <tbody>${(()=>{const beli=[...S.pembelian].filter(b=>b.kodeProj===r.p.kode&&b.status!=='ASET').sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return beli.length?beli.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.namaBarang)}</td><td>${esc(b.kategori||'-')}</td><td>${esc(b.toko||'-')}</td><td class="r">${fNum(b.qty)} ${b.satuan||''}</td><td class="r">${fRp(calcTotal(b))}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                        <tfoot><tr><td colspan="5"><strong>Total Material</strong></td><td class="r"><strong>${fRp(r.mat)}</strong></td></tr></tfoot>
+                      </table>
+                    </div></td></tr>
+                    <tr class="acc-row2"><td>Upah (${S.logAbsensi.filter(a=>a.kodeProj===r.p.kode).length} hari)</td><td class="r">${fRp(r.upah)}</td><td class="r">${r.tBiaya?((r.upah/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                    <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
+                      <table>
+                        <thead><tr><th>Tgl</th><th>Nama</th><th>Status</th><th class="r">Upah (Rp)</th><th class="r">Lembur (Rp)</th></tr></thead>
+                        <tbody>${(()=>{const abs=[...S.logAbsensi].filter(a=>a.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return abs.length?abs.map(a=>`<tr><td>${fDate(a.tgl)}</td><td>${esc(a.nama||a.idKaryawan||'-')}</td><td>${esc(a.status||'-')}</td><td class="r">${fRp(a.upahHariIni)}</td><td class="r">${a.upahLembur?fRp(a.upahLembur):'-'}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                        <tfoot><tr><td colspan="3"><strong>Total Upah</strong></td><td class="r"><strong>${fRp(r.upah)}</strong></td><td></td></tr></tfoot>
+                      </table>
+                    </div></td></tr>
+                    <tr class="acc-row2"><td>Subkon (${S.logSubkon.filter(ls=>ls.kodeProj===r.p.kode).length} item)</td><td class="r">${fRp(r.subkon)}</td><td class="r">${r.tBiaya?((r.subkon/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                    <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
+                      <table>
+                        <thead><tr><th>Tgl</th><th>Nama Subkon</th><th>Pekerjaan</th><th class="r">Nilai (Rp)</th></tr></thead>
+                        <tbody>${(()=>{const sk=[...S.logSubkon].filter(ls=>ls.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return sk.length?sk.map(ls=>{const sub=S.subkon&&S.subkon.find(s=>s.id===ls.idSubkon);return`<tr><td>${fDate(ls.tgl)}</td><td>${esc(sub?sub.nama:ls.idSubkon||'-')}</td><td>${esc(ls.pekerjaan||'-')}</td><td class="r">${fRp(ls.nilaiKontrak)}</td></tr>`}).join(''):'<tr><td colspan="4" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                        <tfoot><tr><td colspan="3"><strong>Total Subkon</strong></td><td class="r"><strong>${fRp(r.subkon)}</strong></td></tr></tfoot>
+                      </table>
+                    </div></td></tr>
+                    <tr><td>Kasbon Bonus</td><td class="r">${fRp(r.kb.bonus)}</td><td class="r">${r.tBiaya?((r.kb.bonus/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                  </tbody>
+                  <tfoot><tr><td><strong>Total Biaya</strong></td><td class="r"><strong>${fRp(r.tBiaya)}</strong></td><td class="r"><strong>100%</strong></td></tr></tfoot>
+                </table>
+              </div>
+              <div>
+                <div style="font-size:10px;font-weight:700;color:#1F4E79;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Pembayaran Masuk</div>
+                <table>
+                  <thead><tr><th>Tgl</th><th>Metode</th><th class="r">Nominal (Rp)</th></tr></thead>
+                  <tbody>${(()=>{const pays=[...S.logPembayaran].filter(b=>b.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return pays.length?pays.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.metode||'-')}</td><td class="r">${fRp(b.nominal)}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                  <tfoot>
+                    <tr><td colspan="2"><strong>Diterima</strong></td><td class="r"><strong>${fRp(r.bayar)}</strong></td></tr>
+                    <tr><td colspan="2">Piutang</td><td class="r" style="color:${(r.vs.final-r.bayar)>0?'#C62828':'#1B5E20'}"><strong>${fRp(r.vs.final-r.bayar)}</strong></td></tr>
+                  </tfoot>
+                </table>
+                ${r.p.catatan?`<div style="margin-top:10px;font-size:11px;color:#475569;background:#FFF9C4;padding:6px 10px;border-radius:6px;border-left:3px solid #F59E0B"><strong>📝 Catatan:</strong> ${esc(r.p.catatan)}</div>`:''}
+              </div>
+            </div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:4px">💡 Klik Material / Upah / Subkon untuk lihat transaksi detail</div>
           </div></td></tr>`).join('')}
         </tbody>
         <tfoot><tr>
