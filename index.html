@@ -419,7 +419,7 @@ function openSettings(){
       </div>
     </div>
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:10px 12px;font-size:11px;color:#1d4ed8;margin-bottom:12px">
-      💡 <strong>Tips PDF:</strong> Saat dialog cetak muncul → pilih <strong>Tujuan: Simpan sebagai PDF</strong> untuk menyimpan ke file. Di HP pilih <strong>Save to PDF</strong> atau gunakan tombol Share → Print.
+      💡 <strong>Tips:</strong> Klik Lihat → laporan terbuka di tab baru. Scroll untuk review, lalu klik <strong>🖨️ Cetak / Simpan PDF</strong> di toolbar atas tab tersebut. Pilih <em>Tujuan: Simpan sebagai PDF</em> di dialog cetak.
     </div>
     <div style="height:1px;background:#f1f5f9;margin:12px 0"></div>
     <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📱 Pasang Sebagai App</div>
@@ -3027,6 +3027,53 @@ async function exportCashFlow(){
   showToast('✅ Excel berhasil diunduh!');
 }
 
+// ─── Helper: buka tab baru dengan laporan HTML ─────────────────────────
+function _openReport(title,bodyHtml){
+  const win=window.open('','_blank');
+  if(!win){showToast('Popup diblokir browser. Izinkan popup untuk membuka laporan.','err');return;}
+  const css=`
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;font-size:12px}
+    #tb{background:#0f172a;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:10px}
+    .tb-t{color:#10b981;font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .tb-b{background:#10b981;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+    .tb-b:hover{opacity:.9}
+    #wrap{max-width:960px;margin:0 auto;background:#fff;padding:28px 32px;min-height:calc(100vh - 44px)}
+    .pr-header{text-align:center;border-bottom:2px solid #1e293b;padding-bottom:14px;margin-bottom:18px}
+    .pr-title{font-size:24px;font-weight:800;letter-spacing:-.5px}
+    .pr-sub{font-size:14px;color:#475569;margin-top:4px}
+    .pr-date{font-size:11px;color:#94a3b8;margin-top:4px}
+    .pr-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+    .pr-kpi-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px}
+    .pr-kpi-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:3px}
+    .pr-kpi-val{font-size:14px;font-weight:700}
+    .pr-section-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:5px;margin-bottom:10px}
+    .pr-table{width:100%;border-collapse:collapse;font-size:11.5px}
+    .pr-table th{background:#f1f5f9;padding:6px 9px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;border:1px solid #e2e8f0;font-weight:700;color:#475569}
+    .pr-table td{padding:5px 9px;border:1px solid #e2e8f0;vertical-align:top}
+    .pr-table tbody tr:hover{background:#fafafa}
+    .pr-table tfoot td{background:#f8fafc;font-size:11.5px;font-weight:600}
+    .pr-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .pr-info-table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:12px}
+    .pr-info-table td{padding:6px 10px;border:1px solid #e2e8f0}
+    .pr-info-lbl{background:#f8fafc;font-weight:600;font-size:10.5px;color:#475569;width:135px}
+    .pr-two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    @media print{
+      #tb{display:none!important}
+      body{background:#fff}
+      #wrap{padding:0;max-width:none;min-height:auto}
+      .pr-table tbody tr:hover{background:inherit}
+      @page{margin:15mm}
+    }
+    @media(max-width:600px){
+      .pr-kpi{grid-template-columns:1fr 1fr}
+      .pr-two-col{grid-template-columns:1fr}
+      #wrap{padding:16px}
+    }`;
+  win.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>${css}</style></head><body><div id="tb"><span class="tb-t">${title}</span><button class="tb-b" onclick="window.print()">🖨️ Cetak / Simpan PDF</button></div><div id="wrap">${bodyHtml}</div></body></html>`);
+  win.document.close();
+}
+
 // ─── PRINT 1: Laporan Semua Proyek → PDF ──────────────────────────────
 function printAllProyek(){
   const rows=S.projects.map(p=>{
@@ -3045,7 +3092,7 @@ function printAllProyek(){
   const tLaba=rows.reduce((s,r)=>s+r.laba,0);
   const tBayar=rows.reduce((s,r)=>s+r.bayar,0);
   const stColor=s=>({Berjalan:'#1d4ed8',Selesai:'#15803d',Hold:'#b45309',Batal:'#b91c1c'}[s]||'#475569');
-  document.getElementById('print-area').innerHTML=`
+  const html=`
     <div class="pr-header">
       <div class="pr-title">${esc(S.companyName)}</div>
       <div class="pr-sub">Laporan Rekap Semua Proyek</div>
@@ -3082,7 +3129,7 @@ function printAllProyek(){
         <td class="pr-num" style="color:${(tNk-tBayar)>0?'#dc2626':'#15803d'}"><strong>${fRp(tNk-tBayar)}</strong></td>
       </tr></tfoot>
     </table>`;
-  closeModal();setTimeout(()=>window.print(),150);
+  closeModal();_openReport(`${S.companyName} — Laporan Semua Proyek`,html);
 }
 
 // ─── PRINT 2: Rekap Detail Satu Proyek → PDF ──────────────────────────
@@ -3105,7 +3152,7 @@ function printRekapProyek(kode){
   const bayarLog=[...S.logPembayaran].filter(b=>b.kodeProj===kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
   const varRows=p.variasi||[];
   const progColor=(p.progress||0)>=75?'#15803d':(p.progress||0)>=50?'#d97706':'#dc2626';
-  document.getElementById('print-area').innerHTML=`
+  const html=`
     <div class="pr-header">
       <div class="pr-title">${esc(S.companyName)}</div>
       <div class="pr-sub">Rekap Proyek — ${esc(p.nama)}</div>
@@ -3170,7 +3217,7 @@ function printRekapProyek(kode){
         </table>
       </div>`}
     </div>`;
-  closeModal();setTimeout(()=>window.print(),150);
+  closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html);
 }
 
 // ── Tab helper
