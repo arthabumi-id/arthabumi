@@ -13,6 +13,30 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 13 (v1.20) — 2026-06-17
+
+## [2026-06-17] v1.20 — Nav Swap + Bug Fix Pembelian
+
+### UX: Bottom Nav — Model Nav Swap (index.html, frontend-only)
+- ✨ **Hapus panel `#nav-lain`** — tidak ada lagi overlay/block yang muncul di atas nav bar
+- ✨ **Nav swap model**: tap **···** → nav bar itu sendiri berubah isi jadi menu sekunder (← Back + Closing, Karyawan, Bayar, RAB, Subkon, Catatan). Tidak ada elemen tambahan, tinggi layar tidak berubah.
+- ✨ State `S.navLain` (boolean) mengontrol mode nav. `openLainnya()` set true, `closeLainnya()` set false, `go()` selalu reset ke false setelah navigasi.
+- 🧹 Hapus semua CSS `#nav-lain`, `#nav-lain-backdrop`, dan HTML `<div id="nav-lain">` dari file
+
+### Bug Fix #1 — Project Dropdown Reset Saat Input Pembelian
+- 🐛 **Root cause**: proyek dipilih dari DOM (`document.getElementById('beli-prj').value`) tanpa disimpan ke state. Setiap kali `go('beli')` dipanggil (misal `addBeliRow`, filter tanggal), seluruh form re-render dan pilihan proyek hilang.
+- ✅ **Fix**: tambah `S.formBeliProj` dan `S.formBeliTgl` ke state. Dropdown proyek punya `onchange="S.formBeliProj=this.value"` + `selected` dari state. `submitBeli()` baca dari state, bukan DOM. Reset state setelah simpan berhasil.
+
+### Bug Fix #2 — Date Range Input Hanya Bisa 1 Karakter
+- 🐛 **Root cause**: input tanggal filter (beli & absensi) pakai `oninput` yang langsung panggil `go('beli')`/`go('absensi')` → re-render per karakter → input terpotong tiap ketik.
+- ✅ **Fix**: ganti `oninput` → `onchange` pada semua date range input. `onchange` hanya fire saat field kehilangan fokus (selesai ketik), tidak per karakter. Fix berlaku di `beliLog()` dan `absLog()`.
+
+### File yang diubah
+- `arthabumi/index.html` — `buildNav()`, `openLainnya()`, `closeLainnya()`, `go()`, `beliInput()`, `beliLog()`, `absLog()`, `submitBeli()`, state `S`
+- Tidak ada perubahan backend/GSheet
+
+---
+
 # 🔧 SESSION 8 (v1.15) — 2026-06-09
 
 ## [2026-06-09] v1.15 — Log Per Toko + Kerja Tambah/Kurang + Cleanup

@@ -1,7 +1,7 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: 2026-06-16
-Versi kode saat ini: v1.19
+Terakhir diupdate: 2026-06-17
+Versi kode saat ini: v1.20
 
 ---
 
