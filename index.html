@@ -89,6 +89,32 @@ button{-webkit-appearance:none;font-family:inherit}
 .prog-bar{background:#e2e8f0;border-radius:99px;height:6px;overflow:hidden;margin-top:4px}
 .prog-fill{height:100%;border-radius:99px;transition:width .3s}
 .num-hint{font-size:10px;color:#94a3b8;margin-top:3px}
+/* ── Print Area (hidden on screen) ─────────────────────────────────── */
+#print-area{display:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;font-size:12px;line-height:1.5}
+.pr-header{text-align:center;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px}
+.pr-title{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.pr-sub{font-size:13px;color:#475569;margin-top:3px}
+.pr-date{font-size:10px;color:#94a3b8;margin-top:3px}
+.pr-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.pr-kpi-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px}
+.pr-kpi-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:2px}
+.pr-kpi-val{font-size:13px;font-weight:700}
+.pr-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:4px;margin-bottom:8px}
+.pr-table{width:100%;border-collapse:collapse;font-size:11px}
+.pr-table th{background:#f1f5f9;padding:5px 8px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;border:1px solid #e2e8f0;font-weight:700}
+.pr-table td{padding:4px 8px;border:1px solid #e2e8f0;vertical-align:top}
+.pr-table tfoot td{background:#f8fafc;font-size:11px}
+.pr-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pr-info-table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px}
+.pr-info-table td{padding:5px 9px;border:1px solid #e2e8f0}
+.pr-info-lbl{background:#f8fafc;font-weight:600;font-size:10px;color:#475569;width:130px}
+.pr-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media print{
+  #spl,#app,#toast,#overlay{display:none!important}
+  #print-area{display:block!important;padding:0}
+  html,body{height:auto!important;overflow:auto!important;background:#fff!important}
+  @page{margin:15mm}
+}
 </style>
 </head>
 <body>
@@ -354,6 +380,46 @@ function openSettings(){
       <strong>📥 Download / Export</strong><br>
       File → Download → Microsoft Excel (.xlsx)<br><br>
       <a href="https://drive.google.com" target="_blank" style="color:#1d4ed8;font-weight:600">🔗 Buka Google Drive</a>
+    </div>
+    <div style="height:1px;background:#f1f5f9;margin:12px 0"></div>
+    <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📤 Export & Cetak</div>
+    <div style="font-size:10.5px;font-weight:700;color:#10b981;margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">📊 Export Excel (.xlsx)</div>
+    <div style="margin-bottom:9px">
+      <div style="font-size:12px;color:#475569;margin-bottom:5px">Rekap semua proyek (2 sheet: data + ringkasan)</div>
+      <button class="btn btn-o btn-sm btn-w" onclick="exportRekapProyek()">⬇️ Download Excel — Rekap Semua Proyek</button>
+    </div>
+    <div style="margin-bottom:9px">
+      <div style="font-size:12px;color:#475569;margin-bottom:5px">Detail satu proyek (6 sheet: info, RAB, pembelian, upah, kasbon, variasi)</div>
+      <div style="display:flex;gap:6px">
+        <select class="fc" id="exp-kode-excel" style="font-size:13px;flex:1">
+          <option value="">-- Pilih Proyek --</option>
+          ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}
+        </select>
+        <button class="btn btn-o btn-sm" style="flex-shrink:0" onclick="exportDetailProyek(document.getElementById('exp-kode-excel').value)">⬇️ Download</button>
+      </div>
+    </div>
+    <div style="margin-bottom:13px">
+      <div style="font-size:12px;color:#475569;margin-bottom:5px">Rekap cash flow bulanan (pendapatan vs pengeluaran per bulan)</div>
+      <button class="btn btn-o btn-sm btn-w" onclick="exportCashFlow()">⬇️ Download Excel — Cash Flow Bulanan</button>
+    </div>
+    <div style="height:1px;background:#f0f9ff;margin:10px 0"></div>
+    <div style="font-size:10.5px;font-weight:700;color:#10b981;margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">🖨️ Cetak / Simpan PDF</div>
+    <div style="margin-bottom:9px">
+      <div style="font-size:12px;color:#475569;margin-bottom:5px">Laporan semua proyek — tabel lengkap dengan KPI</div>
+      <button class="btn btn-p btn-sm btn-w" onclick="printAllProyek()">🖨️ Cetak Laporan Semua Proyek</button>
+    </div>
+    <div style="margin-bottom:9px">
+      <div style="font-size:12px;color:#475569;margin-bottom:5px">Rekap detail satu proyek — RAB vs realisasi + pembayaran</div>
+      <div style="display:flex;gap:6px">
+        <select class="fc" id="exp-kode-pdf" style="font-size:13px;flex:1">
+          <option value="">-- Pilih Proyek --</option>
+          ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}
+        </select>
+        <button class="btn btn-p btn-sm" style="flex-shrink:0" onclick="printRekapProyek(document.getElementById('exp-kode-pdf').value)">🖨️ Cetak</button>
+      </div>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:10px 12px;font-size:11px;color:#1d4ed8;margin-bottom:12px">
+      💡 <strong>Tips PDF:</strong> Saat dialog cetak muncul → pilih <strong>Tujuan: Simpan sebagai PDF</strong> untuk menyimpan ke file. Di HP pilih <strong>Save to PDF</strong> atau gunakan tombol Share → Print.
     </div>
     <div style="height:1px;background:#f1f5f9;margin:12px 0"></div>
     <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📱 Pasang Sebagai App</div>
@@ -2706,6 +2772,407 @@ function subkonRekap(){
   }).filter(Boolean).join('');
   return header+(rows||'<div class="empty">Belum ada pekerjaan subkon</div>');
 }
+// ── EXPORT & CETAK ────────────────────────────────────────────────────
+
+// Lazy-load SheetJS dari CDN (cache oleh browser setelah load pertama)
+let _xlsxLoaded=false;
+function _loadXlsx(){
+  return new Promise((res,rej)=>{
+    if(_xlsxLoaded||window.XLSX){_xlsxLoaded=true;res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>{_xlsxLoaded=true;res();};
+    s.onerror=()=>rej(new Error('Gagal memuat library Excel. Pastikan ada koneksi internet saat pertama kali export.'));
+    document.head.appendChild(s);
+  });
+}
+function _dlFile(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+}
+const fNum=v=>Number(v)||0;
+
+// ─── EXPORT 1: Rekap Semua Proyek → Excel ─────────────────────────────
+async function exportRekapProyek(){
+  showToast('Menyiapkan Excel…','info');
+  try{await _loadXlsx();}catch(e){showToast(e.message,'err');return;}
+  const rows=S.projects.map(p=>{
+    const vs=vSum(p);
+    const mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+    const upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+    const subkon=S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+    const kb=calcKasbonForProj(p.kode);
+    const totalBiaya=mat+upah+subkon+kb.bonus;
+    const laba=vs.final-totalBiaya;
+    const bayar=S.logPembayaran.filter(b=>b.kodeProj===p.kode).reduce((s,b)=>s+(Number(b.nominal)||0),0);
+    return{
+      'Kode Proyek':p.kode,
+      'Nama Proyek':p.nama,
+      'Jenis':p.jenis||'-',
+      'Status':p.status,
+      'Nilai Kontrak Awal (Rp)':fNum(p.nilaiKontrak),
+      'Nilai Kontrak Final (Rp)':fNum(vs.final),
+      'Total Material (Rp)':fNum(mat),
+      'Total Upah (Rp)':fNum(upah),
+      'Total Subkon (Rp)':fNum(subkon),
+      'Kasbon Bonus (Rp)':fNum(kb.bonus),
+      'Total Biaya (Rp)':fNum(totalBiaya),
+      'Laba (Rp)':fNum(laba),
+      'Margin (%)':vs.final?parseFloat((laba/vs.final*100).toFixed(1)):0,
+      'Progress (%)':fNum(p.progress),
+      'Tanggal Mulai':p.tglMulai||'-',
+      'Total Pembayaran (Rp)':fNum(bayar),
+      'Piutang (Rp)':fNum(vs.final-bayar),
+      'Catatan':p.catatan||''
+    };
+  });
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:30},{wch:16},{wch:12},{wch:22},{wch:22},{wch:20},{wch:18},{wch:18},{wch:18},{wch:20},{wch:18},{wch:12},{wch:14},{wch:14},{wch:22},{wch:18},{wch:30}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Rekap Proyek');
+  // Sheet ringkasan
+  const tNk=rows.reduce((s,r)=>s+r['Nilai Kontrak Final (Rp)'],0);
+  const tBiaya=rows.reduce((s,r)=>s+r['Total Biaya (Rp)'],0);
+  const tLaba=rows.reduce((s,r)=>s+r['Laba (Rp)'],0);
+  const tBayar=rows.reduce((s,r)=>s+r['Total Pembayaran (Rp)'],0);
+  const sumWs=XLSX.utils.json_to_sheet([
+    {'Keterangan':'Jumlah Proyek','Nilai':rows.length},
+    {'Keterangan':'Total Nilai Kontrak Final (Rp)','Nilai':tNk},
+    {'Keterangan':'Total Biaya (Rp)','Nilai':tBiaya},
+    {'Keterangan':'Total Laba (Rp)','Nilai':tLaba},
+    {'Keterangan':'Margin Rata-rata (%)','Nilai':tNk?parseFloat((tLaba/tNk*100).toFixed(1)):0},
+    {'Keterangan':'Total Pembayaran Masuk (Rp)','Nilai':tBayar},
+    {'Keterangan':'Total Piutang (Rp)','Nilai':tNk-tBayar},
+    {'Keterangan':'Tanggal Export','Nilai':today()},
+  ]);
+  sumWs['!cols']=[{wch:32},{wch:22}];
+  XLSX.utils.book_append_sheet(wb,sumWs,'Ringkasan');
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+  _dlFile(new Blob([buf],{type:'application/octet-stream'}),`${S.companyName}_Rekap_Proyek_${today()}.xlsx`);
+  showToast('✅ Excel berhasil diunduh!');
+}
+
+// ─── EXPORT 2: Detail Satu Proyek → Excel (6 sheet) ──────────────────
+async function exportDetailProyek(kode){
+  if(!kode){showToast('Pilih proyek terlebih dahulu','err');return;}
+  const p=S.projects.find(x=>x.kode===kode);
+  if(!p){showToast('Proyek tidak ditemukan','err');return;}
+  showToast('Menyiapkan Excel…','info');
+  try{await _loadXlsx();}catch(e){showToast(e.message,'err');return;}
+  const wb=XLSX.utils.book_new();
+  const vs=vSum(p);
+  const mat=S.pembelian.filter(b=>b.kodeProj===kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+  const upah=S.logAbsensi.filter(a=>a.kodeProj===kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+  const kb=calcKasbonForProj(kode);
+  const totalBiaya=mat+upah+subkon+kb.bonus;
+  const laba=vs.final-totalBiaya;
+  const bayar=S.logPembayaran.filter(b=>b.kodeProj===kode).reduce((s,b)=>s+(Number(b.nominal)||0),0);
+  // Sheet 1: Info Proyek
+  const wsInfo=XLSX.utils.json_to_sheet([
+    {Keterangan:'Kode Proyek',Nilai:p.kode},
+    {Keterangan:'Nama Proyek',Nilai:p.nama},
+    {Keterangan:'Jenis',Nilai:p.jenis||'-'},
+    {Keterangan:'Status',Nilai:p.status},
+    {Keterangan:'Tanggal Mulai',Nilai:p.tglMulai||'-'},
+    {Keterangan:'Progress (%)',Nilai:fNum(p.progress)},
+    {Keterangan:'Nilai Kontrak Awal (Rp)',Nilai:fNum(p.nilaiKontrak)},
+    {Keterangan:'Nilai Kontrak Final (Rp)',Nilai:fNum(vs.final)},
+    {Keterangan:'Total Material (Rp)',Nilai:fNum(mat)},
+    {Keterangan:'Total Upah (Rp)',Nilai:fNum(upah)},
+    {Keterangan:'Total Subkon (Rp)',Nilai:fNum(subkon)},
+    {Keterangan:'Kasbon Bonus (Rp)',Nilai:fNum(kb.bonus)},
+    {Keterangan:'Total Biaya (Rp)',Nilai:fNum(totalBiaya)},
+    {Keterangan:'Laba (Rp)',Nilai:fNum(laba)},
+    {Keterangan:'Margin (%)',Nilai:vs.final?parseFloat((laba/vs.final*100).toFixed(1)):0},
+    {Keterangan:'Total Pembayaran (Rp)',Nilai:fNum(bayar)},
+    {Keterangan:'Piutang (Rp)',Nilai:fNum(vs.final-bayar)},
+    {Keterangan:'Catatan',Nilai:p.catatan||''},
+    {Keterangan:'Tanggal Export',Nilai:today()},
+  ]);
+  wsInfo['!cols']=[{wch:28},{wch:32}];
+  XLSX.utils.book_append_sheet(wb,wsInfo,'Info Proyek');
+  // Sheet 2: RAB
+  const rabProj=S.rab.filter(r=>r.kodeProj===kode);
+  const rabRows=rabProj.length?rabProj.map(r=>({
+    'Label Material':r.labelMat||'Material',
+    'Anggaran Material (Rp)':fNum(r.material),
+    'Label Upah':r.labelUpah||'Upah',
+    'Anggaran Upah (Rp)':fNum(r.upah),
+    'Label Subkon':r.labelSubkon||'Subkon',
+    'Anggaran Subkon (Rp)':fNum(r.subkon),
+    'Label Overhead':r.labelOverhead||'Overhead',
+    'Anggaran Overhead (Rp)':fNum(r.overhead),
+    'Total Anggaran (Rp)':fNum(r.material)+fNum(r.upah)+fNum(r.subkon)+fNum(r.overhead),
+    'Tanggal Update':r.tglUpdate||'-',
+  })):[{Keterangan:'Belum ada RAB untuk proyek ini'}];
+  const wsRAB=XLSX.utils.json_to_sheet(rabRows);
+  wsRAB['!cols']=[{wch:22},{wch:22},{wch:18},{wch:20},{wch:18},{wch:20},{wch:18},{wch:20},{wch:22},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsRAB,'RAB');
+  // Sheet 3: Log Pembelian
+  const beliData=S.pembelian.filter(b=>b.kodeProj===kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const beliRows=beliData.length?beliData.map(b=>({
+    'Tanggal':b.tgl||'-',
+    'Nama Barang':b.namaBarang||'-',
+    'Kategori':b.kategori||'-',
+    'Status Barang':b.status||'-',
+    'Toko':b.toko||'-',
+    'Quantity':fNum(b.qty),
+    'Satuan':b.satuan||'pcs',
+    'Harga Satuan (Rp)':fNum(b.harga),
+    'Diskon (Rp)':fNum(b.diskon),
+    'Total (Rp)':calcTotal(b),
+  })):[{Keterangan:'Belum ada pembelian untuk proyek ini'}];
+  const wsBeli=XLSX.utils.json_to_sheet(beliRows);
+  wsBeli['!cols']=[{wch:12},{wch:30},{wch:14},{wch:14},{wch:20},{wch:10},{wch:10},{wch:18},{wch:14},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsBeli,'Log Pembelian');
+  // Sheet 4: Log Upah
+  const upahData=S.logAbsensi.filter(a=>a.kodeProj===kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const upahRows=upahData.length?upahData.map(a=>({
+    'Tanggal':a.tgl||'-',
+    'Nama Karyawan':a.nama||a.idKaryawan||'-',
+    'Status Kehadiran':a.status||'-',
+    'Upah Hari Ini (Rp)':fNum(a.upahHariIni),
+    'Jam Lembur':fNum(a.jamLembur),
+    'Upah Lembur (Rp)':fNum(a.upahLembur),
+    'Status Bayar':a.statusBayar||'-',
+    'No. Closing':a.noClosing||'-',
+  })):[{Keterangan:'Belum ada data absensi untuk proyek ini'}];
+  const wsUpah=XLSX.utils.json_to_sheet(upahRows);
+  wsUpah['!cols']=[{wch:12},{wch:24},{wch:18},{wch:18},{wch:12},{wch:18},{wch:14},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsUpah,'Log Upah');
+  // Sheet 5: Log Kasbon
+  const ksbData=S.logKasbon.filter(k=>k.kodeProj===kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const ksbRows=ksbData.length?ksbData.map(k=>({
+    'Tanggal':k.tgl||'-',
+    'Nama Karyawan':k.nama||k.idKaryawan||'-',
+    'Tipe':k.tipe||'-',
+    'Nominal (Rp)':fNum(k.nominal),
+    'Keterangan':k.ket||'-',
+    'No. Closing':k.noClosing||'-',
+  })):[{Keterangan:'Belum ada kasbon terkait proyek ini'}];
+  const wsKsb=XLSX.utils.json_to_sheet(ksbRows);
+  wsKsb['!cols']=[{wch:12},{wch:24},{wch:12},{wch:18},{wch:30},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsKsb,'Log Kasbon');
+  // Sheet 6: Variasi Kerja (jika ada)
+  const varData=p.variasi||[];
+  if(varData.length){
+    const wsVar=XLSX.utils.json_to_sheet(varData.map(v=>({
+      'Tanggal':v.tgl||'-',
+      'Jenis':v.jenis==='tambah'?'Kerja Tambah':'Kerja Kurang',
+      'Nominal (Rp)':fNum(v.nominal),
+      'Catatan':v.catatan||'-',
+    })));
+    wsVar['!cols']=[{wch:12},{wch:16},{wch:18},{wch:30}];
+    XLSX.utils.book_append_sheet(wb,wsVar,'Variasi Kerja');
+  }
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+  _dlFile(new Blob([buf],{type:'application/octet-stream'}),`${S.companyName}_Detail_${kode}_${today()}.xlsx`);
+  showToast('✅ Excel berhasil diunduh!');
+}
+
+// ─── EXPORT 3: Rekap Cash Flow Bulanan → Excel ────────────────────────
+async function exportCashFlow(){
+  showToast('Menyiapkan Excel…','info');
+  try{await _loadXlsx();}catch(e){showToast(e.message,'err');return;}
+  const monthly={};
+  const addM=(tgl,cat,val)=>{
+    if(!tgl)return;
+    const m=String(tgl).substring(0,7);
+    if(!monthly[m])monthly[m]={material:0,upah:0,subkon:0,pembayaran:0,bonus:0};
+    monthly[m][cat]=(monthly[m][cat]||0)+(Number(val)||0);
+  };
+  S.pembelian.filter(b=>b.status!=='ASET').forEach(b=>addM(b.tgl,'material',calcTotal(b)));
+  S.logAbsensi.forEach(a=>addM(a.tgl,'upah',Number(a.upahHariIni)||0));
+  S.logSubkon.forEach(ls=>addM(ls.tgl,'subkon',Number(ls.nilaiKontrak)||0));
+  S.logPembayaran.forEach(b=>addM(b.tgl,'pembayaran',Number(b.nominal)||0));
+  S.logKasbon.filter(k=>k.tipe==='BONUS').forEach(k=>addM(k.tgl,'bonus',Number(k.nominal)||0));
+  const BULAN=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const months=Object.keys(monthly).sort();
+  const cfRows=months.map(m=>{
+    const d=monthly[m];
+    const tBiaya=d.material+d.upah+d.subkon+d.bonus;
+    const[y,mo]=m.split('-');
+    return{
+      'Bulan':`${BULAN[parseInt(mo)]} ${y}`,
+      'Pendapatan / Pembayaran Masuk (Rp)':fNum(d.pembayaran),
+      'Biaya Material (Rp)':fNum(d.material),
+      'Biaya Upah (Rp)':fNum(d.upah),
+      'Biaya Subkon (Rp)':fNum(d.subkon),
+      'Kasbon Bonus (Rp)':fNum(d.bonus),
+      'Total Pengeluaran (Rp)':fNum(tBiaya),
+      'Surplus / Defisit (Rp)':fNum(d.pembayaran-tBiaya),
+    };
+  });
+  if(cfRows.length){
+    cfRows.push({
+      'Bulan':'TOTAL',
+      'Pendapatan / Pembayaran Masuk (Rp)':cfRows.reduce((s,r)=>s+r['Pendapatan / Pembayaran Masuk (Rp)'],0),
+      'Biaya Material (Rp)':cfRows.reduce((s,r)=>s+r['Biaya Material (Rp)'],0),
+      'Biaya Upah (Rp)':cfRows.reduce((s,r)=>s+r['Biaya Upah (Rp)'],0),
+      'Biaya Subkon (Rp)':cfRows.reduce((s,r)=>s+r['Biaya Subkon (Rp)'],0),
+      'Kasbon Bonus (Rp)':cfRows.reduce((s,r)=>s+r['Kasbon Bonus (Rp)'],0),
+      'Total Pengeluaran (Rp)':cfRows.reduce((s,r)=>s+r['Total Pengeluaran (Rp)'],0),
+      'Surplus / Defisit (Rp)':cfRows.reduce((s,r)=>s+r['Surplus / Defisit (Rp)'],0),
+    });
+  }
+  const ws=XLSX.utils.json_to_sheet(cfRows.length?cfRows:[{Keterangan:'Belum ada data transaksi'}]);
+  ws['!cols']=[{wch:20},{wch:30},{wch:22},{wch:20},{wch:20},{wch:18},{wch:24},{wch:24}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Cash Flow Bulanan');
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+  _dlFile(new Blob([buf],{type:'application/octet-stream'}),`${S.companyName}_CashFlow_${today()}.xlsx`);
+  showToast('✅ Excel berhasil diunduh!');
+}
+
+// ─── PRINT 1: Laporan Semua Proyek → PDF ──────────────────────────────
+function printAllProyek(){
+  const rows=S.projects.map(p=>{
+    const vs=vSum(p);
+    const mat=S.pembelian.filter(b=>b.kodeProj===p.kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+    const upah=S.logAbsensi.filter(a=>a.kodeProj===p.kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+    const subkon=S.logSubkon.filter(ls=>ls.kodeProj===p.kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+    const kb=calcKasbonForProj(p.kode);
+    const tBiaya=mat+upah+subkon+kb.bonus;
+    const laba=vs.final-tBiaya;
+    const bayar=S.logPembayaran.filter(b=>b.kodeProj===p.kode).reduce((s,b)=>s+(Number(b.nominal)||0),0);
+    return{p,vs,mat,upah,subkon,kb,tBiaya,laba,bayar};
+  });
+  const tNk=rows.reduce((s,r)=>s+r.vs.final,0);
+  const tBiayaAll=rows.reduce((s,r)=>s+r.tBiaya,0);
+  const tLaba=rows.reduce((s,r)=>s+r.laba,0);
+  const tBayar=rows.reduce((s,r)=>s+r.bayar,0);
+  const stColor=s=>({Berjalan:'#1d4ed8',Selesai:'#15803d',Hold:'#b45309',Batal:'#b91c1c'}[s]||'#475569');
+  document.getElementById('print-area').innerHTML=`
+    <div class="pr-header">
+      <div class="pr-title">${esc(S.companyName)}</div>
+      <div class="pr-sub">Laporan Rekap Semua Proyek</div>
+      <div class="pr-date">Dicetak: ${fDate(today())}</div>
+    </div>
+    <div class="pr-kpi">
+      <div class="pr-kpi-item"><div class="pr-kpi-lbl">Total Nilai Kontrak</div><div class="pr-kpi-val">${fRp(tNk)}</div></div>
+      <div class="pr-kpi-item"><div class="pr-kpi-lbl">Total Biaya</div><div class="pr-kpi-val">${fRp(tBiayaAll)}</div></div>
+      <div class="pr-kpi-item"><div class="pr-kpi-lbl">Total Laba</div><div class="pr-kpi-val" style="color:#15803d">${fRp(tLaba)}</div></div>
+      <div class="pr-kpi-item"><div class="pr-kpi-lbl">Pembayaran Masuk</div><div class="pr-kpi-val">${fRp(tBayar)}</div></div>
+    </div>
+    <div class="pr-section-title">Daftar Proyek</div>
+    <table class="pr-table">
+      <thead><tr><th>Kode</th><th>Nama Proyek</th><th>Jenis</th><th>Status</th><th class="pr-num">Nilai Kontrak</th><th class="pr-num">Total Biaya</th><th class="pr-num">Laba</th><th class="pr-num">Margin</th><th class="pr-num">Progress</th><th class="pr-num">Piutang</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${esc(r.p.kode)}</td>
+        <td>${esc(r.p.nama)}</td>
+        <td>${esc(r.p.jenis||'-')}</td>
+        <td style="color:${stColor(r.p.status)};font-weight:600">${esc(r.p.status)}</td>
+        <td class="pr-num">${fRp(r.vs.final)}</td>
+        <td class="pr-num">${fRp(r.tBiaya)}</td>
+        <td class="pr-num" style="color:${r.laba>=0?'#15803d':'#dc2626'}">${fRp(r.laba)}</td>
+        <td class="pr-num">${r.vs.final?((r.laba/r.vs.final)*100).toFixed(1):0}%</td>
+        <td class="pr-num">${r.p.progress||0}%</td>
+        <td class="pr-num" style="color:${(r.vs.final-r.bayar)>0?'#dc2626':'#15803d'}">${fRp(r.vs.final-r.bayar)}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr>
+        <td colspan="4"><strong>TOTAL (${rows.length} proyek)</strong></td>
+        <td class="pr-num"><strong>${fRp(tNk)}</strong></td>
+        <td class="pr-num"><strong>${fRp(tBiayaAll)}</strong></td>
+        <td class="pr-num" style="color:${tLaba>=0?'#15803d':'#dc2626'}"><strong>${fRp(tLaba)}</strong></td>
+        <td class="pr-num"><strong>${tNk?((tLaba/tNk)*100).toFixed(1):0}%</strong></td>
+        <td></td>
+        <td class="pr-num" style="color:${(tNk-tBayar)>0?'#dc2626':'#15803d'}"><strong>${fRp(tNk-tBayar)}</strong></td>
+      </tr></tfoot>
+    </table>`;
+  closeModal();setTimeout(()=>window.print(),150);
+}
+
+// ─── PRINT 2: Rekap Detail Satu Proyek → PDF ──────────────────────────
+function printRekapProyek(kode){
+  if(!kode){showToast('Pilih proyek terlebih dahulu','err');return;}
+  const p=S.projects.find(x=>x.kode===kode);
+  if(!p){showToast('Proyek tidak ditemukan','err');return;}
+  const vs=vSum(p);
+  const mat=S.pembelian.filter(b=>b.kodeProj===kode&&b.status!=='ASET').reduce((s,b)=>s+calcTotal(b),0);
+  const upah=S.logAbsensi.filter(a=>a.kodeProj===kode).reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const subkon=S.logSubkon.filter(ls=>ls.kodeProj===kode).reduce((s,ls)=>s+(Number(ls.nilaiKontrak)||0),0);
+  const kb=calcKasbonForProj(kode);
+  const totalBiaya=mat+upah+subkon+kb.bonus;
+  const laba=vs.final-totalBiaya;
+  const margin=vs.final?(laba/vs.final*100).toFixed(1):0;
+  const bayar=S.logPembayaran.filter(b=>b.kodeProj===kode).reduce((s,b)=>s+(Number(b.nominal)||0),0);
+  const piutang=vs.final-bayar;
+  const rabProj=S.rab.find(r=>r.kodeProj===kode);
+  const rabTotal=rabProj?(fNum(rabProj.material)+fNum(rabProj.upah)+fNum(rabProj.subkon)+fNum(rabProj.overhead)):0;
+  const bayarLog=[...S.logPembayaran].filter(b=>b.kodeProj===kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  const varRows=p.variasi||[];
+  const progColor=(p.progress||0)>=75?'#15803d':(p.progress||0)>=50?'#d97706':'#dc2626';
+  document.getElementById('print-area').innerHTML=`
+    <div class="pr-header">
+      <div class="pr-title">${esc(S.companyName)}</div>
+      <div class="pr-sub">Rekap Proyek — ${esc(p.nama)}</div>
+      <div class="pr-date">Dicetak: ${fDate(today())}</div>
+    </div>
+    <div class="pr-section-title">Informasi Proyek</div>
+    <table class="pr-info-table">
+      <tr><td class="pr-info-lbl">Kode Proyek</td><td>${esc(p.kode)}</td><td class="pr-info-lbl">Status</td><td><strong>${esc(p.status)}</strong></td></tr>
+      <tr><td class="pr-info-lbl">Nama Proyek</td><td colspan="3"><strong>${esc(p.nama)}</strong></td></tr>
+      <tr><td class="pr-info-lbl">Jenis</td><td>${esc(p.jenis||'-')}</td><td class="pr-info-lbl">Tanggal Mulai</td><td>${fDate(p.tglMulai)}</td></tr>
+      <tr><td class="pr-info-lbl">Progress</td><td colspan="3">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px">
+            <div style="background:${progColor};width:${p.progress||0}%;height:100%;border-radius:4px"></div>
+          </div>
+          <strong style="color:${progColor}">${p.progress||0}%</strong>
+        </div>
+      </td></tr>
+      ${p.catatan?`<tr><td class="pr-info-lbl">Catatan</td><td colspan="3">${esc(p.catatan)}</td></tr>`:''}
+    </table>
+    <div class="pr-section-title" style="margin-top:14px">Ringkasan Keuangan (RAB vs Realisasi)</div>
+    <table class="pr-table">
+      <thead><tr><th>Komponen</th><th class="pr-num">Anggaran RAB (Rp)</th><th class="pr-num">Realisasi (Rp)</th><th class="pr-num">Selisih (Rp)</th></tr></thead>
+      <tbody>
+        <tr><td>Nilai Kontrak</td><td class="pr-num">${fRp(p.nilaiKontrak)}</td><td class="pr-num">${fRp(vs.final)}</td><td class="pr-num" style="color:${vs.final>=p.nilaiKontrak?'#15803d':'#dc2626'}">${fRp(vs.final-p.nilaiKontrak)}</td></tr>
+        <tr><td>— ${esc(rabProj?.labelMat||'Material')}</td><td class="pr-num">${fRp(rabProj?.material||0)}</td><td class="pr-num">${fRp(mat)}</td><td class="pr-num" style="color:${mat<=(rabProj?.material||0)?'#15803d':'#dc2626'}">${fRp(mat-(rabProj?.material||0))}</td></tr>
+        <tr><td>— ${esc(rabProj?.labelUpah||'Upah')}</td><td class="pr-num">${fRp(rabProj?.upah||0)}</td><td class="pr-num">${fRp(upah)}</td><td class="pr-num" style="color:${upah<=(rabProj?.upah||0)?'#15803d':'#dc2626'}">${fRp(upah-(rabProj?.upah||0))}</td></tr>
+        <tr><td>— ${esc(rabProj?.labelSubkon||'Subkon')}</td><td class="pr-num">${fRp(rabProj?.subkon||0)}</td><td class="pr-num">${fRp(subkon)}</td><td class="pr-num" style="color:${subkon<=(rabProj?.subkon||0)?'#15803d':'#dc2626'}">${fRp(subkon-(rabProj?.subkon||0))}</td></tr>
+        <tr><td>— ${esc(rabProj?.labelOverhead||'Overhead')}</td><td class="pr-num">${fRp(rabProj?.overhead||0)}</td><td class="pr-num">—</td><td class="pr-num">—</td></tr>
+        <tr><td>— Kasbon Bonus</td><td class="pr-num">—</td><td class="pr-num">${fRp(kb.bonus)}</td><td class="pr-num">—</td></tr>
+        <tr style="background:#f8fafc;font-weight:700"><td>Total Biaya</td><td class="pr-num">${fRp(rabTotal)}</td><td class="pr-num">${fRp(totalBiaya)}</td><td class="pr-num" style="color:${totalBiaya<=rabTotal?'#15803d':'#dc2626'}">${fRp(totalBiaya-rabTotal)}</td></tr>
+        <tr style="background:#f0fdf4;font-weight:700"><td>Laba / Rugi</td><td class="pr-num">—</td><td class="pr-num" style="color:${laba>=0?'#15803d':'#dc2626'}">${fRp(laba)}</td><td class="pr-num">${margin}%</td></tr>
+      </tbody>
+    </table>
+    <div class="pr-two-col" style="margin-top:14px">
+      <div>
+        <div class="pr-section-title">Pembayaran Masuk</div>
+        <table class="pr-table">
+          <thead><tr><th>Tanggal</th><th>Metode</th><th class="pr-num">Nominal (Rp)</th></tr></thead>
+          <tbody>${bayarLog.length?bayarLog.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.metode||'-')}</td><td class="pr-num">${fRp(b.nominal)}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#94a3b8;font-style:italic">Belum ada pembayaran</td></tr>'}</tbody>
+          <tfoot>
+            <tr><td colspan="2"><strong>Total Diterima</strong></td><td class="pr-num"><strong>${fRp(bayar)}</strong></td></tr>
+            <tr><td colspan="2">Piutang</td><td class="pr-num" style="color:${piutang>0?'#dc2626':'#15803d'}"><strong>${fRp(piutang)}</strong></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      ${varRows.length?`<div>
+        <div class="pr-section-title">Variasi Kerja Tambah / Kurang</div>
+        <table class="pr-table">
+          <thead><tr><th>Tanggal</th><th>Jenis</th><th class="pr-num">Nominal (Rp)</th></tr></thead>
+          <tbody>${varRows.map(v=>`<tr><td>${fDate(v.tgl)}</td><td style="color:${v.jenis==='tambah'?'#15803d':'#dc2626'};font-weight:600">${v.jenis==='tambah'?'Tambah':'Kurang'}</td><td class="pr-num">${fRp(v.nominal)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td colspan="2"><strong>Net Variasi</strong></td><td class="pr-num" style="color:${vs.tambah-vs.kurang>=0?'#15803d':'#dc2626'}"><strong>${fRp(vs.tambah-vs.kurang)}</strong></td></tr></tfoot>
+        </table>
+      </div>`:`<div>
+        <div class="pr-section-title">Informasi Kasbon</div>
+        <table class="pr-table">
+          <thead><tr><th>Tipe</th><th class="pr-num">Nominal (Rp)</th></tr></thead>
+          <tbody>
+            <tr><td>Kasbon Potong (info)</td><td class="pr-num">${fRp(kb.potong)}</td></tr>
+            <tr><td>Kasbon Bonus (biaya proyek)</td><td class="pr-num">${fRp(kb.bonus)}</td></tr>
+          </tbody>
+        </table>
+      </div>`}
+    </div>`;
+  closeModal();setTimeout(()=>window.print(),150);
+}
+
 // ── Tab helper
 function setTab(page,tab){S.tab[page]=tab;go(page);}
 // ── Init
@@ -2731,5 +3198,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   }catch(e){}
 });
 </script>
+<div id="print-area"></div>
 </body>
 </html>
