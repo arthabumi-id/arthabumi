@@ -123,7 +123,7 @@ button{-webkit-appearance:none;font-family:inherit}
 'use strict';
 // ARTHABUMI v1.11 - Cashflow per Project + Single Shop Name + Confirmation Modal + Date Filter
 const S={
-  page:'dashboard',tab:{},navLain:false,
+  page:'dashboard',tab:{},navLain:false,formBeliProj:'',formBeliTgl:'',
   projects:[],pembelian:[],karyawan:[],
   logAbsensi:[],logKasbon:[],logPembayaran:[],
   masterBarang:[],masterToko:[],
@@ -1054,9 +1054,10 @@ function pgBeli(){
 }
 function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
+  if(!S.formBeliTgl)S.formBeliTgl=today();
   const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
   const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
-  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${S.formBeliProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const currentShop=S.formItems[0]?.toko||'';
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
     <div class="row" style="margin-bottom:8px">
@@ -1085,8 +1086,8 @@ function beliInput(){
   return `<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
     <button class="btn btn-o btn-sm" onclick="openPasteBeli()">📋 Paste Daftar</button></div>
   <div class="card">
-    <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${today()}"></div>
-    <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj">${prjOpts}</select></div></div>
+    <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${S.formBeliTgl}" onchange="S.formBeliTgl=this.value"></div>
+    <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj" onchange="S.formBeliProj=this.value">${prjOpts}</select></div></div>
     <div class="fg"><label class="fl">🏢 Nama Toko (untuk semua item)</label>
       <input class="fc" list="tk-dl" id="beli-toko" value="${esc(currentShop)}" placeholder="Pilih toko" oninput="S.formItems.forEach(x=>x.toko=this.value)">
       <datalist id="tk-dl">${tk}</datalist></div>
@@ -1139,11 +1140,11 @@ function beliLog(){
     </div>
     <div id="beli-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
       <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" oninput="S.tab.beliDateFrom=this.value;go('beli')">
+      <input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;go('beli')">
     </div>
     <div id="beli-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
       <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" oninput="S.tab.beliDateTo=this.value;go('beli')">
+      <input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;go('beli')">
     </div>
     </div>`;
   const all=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
@@ -1282,13 +1283,14 @@ function executeBeli(){
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
   showToast('✅ '+newItems.length+' item disimpan');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
+  S.formBeliProj='';S.formBeliTgl=today();
   setTab('beli','log');
   closeModal();
   doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
 }
 function submitBeli(){
-  const tgl=document.getElementById('beli-tgl').value;
-  const kodeProj=document.getElementById('beli-prj').value;
+  const tgl=S.formBeliTgl||today();
+  const kodeProj=S.formBeliProj;
   if(!kodeProj){showToast('Pilih proyek','err');return;}
   if(S.formItems.some(it=>!it.namaBarang||!it.harga)){showToast('Lengkapi nama & harga','err');return;}
   // Sinkron toko dari global input ke semua item (fix: item baru yg ditambah setelah toko diketik)
@@ -1551,11 +1553,11 @@ function absLog(){
     </div>
     <div id="abs-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
       <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" oninput="S.tab.absDateFrom=this.value;go('absensi')">
+      <input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;go('absensi')">
     </div>
     <div id="abs-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
       <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" oninput="S.tab.absDateTo=this.value;go('absensi')">
+      <input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;go('absensi')">
     </div>
     </div>`;
   const all=[...S.logAbsensi].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
