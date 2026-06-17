@@ -3685,9 +3685,33 @@ function printRekapProyek(kode){
       {label:'Anggaran RAB (ribu Rp)',data:${rabAnggaran}.map(v=>Math.round(v/1000)),backgroundColor:'rgba(46,117,182,.65)',borderRadius:4},
       {label:'Realisasi (ribu Rp)',data:${rabRealisasi},backgroundColor:'rgba(198,40,40,.65)',borderRadius:4}
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{y:{ticks:{font:{size:10}}}}}});
-    new Chart(document.getElementById('compChart'),{type:'doughnut',data:{labels:['Material','Upah','Subkon','Kasbon Bonus'],datasets:[{data:[${Math.round(mat/1000)},${Math.round(upah/1000)},${Math.round(subkon/1000)},${Math.round(kb.bonus/1000)}],backgroundColor:['#1F4E79','#2E75B6','#42A5F5','#90CAF9'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}});`;
+    new Chart(document.getElementById('compChart'),{type:'doughnut',data:{labels:['Material','Upah','Subkon','Kasbon Bonus'],datasets:[{data:[${Math.round(mat/1000)},${Math.round(upah/1000)},${Math.round(subkon/1000)},${Math.round(kb.bonus/1000)}],backgroundColor:['#1F4E79','#2E75B6','#ED7D31','#F4B942']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}},tooltip:{callbacks:{label:ctx=>ctx.label+': Rp '+(ctx.parsed*1000).toLocaleString('id-ID')}}}}}}});
+  `;
   closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html,chartScripts);
 }
+// ── Tab helper
+function setTab(page,tab){S.tab[page]=tab;go(page);}
+// ── Init
+window.addEventListener('DOMContentLoaded',async()=>{
+  loadLocal();
+  S.webAppUrl=sg(KS.url,'');S.pollInterval=Number(sg(KS.poll,60))||60;
+  const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
+  const sn=document.getElementById('spl-name');if(sn)sn.textContent=S.companyName;
+  document.title=S.companyName;
+  go('dashboard');
+  document.getElementById('nav').innerHTML=buildNav();
+  setTimeout(()=>{const spl=document.getElementById('spl');if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}},300);
+  updateSyncBadge();
+  if(S.webAppUrl){await doFetch();startPoll();}
+  try{
+    const mf={name:S.companyName,short_name:S.companyName.split(' ')[0],description:'Sistem Manajemen Proyek Kontraktor',start_url:'.',display:'standalone',background_color:'#0f172a',theme_color:'#0f172a',icons:[{src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjI1NiIgeT0iMzMwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzEwYjk4MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUI8L3RleHQ+PC9zdmc+',sizes:'512x512',type:'image/svg+xml'}]};
+    const blob=new Blob([JSON.stringify(mf)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('link');link.rel='manifest';link.href=url;
+    document.head.appendChild(link);
+  }catch(e){}
+});
+
 </script>
 </body>
 </html>
