@@ -3434,53 +3434,51 @@ function printAllProyek(){
             <td class="r" style="color:${(r.vs.final-r.bayar)>0?'#C62828':'#1B5E20'}">${fRp(r.vs.final-r.bayar)}</td>
           </tr>
           <tr class="detail-row"><td colspan="10"><div class="detail-inner">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
-              <div>
-                <div style="font-size:10px;font-weight:700;color:#1F4E79;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Biaya</div>
-                <table>
-                  <thead><tr><th>Komponen</th><th class="r">Jumlah (Rp)</th><th class="r">%</th></tr></thead>
-                  <tbody>
-                    <tr class="acc-row2"><td>Material (${S.pembelian.filter(b=>b.kodeProj===r.p.kode&&b.status!=='ASET').length} item)</td><td class="r">${fRp(r.mat)}</td><td class="r">${r.tBiaya?((r.mat/r.tBiaya)*100).toFixed(0):0}%</td></tr>
-                    <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
-                      <table>
-                        <thead><tr><th>Tgl</th><th>Barang</th><th>Kategori</th><th>Toko</th><th class="r">Qty</th><th class="r">Total (Rp)</th></tr></thead>
-                        <tbody>${(()=>{const beli=[...S.pembelian].filter(b=>b.kodeProj===r.p.kode&&b.status!=='ASET').sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return beli.length?beli.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.namaBarang)}</td><td>${esc(b.kategori||'-')}</td><td>${esc(b.toko||'-')}</td><td class="r">${fNum(b.qty)} ${b.satuan||''}</td><td class="r">${fRp(calcTotal(b))}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
-                        <tfoot><tr><td colspan="5"><strong>Total Material</strong></td><td class="r"><strong>${fRp(r.mat)}</strong></td></tr></tfoot>
-                      </table>
-                    </div></td></tr>
-                    <tr class="acc-row2"><td>Upah (${S.logAbsensi.filter(a=>a.kodeProj===r.p.kode).length} hari)</td><td class="r">${fRp(r.upah)}</td><td class="r">${r.tBiaya?((r.upah/r.tBiaya)*100).toFixed(0):0}%</td></tr>
-                    <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
-                      <table>
-                        <thead><tr><th>Tgl</th><th>Nama</th><th>Status</th><th class="r">Upah (Rp)</th><th class="r">Lembur (Rp)</th></tr></thead>
-                        <tbody>${(()=>{const abs=[...S.logAbsensi].filter(a=>a.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return abs.length?abs.map(a=>`<tr><td>${fDate(a.tgl)}</td><td>${esc(a.nama||a.idKaryawan||'-')}</td><td>${esc(a.status||'-')}</td><td class="r">${fRp(a.upahHariIni)}</td><td class="r">${a.upahLembur?fRp(a.upahLembur):'-'}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
-                        <tfoot><tr><td colspan="3"><strong>Total Upah</strong></td><td class="r"><strong>${fRp(r.upah)}</strong></td><td></td></tr></tfoot>
-                      </table>
-                    </div></td></tr>
-                    <tr class="acc-row2"><td>Subkon (${S.logSubkon.filter(ls=>ls.kodeProj===r.p.kode).length} item)</td><td class="r">${fRp(r.subkon)}</td><td class="r">${r.tBiaya?((r.subkon/r.tBiaya)*100).toFixed(0):0}%</td></tr>
-                    <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
-                      <table>
-                        <thead><tr><th>Tgl</th><th>Nama Subkon</th><th>Pekerjaan</th><th class="r">Nilai (Rp)</th></tr></thead>
-                        <tbody>${(()=>{const sk=[...S.logSubkon].filter(ls=>ls.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return sk.length?sk.map(ls=>{const sub=S.subkon&&S.subkon.find(s=>s.id===ls.idSubkon);return`<tr><td>${fDate(ls.tgl)}</td><td>${esc(sub?sub.nama:ls.idSubkon||'-')}</td><td>${esc(ls.pekerjaan||'-')}</td><td class="r">${fRp(ls.nilaiKontrak)}</td></tr>`}).join(''):'<tr><td colspan="4" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
-                        <tfoot><tr><td colspan="3"><strong>Total Subkon</strong></td><td class="r"><strong>${fRp(r.subkon)}</strong></td></tr></tfoot>
-                      </table>
-                    </div></td></tr>
-                    <tr><td>Kasbon Bonus</td><td class="r">${fRp(r.kb.bonus)}</td><td class="r">${r.tBiaya?((r.kb.bonus/r.tBiaya)*100).toFixed(0):0}%</td></tr>
-                  </tbody>
-                  <tfoot><tr><td><strong>Total Biaya</strong></td><td class="r"><strong>${fRp(r.tBiaya)}</strong></td><td class="r"><strong>100%</strong></td></tr></tfoot>
-                </table>
-              </div>
-              <div>
-                <div style="font-size:10px;font-weight:700;color:#1F4E79;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Pembayaran Masuk</div>
-                <table>
-                  <thead><tr><th>Tgl</th><th>Metode</th><th class="r">Nominal (Rp)</th></tr></thead>
-                  <tbody>${(()=>{const pays=[...S.logPembayaran].filter(b=>b.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return pays.length?pays.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.metode||'-')}</td><td class="r">${fRp(b.nominal)}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
-                  <tfoot>
-                    <tr><td colspan="2"><strong>Diterima</strong></td><td class="r"><strong>${fRp(r.bayar)}</strong></td></tr>
-                    <tr><td colspan="2">Piutang</td><td class="r" style="color:${(r.vs.final-r.bayar)>0?'#C62828':'#1B5E20'}"><strong>${fRp(r.vs.final-r.bayar)}</strong></td></tr>
-                  </tfoot>
-                </table>
-                ${r.p.catatan?`<div style="margin-top:10px;font-size:11px;color:#475569;background:#FFF9C4;padding:6px 10px;border-radius:6px;border-left:3px solid #F59E0B"><strong>📝 Catatan:</strong> ${esc(r.p.catatan)}</div>`:''}
-              </div>
+            <div style="margin-bottom:10px">
+              <div style="font-size:10px;font-weight:700;color:#1F4E79;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Ringkasan Biaya</div>
+              <table>
+                <thead><tr><th>Komponen</th><th class="r">Jumlah (Rp)</th><th class="r">%</th></tr></thead>
+                <tbody>
+                  <tr class="acc-row2"><td>Material (${S.pembelian.filter(b=>b.kodeProj===r.p.kode&&b.status!=='ASET').length} item)</td><td class="r">${fRp(r.mat)}</td><td class="r">${r.tBiaya?((r.mat/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                  <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
+                    <table>
+                      <thead><tr><th>Tgl</th><th>Barang</th><th>Kategori</th><th>Toko</th><th class="r">Qty</th><th class="r">Total (Rp)</th></tr></thead>
+                      <tbody>${(()=>{const beli=[...S.pembelian].filter(b=>b.kodeProj===r.p.kode&&b.status!=='ASET').sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return beli.length?beli.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.namaBarang)}</td><td>${esc(b.kategori||'-')}</td><td>${esc(b.toko||'-')}</td><td class="r">${fNum(b.qty)} ${b.satuan||''}</td><td class="r">${fRp(calcTotal(b))}</td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                      <tfoot><tr><td colspan="5"><strong>Total Material</strong></td><td class="r"><strong>${fRp(r.mat)}</strong></td></tr></tfoot>
+                    </table>
+                  </div></td></tr>
+                  <tr class="acc-row2"><td>Upah (${S.logAbsensi.filter(a=>a.kodeProj===r.p.kode).length} hari)</td><td class="r">${fRp(r.upah)}</td><td class="r">${r.tBiaya?((r.upah/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                  <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
+                    <table>
+                      <thead><tr><th>Tgl</th><th>Nama</th><th>Status</th><th class="r">Upah (Rp)</th><th class="r">Lembur (Rp)</th></tr></thead>
+                      <tbody>${(()=>{const abs=[...S.logAbsensi].filter(a=>a.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return abs.length?abs.map(a=>`<tr><td>${fDate(a.tgl)}</td><td>${esc(a.nama||a.idKaryawan||'-')}</td><td>${esc(a.status||'-')}</td><td class="r">${fRp(a.upahHariIni)}</td><td class="r">${a.upahLembur?fRp(a.upahLembur):'-'}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                      <tfoot><tr><td colspan="3"><strong>Total Upah</strong></td><td class="r"><strong>${fRp(r.upah)}</strong></td><td></td></tr></tfoot>
+                    </table>
+                  </div></td></tr>
+                  <tr class="acc-row2"><td>Subkon (${S.logSubkon.filter(ls=>ls.kodeProj===r.p.kode).length} item)</td><td class="r">${fRp(r.subkon)}</td><td class="r">${r.tBiaya?((r.subkon/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                  <tr class="detail-row2"><td colspan="3"><div class="detail-inner2">
+                    <table>
+                      <thead><tr><th>Tgl</th><th>Nama Subkon</th><th>Pekerjaan</th><th class="r">Nilai (Rp)</th></tr></thead>
+                      <tbody>${(()=>{const sk=[...S.logSubkon].filter(ls=>ls.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return sk.length?sk.map(ls=>{const sub=S.masterSubkon&&S.masterSubkon.find(s=>s.id===ls.idSubkon);return`<tr><td>${fDate(ls.tgl)}</td><td>${esc(sub?sub.nama:(ls.namaSubkon||ls.idSubkon||'-'))}</td><td>${esc(ls.pekerjaan||ls.uraian||'-')}</td><td class="r">${fRp(ls.nilaiKontrak)}</td></tr>`}).join(''):'<tr><td colspan="4" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada</td></tr>';})()}</tbody>
+                      <tfoot><tr><td colspan="3"><strong>Total Subkon</strong></td><td class="r"><strong>${fRp(r.subkon)}</strong></td></tr></tfoot>
+                    </table>
+                  </div></td></tr>
+                  <tr><td>Kasbon Bonus</td><td class="r">${fRp(r.kb.bonus)}</td><td class="r">${r.tBiaya?((r.kb.bonus/r.tBiaya)*100).toFixed(0):0}%</td></tr>
+                </tbody>
+                <tfoot><tr><td><strong>Total Biaya</strong></td><td class="r"><strong>${fRp(r.tBiaya)}</strong></td><td class="r"><strong>100%</strong></td></tr></tfoot>
+              </table>
+            </div>
+            <div style="margin-bottom:10px">
+              <div style="font-size:10px;font-weight:700;color:#1F4E79;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Pembayaran Masuk</div>
+              <table>
+                <thead><tr><th>Tgl</th><th>Metode</th><th class="r">Nominal (Rp)</th></tr></thead>
+                <tbody>${(()=>{const pays=[...S.logPembayaran].filter(b=>b.kodeProj===r.p.kode).sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));return pays.length?pays.map(b=>`<tr><td>${fDate(b.tgl)}</td><td>${esc(b.metode||'-')}</td><td class="r">${fRp(b.nominal)}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;font-style:italic;color:#94a3b8">Belum ada pembayaran</td></tr>';})()}</tbody>
+                <tfoot>
+                  <tr><td colspan="2"><strong>Total Diterima</strong></td><td class="r"><strong>${fRp(r.bayar)}</strong></td></tr>
+                  <tr><td colspan="2">Piutang</td><td class="r" style="color:${(r.vs.final-r.bayar)>0?'#C62828':'#1B5E20'}"><strong>${fRp(r.vs.final-r.bayar)}</strong></td></tr>
+                </tfoot>
+              </table>
+              ${r.p.catatan?`<div style="margin-top:10px;font-size:11px;color:#475569;background:#FFF9C4;padding:6px 10px;border-radius:6px;border-left:3px solid #F59E0B"><strong>📝 Catatan:</strong> ${esc(r.p.catatan)}</div>`:''}
             </div>
             <div style="font-size:10px;color:#94a3b8;margin-top:4px">💡 Klik Material / Upah / Subkon untuk lihat transaksi detail</div>
           </div></td></tr>`).join('')}
