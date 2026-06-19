@@ -1214,11 +1214,11 @@ function beliLog(){
     </div>
     <div id="beli-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
       <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;go('beli')">
+      <input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;if(!this.value||this.value.length===10)go('beli')">
     </div>
     <div id="beli-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
       <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;go('beli')">
+      <input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;if(!this.value||this.value.length===10)go('beli')">
     </div>
     </div>`;
   const all=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
@@ -1627,11 +1627,11 @@ function absLog(){
     </div>
     <div id="abs-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
       <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;go('absensi')">
+      <input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;if(!this.value||this.value.length===10)go('absensi')">
     </div>
     <div id="abs-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
       <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;go('absensi')">
+      <input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;if(!this.value||this.value.length===10)go('absensi')">
     </div>
     </div>`;
   const all=[...S.logAbsensi].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
