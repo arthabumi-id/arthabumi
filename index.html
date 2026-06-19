@@ -216,9 +216,10 @@ async function gsFetch(url){
   }finally{clearTimeout(tid);}
 }
 async function gsWrite(url,action,data){
-  const ps=JSON.stringify(data);if(ps.length>7000)throw new Error('Data terlalu besar');
+  const ps=JSON.stringify(data);
+  if(ps.length>50000)throw new Error('Data terlalu besar (>50KB)');
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),15000);
+  const tid=setTimeout(()=>ctrl.abort(),45000); // 45 detik — GAS bisa cold-start lama
   try{
     const r=await fetch(url+'?action='+action+'&payload='+encodeURIComponent(ps)+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -252,7 +253,10 @@ async function doSync(action,payload){
   if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();
   showToast('🔄 Menyimpan ke GSheet…','info');
   try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('✅ GSheet berhasil diupdate!');go(S.page);}
-  catch(e){S.syncError=e.message;S.retryQ.push({action,payload,retries:0});showToast('❌ Gagal: '+e.message,'err');}
+  catch(e){
+    const msg=e.name==='AbortError'?'GSheet timeout — data disimpan lokal, retry otomatis':e.message;
+    S.syncError=msg;S.retryQ.push({action,payload,retries:0});showToast('⚠️ '+msg,'err');
+  }
   finally{S.syncing=false;updateSyncBadge();}
 }
 function updateSyncBadge(){
