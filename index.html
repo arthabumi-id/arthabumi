@@ -538,6 +538,7 @@ const filterByDate=(items,mode,fromDate,toDate)=>{
   const t=new Date(today_str);
   let from,to;
   if(mode==='today'){from=to=today_str;}
+  else if(mode==='yesterday'){const y=new Date(t);y.setDate(y.getDate()-1);const ys=y.getFullYear()+'-'+String(y.getMonth()+1).padStart(2,'0')+'-'+String(y.getDate()).padStart(2,'0');from=to=ys;}
   else if(mode==='thisweek'){
     const day=t.getDay();const diff=t.getDate()-day+(day===0?-6:1);
     const start=new Date(t.setDate(diff));from=start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
@@ -1208,18 +1209,20 @@ function beliLog(){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
       <button class="tab ${dateMode==='all'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('all')">Semua</button>
       <button class="tab ${dateMode==='today'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('today')">Hari Ini</button>
+      <button class="tab ${dateMode==='yesterday'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('yesterday')">Kemarin</button>
       <button class="tab ${dateMode==='thisweek'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('thisweek')">Minggu Ini</button>
       <button class="tab ${dateMode==='thismonth'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('thismonth')">Bulan Ini</button>
       <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('custom')">Custom</button>
     </div>
     <div id="beli-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
       <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;if(!this.value||this.value.length===10)go('beli')">
+      <input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value">
     </div>
     <div id="beli-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
       <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;if(!this.value||this.value.length===10)go('beli')">
+      <input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value">
     </div>
+    ${dateMode==='custom'?`<button class="btn btn-o btn-sm btn-w" onclick="go('beli')" style="margin-top:4px">🔍 Terapkan Filter</button>`:''}
     </div>`;
   const all=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
   let filtered=S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all;
@@ -1621,18 +1624,20 @@ function absLog(){
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
       <button class="tab ${dateMode==='all'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('all')">Semua</button>
       <button class="tab ${dateMode==='today'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('today')">Hari Ini</button>
+      <button class="tab ${dateMode==='yesterday'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('yesterday')">Kemarin</button>
       <button class="tab ${dateMode==='thisweek'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('thisweek')">Minggu Ini</button>
       <button class="tab ${dateMode==='thismonth'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('thismonth')">Bulan Ini</button>
       <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('custom')">Custom</button>
     </div>
     <div id="abs-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
       <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;if(!this.value||this.value.length===10)go('absensi')">
+      <input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value">
     </div>
     <div id="abs-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
       <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;if(!this.value||this.value.length===10)go('absensi')">
+      <input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value">
     </div>
+    ${dateMode==='custom'?`<button class="btn btn-o btn-sm btn-w" onclick="go('absensi')" style="margin-top:4px">🔍 Terapkan Filter</button>`:''}
     </div>`;
   const all=[...S.logAbsensi].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
   let list=S.absFilter?all.filter(a=>a.kodeProj===S.absFilter):all;
@@ -3711,7 +3716,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
     document.head.appendChild(link);
   }catch(e){}
 });
-
 </script>
 </body>
 </html>
