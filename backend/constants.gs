@@ -1,7 +1,9 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — constants.gs  v1.8
+// ARTHABUMI — constants.gs  v2.0
 // Konstanta terpusat: nama sheet, batas baris, config API
 //
+// ✅ v2.0 UNLIMITED: .end dihapus dari ROWS — read/write pakai getLastRow() dinamis
+//                   Sheet bisa tumbuh tanpa batas (Google Sheets max ~10 juta sel)
 // ✅ CARA PAKAI: Gunakan SHEET.PROJECT bukan "MASTER PROJECT"
 //               Gunakan ROWS.PROJECT.start bukan angka 4
 // ════════════════════════════════════════════════════════════════════════
@@ -22,20 +24,21 @@ var SHEET = {
   REKAP:      "REKAP"           // Sheet rekap ringkasan semua proyek (v1.13)
 };
 
-// ── Batas Baris per Sheet {start, end} ────────────────────────────────
-// start = baris data pertama, end = baris data terakhir (inklusif)
+// ── Batas Baris per Sheet — hanya .start (baris data pertama) ─────────
+// .end DIHAPUS — semua read/write kini pakai ws.getLastRow() secara dinamis
+// Sheet tumbuh otomatis, tidak ada batas maksimum
 var ROWS = {
-  PROJECT:    { start: 4,  end: 53   },  // max 50 proyek
-  PEMBELIAN:  { start: 4,  end: 303  },  // max 300 item
-  KARYAWAN:   { start: 4,  end: 53   },  // max 50 karyawan
-  ABSENSI:    { start: 4,  end: 1003 },  // max 1000 absensi
-  KASBON:     { start: 4,  end: 1003 },  // max 1000 kasbon
-  PEMBAYARAN: { start: 4,  end: 503  },  // max 500 pembayaran
-  BARANG:     { start: 5,  end: 1004 },  // max 1000 barang (start=5, baris 4 = header tambahan)
-  TOKO:       { start: 4,  end: 103  },  // max 100 toko
-  RAB:        { start: 4,  end: 103  },  // max 100 entri RAB
-  SUBKON:     { start: 4,  end: 103  },  // max 100 subkontraktor
-  LOG_SUBKON: { start: 4,  end: 503  }   // max 500 log subkon
+  PROJECT:    { start: 4 },  // unlimited
+  PEMBELIAN:  { start: 4 },  // unlimited
+  KARYAWAN:   { start: 4 },  // unlimited
+  ABSENSI:    { start: 4 },  // unlimited
+  KASBON:     { start: 4 },  // unlimited
+  PEMBAYARAN: { start: 4 },  // unlimited
+  BARANG:     { start: 5 },  // unlimited (start=5, baris 4 = header tambahan)
+  TOKO:       { start: 4 },  // unlimited
+  RAB:        { start: 4 },  // unlimited
+  SUBKON:     { start: 4 },  // unlimited
+  LOG_SUBKON: { start: 4 }   // unlimited
 };
 
 // ── Timezone ──────────────────────────────────────────────────────────

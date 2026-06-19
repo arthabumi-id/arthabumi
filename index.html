@@ -417,6 +417,10 @@ function openSettings(){
       <div style="font-size:12px;color:#475569;margin-bottom:5px">Rekap cash flow bulanan (pendapatan vs pengeluaran per bulan)</div>
       <button class="btn btn-o btn-sm btn-w" onclick="exportCashFlow()">⬇️ Download Excel — Cash Flow Bulanan</button>
     </div>
+    <div style="margin-bottom:9px">
+      <div style="font-size:12px;color:#475569;margin-bottom:5px">Master Barang & Toko — daftar nama barang, harga satuan, dan nama toko (untuk RAB)</div>
+      <button class="btn btn-o btn-sm btn-w" onclick="exportMasterData()">⬇️ Download Excel — Master Barang & Toko</button>
+    </div>
     <div style="height:1px;background:#f0f9ff;margin:10px 0"></div>
     <div style="font-size:10.5px;font-weight:700;color:#10b981;margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">🖨️ Cetak / Simpan PDF</div>
     <div style="margin-bottom:9px">
@@ -3315,6 +3319,124 @@ async function exportCashFlow(){
   showToast('✅ Excel berhasil diunduh!');
 }
 
+// ─── Export Master Barang & Toko (untuk RAB) ─────────────────────────
+async function exportMasterData(){
+  showToast('Menyiapkan Excel Master Data…','info');
+  try{await _loadXlsx();}catch(e){showToast(e.message,'err');return;}
+  const tgl=today();
+
+  // ── Sheet 1: Master Barang ──────────────────────────────────────────
+  const nB=5;
+  const barangRows=[
+    [_C(`MASTER BARANG — ${S.companyName}`,_ST.title),...Array(nB-1).fill(_C('',_ST.title))],
+    [_C(`Diekspor: ${tgl}  |  ${S.masterBarang.length} item`,_ST.info),...Array(nB-1).fill(_C('',_ST.info))],
+    _eRow(nB),
+    ['No','Nama Barang / Material','Kategori','Satuan','Harga Satuan Terakhir (Rp)'].map((h,i)=>_C(h,i===4?_ST.hdrR:_ST.hdr)),
+  ];
+  // Sort by kategori, lalu nama
+  const sortedBarang=[...S.masterBarang].sort((a,b)=>{
+    const kc=String(a.kategori||'').localeCompare(String(b.kategori||''));
+    return kc!==0?kc:String(a.nama||'').localeCompare(String(b.nama||''));
+  });
+  let lastKat='', no=0;
+  sortedBarang.forEach((b,i)=>{
+    const kat=String(b.kategori||'—');
+    // Baris pemisah kategori
+    if(kat!==lastKat){
+      if(lastKat!=='') barangRows.push(_eRow(nB));
+      barangRows.push([
+        _C(kat,{font:{bold:true,color:{rgb:'1F4E79'}},fill:{fgColor:{rgb:'DEEAF1'}},alignment:{horizontal:'left'}}),
+        ...(Array(nB-1).fill(_C('',{fill:{fgColor:{rgb:'DEEAF1'}}}))),
+      ]);
+      lastKat=kat; no=0;
+    }
+    no++;
+    const e=no%2===0;
+    barangRows.push([
+      _C(no,        e?{...(_ST.le),alignment:{horizontal:'center'}}:{...(_ST.lo),alignment:{horizontal:'center'}}),
+      _C(b.nama||'',e?_ST.le:_ST.lo),
+      _C(kat,       e?_ST.le:_ST.lo),
+      _C(b.satuan||'pcs', e?{...(_ST.le),alignment:{horizontal:'center'}}:{...(_ST.lo),alignment:{horizontal:'center'}}),
+      _C(b.hargaTerakhir>0?fNum(b.hargaTerakhir):'—', b.hargaTerakhir>0?(e?_ST.pos(true):_ST.pos(false)):(e?_ST.le:_ST.lo)),
+    ]);
+  });
+  if(!sortedBarang.length) barangRows.push([_C('Belum ada data barang',{font:{italic:true},alignment:{horizontal:'center'}}),...Array(nB-1).fill(_C(''))]);
+  const wsBarang=_makeWS(barangRows,[6,40,20,12,26],[
+    {s:{r:0,c:0},e:{r:0,c:nB-1}},
+    {s:{r:1,c:0},e:{r:1,c:nB-1}},
+  ]);
+  wsBarang['!rows']=[{hpt:24},{hpt:14},{hpt:6},{hpt:20}];
+
+  // ── Sheet 2: Master Toko ───────────────────────────────────────────
+  const nT=3;
+  const sortedToko=[...S.masterToko].sort((a,b)=>String(a).localeCompare(String(b)));
+  const tokoRows=[
+    [_C(`MASTER TOKO / SUPPLIER — ${S.companyName}`,_ST.title),...Array(nT-1).fill(_C('',_ST.title))],
+    [_C(`Diekspor: ${tgl}  |  ${sortedToko.length} toko`,_ST.info),...Array(nT-1).fill(_C('',_ST.info))],
+    _eRow(nT),
+    ['No','Nama Toko / Supplier','Keterangan'].map(h=>_C(h,_ST.hdr)),
+    ...sortedToko.map((t,i)=>{
+      const e=i%2===0;
+      return[
+        _C(i+1,{...(e?_ST.le:_ST.lo),alignment:{horizontal:'center'}}),
+        _C(t,   e?_ST.le:_ST.lo),
+        _C('',  e?_ST.le:_ST.lo),
+      ];
+    }),
+  ];
+  if(!sortedToko.length) tokoRows.push([_C('Belum ada data toko',{font:{italic:true},alignment:{horizontal:'center'}}),...Array(nT-1).fill(_C(''))]);
+  const wsToko=_makeWS(tokoRows,[6,40,30],[
+    {s:{r:0,c:0},e:{r:0,c:nT-1}},
+    {s:{r:1,c:0},e:{r:1,c:nT-1}},
+  ]);
+  wsToko['!rows']=[{hpt:24},{hpt:14},{hpt:6},{hpt:20}];
+
+  // ── Sheet 3: Ringkasan Harga per Kategori ─────────────────────────
+  // Rata-rata harga per kategori — berguna untuk estimasi RAB
+  const nR=4;
+  const katMap={};
+  sortedBarang.forEach(b=>{
+    if(!b.hargaTerakhir) return;
+    const k=String(b.kategori||'Lain-lain');
+    if(!katMap[k]) katMap[k]={items:[],total:0};
+    katMap[k].items.push(b);
+    katMap[k].total+=b.hargaTerakhir;
+  });
+  const ringkasanRows=[
+    [_C(`RINGKASAN HARGA PER KATEGORI — ${S.companyName}`,_ST.title),...Array(nR-1).fill(_C('',_ST.title))],
+    [_C(`Diekspor: ${tgl}  |  Rata-rata harga terakhir per kategori`,_ST.info),...Array(nR-1).fill(_C('',_ST.info))],
+    _eRow(nR),
+    ['Kategori','Jumlah Item','Harga Terendah (Rp)','Harga Rata-rata (Rp)'].map((h,i)=>_C(h,i>1?_ST.hdrR:_ST.hdr)),
+  ];
+  Object.keys(katMap).sort().forEach((k,i)=>{
+    const d=katMap[k];
+    const prices=d.items.map(b=>b.hargaTerakhir).filter(v=>v>0).sort((a,b)=>a-b);
+    const avg=Math.round(d.total/d.items.length);
+    const e=i%2===0;
+    ringkasanRows.push([
+      _C(k,                   e?_ST.le:_ST.lo),
+      _C(d.items.length,      {...(e?_ST.le:_ST.lo),alignment:{horizontal:'center'}}),
+      _C(prices.length?fNum(prices[0]):'—', e?_ST.le:_ST.lo),
+      _C(fNum(avg),           _ST.pos(e)),
+    ]);
+  });
+  if(!Object.keys(katMap).length) ringkasanRows.push([_C('Belum ada data harga',{font:{italic:true}}),...Array(nR-1).fill(_C(''))]);
+  const wsRingkasan=_makeWS(ringkasanRows,[28,14,24,24],[
+    {s:{r:0,c:0},e:{r:0,c:nR-1}},
+    {s:{r:1,c:0},e:{r:1,c:nR-1}},
+  ]);
+  wsRingkasan['!rows']=[{hpt:24},{hpt:14},{hpt:6},{hpt:20}];
+
+  // ── Build workbook ─────────────────────────────────────────────────
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,wsBarang,'Master Barang');
+  XLSX.utils.book_append_sheet(wb,wsToko,'Master Toko');
+  XLSX.utils.book_append_sheet(wb,wsRingkasan,'Ringkasan Harga');
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+  _dlFile(new Blob([buf],{type:'application/octet-stream'}),`${S.companyName}_MasterData_${tgl}.xlsx`);
+  showToast('✅ Master Data berhasil diunduh!');
+}
+
 // ─── Helper: buka tab baru dengan laporan HTML mewah ──────────────────
 function _openReport(title,bodyHtml,chartScripts){
   const win=window.open('','_blank');
@@ -3701,9 +3823,7 @@ function printRekapProyek(kode){
   `;
   closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html,chartScripts);
 }
-// ── Tab helper
 function setTab(page,tab){S.tab[page]=tab;go(page);}
-// ── Init
 window.addEventListener('DOMContentLoaded',async()=>{
   loadLocal();
   S.webAppUrl=sg(KS.url,'');S.pollInterval=Number(sg(KS.poll,60))||60;
@@ -3716,9 +3836,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
   updateSyncBadge();
   if(S.webAppUrl){await doFetch();startPoll();}
   try{
-    const mf={name:S.companyName,short_name:S.companyName.split(' ')[0],description:'Sistem Manajemen Proyek Kontraktor',start_url:'.',display:'standalone',background_color:'#0f172a',theme_color:'#0f172a',icons:[{src:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExNCIgZmlsbD0iIzBmMTcyYSIvPjx0ZXh0IHg9IjI1NiIgeT0iMzMwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjIwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzEwYjk4MSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUI8L3RleHQ+PC9zdmc+',sizes:'512x512',type:'image/svg+xml'}]};
-    const blob=new Blob([JSON.stringify(mf)],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
+    const manifest={name:S.companyName,short_name:'Arthabumi',start_url:'.',display:'standalone',background_color:'#1e3a5f',theme_color:'#1e3a5f',icons:[{src:'https://raw.githubusercontent.com/google/material-design-icons/master/png/action/business/materialicons/48dp/1x/baseline_business_black_48dp.png',sizes:'48x48',type:'image/png'}]};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/json'}));
     const link=document.createElement('link');link.rel='manifest';link.href=url;
     document.head.appendChild(link);
   }catch(e){}

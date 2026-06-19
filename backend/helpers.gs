@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — helpers.gs  v1.8
+// ARTHABUMI — helpers.gs  v2.0
 // Fungsi-fungsi bantu: tanggal, pencarian baris, locale, validasi
 // Diekstrak dari config.gs agar lebih mudah di-maintain
 // ════════════════════════════════════════════════════════════════════════
@@ -36,22 +36,23 @@ function _apiParseDate(s) {
   }
 }
 
-// ── Find: Baris kosong berikutnya di kolom tertentu ───────────────────
-// Dipakai untuk INSERT — cari slot kosong pertama
-// col = huruf kolom (misal "B"), s/e = range baris
+// ── Find: Baris berikutnya untuk INSERT (unlimited mode) ──────────────
+// v2.0: Pakai getLastRow() — selalu append setelah baris terakhir berisi data
+//       Tidak ada batas maksimum — sheet tumbuh otomatis
+//       Parameter col/e tetap ada untuk backward-compat tapi diabaikan
 function _apiFindNext(ws, col, s, e) {
-  var vals = ws.getRange(col + s + ":" + col + e).getValues();
-  for (var i = 0; i < vals.length; i++) {
-    if (String(vals[i][0]).trim() === "") return s + i;
-  }
-  return e + 1; // di luar range — idealnya log warning
+  var last = ws.getLastRow();
+  return (last < s) ? s : last + 1;
 }
 
 // ── Find: Baris berdasarkan nilai kunci di kolom tertentu ─────────────
 // Dipakai untuk UPDATE/DELETE — cari baris yang cocok
+// v2.0: end row dinamis dari getLastRow()
 // Mengembalikan -1 kalau tidak ditemukan
 function _apiFindRow(ws, col, s, e, key) {
-  var vals = ws.getRange(col + s + ":" + col + e).getValues();
+  var endRow = ws.getLastRow();
+  if (endRow < s) return -1;
+  var vals = ws.getRange(col + s + ":" + col + endRow).getValues();
   var keyStr = String(key).trim();
   for (var i = 0; i < vals.length; i++) {
     if (String(vals[i][0]).trim() === keyStr) return s + i;
