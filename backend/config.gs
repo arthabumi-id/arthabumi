@@ -94,6 +94,7 @@ function _apiHandleAction(ss, action, data) {
     case "deleteProject":     _apiDeleteProject(ss, data);     break;
     // Pembelian
     case "addPembelian":      _apiAddPembelian(ss, data);      break;
+    case "updatePembelian":   _apiUpdatePembelian(ss, data);   break;
     case "deletePembelian":   _apiDeletePembelian(ss, data);   break;
     // Karyawan
     case "addKaryawan":       _apiAddKaryawan(ss, data);       break;

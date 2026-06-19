@@ -158,6 +158,7 @@ const S={
   syncing:false,lastSync:null,syncError:null,
   countdown:0,retryQ:[],
   formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}],
+  editBeliIdx:null,editBeliOrig:null,
   payItems:[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}],
   absRows:[],
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
@@ -1201,6 +1202,7 @@ function beliItemCard(b,showToko){
         <div class="item-sub">${sub}</div></div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:#10b981">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
+        <button style="background:#dbeafe;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#1d4ed8" onclick="openEditBeli(${ri})">✏️</button>
         <button style="background:#fee2e2;border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
       </div></div>
       <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
@@ -1392,6 +1394,58 @@ function delPembelian(idx){
   if(!confirm('Hapus "'+b.namaBarang+'"?'))return;
   S.pembelian.splice(idx,1);ss(KS.beli,S.pembelian);showToast('🗑 Dihapus');go('beli');
   doSync('deletePembelian',{tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
+}
+function openEditBeli(idx){
+  const b=S.pembelian[idx];if(!b)return;
+  S.editBeliIdx=idx;
+  S.editBeliOrig={tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang};
+  const projOpts=`<option value="">— Tanpa Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${p.kode===b.kodeProj?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  openModal(`<div class="modal-title">✏️ Edit Pembelian</div>
+    <div class="fg" style="margin-bottom:9px"><label class="fl">Tanggal</label><input class="fc" type="date" id="eb-tgl" value="${esc(b.tgl)}"></div>
+    <div class="fg" style="margin-bottom:9px"><label class="fl">Proyek</label><select class="fc" id="eb-proj"><option value="">— Tanpa Proyek —</option>${projOpts}</select></div>
+    <div class="fg" style="margin-bottom:9px"><label class="fl">Nama Barang</label><input class="fc" list="brg-dl" id="eb-nama" value="${esc(b.namaBarang)}"></div>
+    <div class="row" style="gap:8px;margin-bottom:9px">
+      <div class="fg" style="flex:1"><label class="fl">Kategori</label>
+        <select class="fc" id="eb-kat">${['Material','Tools','Operasional','ASET'].map(k=>`<option ${k===b.kategori?'selected':''}>${k}</option>`).join('')}</select></div>
+      <div class="fg" style="flex:1"><label class="fl">Satuan</label><input class="fc" id="eb-sat" value="${esc(b.satuan||'pcs')}"></div>
+    </div>
+    <div class="row" style="gap:8px;margin-bottom:9px">
+      <div class="fg" style="flex:1"><label class="fl">Qty</label><input class="fc" type="number" id="eb-qty" value="${b.qty}"></div>
+      <div class="fg" style="flex:1"><label class="fl">Status</label>
+        <select class="fc" id="eb-sts">${['HABIS','SISA','ASET'].map(s=>`<option ${s===b.status?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="row" style="gap:8px;margin-bottom:9px">
+      <div class="fg" style="flex:1"><label class="fl">Harga (Rp)</label><input class="fc" type="number" id="eb-hrg" value="${b.harga}"></div>
+      <div class="fg" style="flex:1"><label class="fl">Diskon (Rp)</label><input class="fc" type="number" id="eb-dis" value="${b.diskon||0}"></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label class="fl">Toko</label><input class="fc" list="tk-dl" id="eb-toko" value="${esc(b.toko||'')}"></div>
+    <div class="act-row">
+      <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
+      <button class="btn btn-p btn-sm" onclick="submitEditBeli()">💾 Simpan Perubahan</button>
+    </div>`);
+}
+function submitEditBeli(){
+  const idx=S.editBeliIdx; const orig=S.editBeliOrig;
+  if(idx==null||!orig){closeModal();return;}
+  const tgl=document.getElementById('eb-tgl')?.value||'';
+  const kodeProj=document.getElementById('eb-proj')?.value||'';
+  const namaBarang=(document.getElementById('eb-nama')?.value||'').trim();
+  const kategori=document.getElementById('eb-kat')?.value||'Material';
+  const satuan=(document.getElementById('eb-sat')?.value||'pcs').trim();
+  const qty=Number(document.getElementById('eb-qty')?.value)||0;
+  const harga=Number(document.getElementById('eb-hrg')?.value)||0;
+  const diskon=Number(document.getElementById('eb-dis')?.value)||0;
+  const status=document.getElementById('eb-sts')?.value||'HABIS';
+  const toko=(document.getElementById('eb-toko')?.value||'').trim();
+  if(!namaBarang||!harga){showToast('Nama & harga wajib diisi','err');return;}
+  const total=Math.max(0,qty*harga-diskon);
+  const updated={...S.pembelian[idx],tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total};
+  S.pembelian[idx]=updated;
+  ss(KS.beli,S.pembelian);
+  closeModal();
+  showToast('✅ Pembelian diupdate');
+  go('beli');
+  doSync('updatePembelian',{oldTgl:orig.tgl,oldKodeProj:orig.kodeProj,oldNamaBarang:orig.namaBarang,tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total});
 }
 function openPasteBeli(){
   openModal(`<div class="modal-title">📋 Paste Daftar Pembelian</div>

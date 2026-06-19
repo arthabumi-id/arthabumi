@@ -629,3 +629,73 @@ function _apiDeleteLogSubkon(ss, d) {
   if (rowNum < 0) return;
   ws.getRange(rowNum, 1, 1, 12).clearContent();
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// UPDATE PEMBELIAN — v1.0 (Session 17)
+// Cari baris berdasarkan nilai LAMA (oldTgl + oldKodeProj + oldNamaBarang),
+// lalu timpa dengan nilai baru. Update in-place, tidak hapus baris.
+// ════════════════════════════════════════════════════════════════════════
+function _apiUpdatePembelian(ss, d) {
+  var ws = ss.getSheetByName(SHEET.PEMBELIAN);
+  if (!ws) return;
+  var R      = ROWS.PEMBELIAN;
+  var endRow = ws.getLastRow();
+  if (endRow < R.start) return;
+
+  // Cari baris berdasarkan nilai LAMA
+  var data  = ws.getRange("B" + R.start + ":D" + endRow).getValues();
+  var tglT  = String(d.oldTgl        || "").trim();
+  var projT = String(d.oldKodeProj   || "").trim();
+  var namaT = String(d.oldNamaBarang || "").trim().toLowerCase();
+  var rowNum = -1;
+  for (var i = 0; i < data.length; i++) {
+    if (_apiSerDate(data[i][0]) === tglT &&
+        String(data[i][1]).trim()              === projT &&
+        String(data[i][2]).trim().toLowerCase() === namaT) {
+      rowNum = i + R.start;
+      break;
+    }
+  }
+  if (rowNum < 0) return; // Row tidak ditemukan (belum sync atau sudah dihapus)
+
+  // Update 11 kolom sekaligus (B:L), kolom A (no urut) dibiarkan
+  var tglDate = _apiParseDate(String(d.tgl || ""));
+  var qty     = _sanitizeNum(d.qty);
+  var harga   = _sanitizeNum(d.harga);
+  var diskon  = _sanitizeNum(d.diskon);
+  var total   = _sanitizeNum(d.total) || Math.max(0, qty * harga - diskon);
+
+  ws.getRange(rowNum, 2, 1, 11).setValues([[
+    tglDate || String(d.tgl || ""),         // B = tgl
+    _sanitizeStr(d.kodeProj)   || "",       // C = kodeProj
+    _sanitizeStr(d.namaBarang) || "",       // D = namaBarang
+    _sanitizeStr(d.kategori)   || "",       // E = kategori
+    _sanitizeStr(d.satuan)     || "pcs",    // F = satuan
+    qty,                                    // G = qty
+    harga,                                  // H = harga
+    diskon,                                 // I = diskon
+    _sanitizeStr(d.status)     || "HABIS",  // J = status
+    _sanitizeStr(d.toko)       || "",       // K = toko
+    total                                   // L = total
+  ]]);
+  ws.getRange(rowNum,  8).setNumberFormat("#,##0"); // H = harga
+  ws.getRange(rowNum,  9).setNumberFormat("#,##0"); // I = diskon
+  ws.getRange(rowNum, 12).setNumberFormat("#,##0"); // L = total
+
+  // Update hargaTerakhir di MASTER BARANG
+  var wsBarang = ss.getSheetByName(SHEET.BARANG);
+  if (wsBarang && d.namaBarang && harga > 0) {
+    var Rb     = ROWS.BARANG;
+    var endBrg = wsBarang.getLastRow();
+    if (endBrg >= Rb.start) {
+      var brg     = wsBarang.getRange("C" + Rb.start + ":G" + endBrg).getValues();
+      var namaNew = String(d.namaBarang || "").toLowerCase();
+      for (var k = 0; k < brg.length; k++) {
+        if (String(brg[k][0]).toLowerCase() === namaNew) {
+          wsBarang.getRange(k + Rb.start, 7).setValue(harga).setNumberFormat("#,##0");
+          break;
+        }
+      }
+    }
+  }
+}
