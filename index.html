@@ -208,7 +208,7 @@ const numInp=(id,val=0,ph='0',extra='')=>{
 // ── GSheet API
 async function gsFetch(url){
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),10000);
+  const tid=setTimeout(()=>ctrl.abort(),30000); // 30 detik — GAS cold start bisa 20-25 detik
   try{
     const r=await fetch(url+'?action=getAllData&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -246,7 +246,10 @@ function applyGS(d){
 async function doFetch(url){
   const u=url||S.webAppUrl;if(!u)return;S.syncing=true;updateSyncBadge();
   try{const d=await gsFetch(u);applyGS(d);}
-  catch(e){S.syncError=e.message;showToast('⚠️ GSheet gagal','err');}
+  catch(e){
+    const msg=e.name==='AbortError'?'GSheet lambat/timeout — data lokal dipakai':('GSheet: '+e.message);
+    S.syncError=msg;showToast('⚠️ '+msg,'err');
+  }
   finally{S.syncing=false;updateSyncBadge();}
 }
 async function doSync(action,payload){
