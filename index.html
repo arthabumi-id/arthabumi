@@ -1442,6 +1442,11 @@ function submitEditBeli(){
   const updated={...S.pembelian[idx],tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total};
   S.pembelian[idx]=updated;
   ss(KS.beli,S.pembelian);
+  // Sync S.masterBarang agar Cek Harga langsung reflect nama & harga baru
+  const brgi=S.masterBarang.findIndex(b=>b.nama.toLowerCase()===orig.namaBarang.toLowerCase());
+  if(brgi>=0){S.masterBarang[brgi]={...S.masterBarang[brgi],nama:namaBarang,kategori,satuan,hargaTerakhir:harga};}
+  else{S.masterBarang.push({id:'BRG-EDIT-'+Date.now(),nama:namaBarang,kategori,satuan,hargaTerakhir:harga});}
+  ss(KS.brg,S.masterBarang);
   closeModal();
   showToast('✅ Pembelian diupdate');
   go('beli');
