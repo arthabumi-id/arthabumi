@@ -127,18 +127,14 @@ function _apiAddPembelian(ss, items) {
       }
     }
     if (!found) {
-      for (var jn = 0; jn < barangData.length; jn++) {
-        if (String(barangData[jn][0]).trim() === "") {
-          var n = jn + 1;
-          wsBarang.getRange(jn + Rb.start, 1, 1, 7).setValues([[
-            n, "BRG-" + _padNum(n, 3),
-            itb.namaBarang || "", itb.kategori || "",
-            itb.satuan     || "pcs", itb.harga || 0, itb.harga || 0
-          ]]);
-          barangData[jn][0] = itb.namaBarang;
-          break;
-        }
-      }
+      // Unlimited v2.0: append langsung setelah baris terakhir (tidak cari baris kosong)
+      var nextBrg = wsBarang.getLastRow() + 1;
+      var nBrg    = nextBrg - Rb.start + 1;
+      wsBarang.getRange(nextBrg, 1, 1, 7).setValues([[
+        nBrg, "BRG-" + _padNum(nBrg, 3),
+        itb.namaBarang || "", itb.kategori || "",
+        itb.satuan     || "pcs", itb.harga || 0, itb.harga || 0
+      ]]);
     }
   }
 
@@ -152,14 +148,10 @@ function _apiAddPembelian(ss, items) {
       var tokoName = String(items[ti].toko || "").trim();
       if (!tokoName) continue;
       if (tokoList.indexOf(tokoName.toLowerCase()) >= 0) continue; // sudah ada
-      // Cari baris kosong pertama
-      for (var tj = 0; tj < tokoList.length; tj++) {
-        if (tokoList[tj] === "") {
-          wsToko.getRange(tj + Rt.start, 2).setValue(tokoName);
-          tokoList[tj] = tokoName.toLowerCase(); // hindari duplikat dalam batch yang sama
-          break;
-        }
-      }
+      // Unlimited v2.0: append langsung setelah baris terakhir
+      var nextToko = wsToko.getLastRow() + 1;
+      wsToko.getRange(nextToko, 2).setValue(tokoName);
+      tokoList.push(tokoName.toLowerCase()); // hindari duplikat dalam batch yang sama
     }
   }
 }
