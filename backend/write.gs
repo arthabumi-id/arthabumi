@@ -114,7 +114,7 @@ function _apiAddPembelian(ss, items) {
   // Update MASTER BARANG (harga terakhir)
   if (!wsBarang) return;
   var Rb         = ROWS.BARANG;
-  var barangData = wsBarang.getRange("C" + Rb.start + ":G" + Rb.end).getValues();
+  var barangData = wsBarang.getRange("C" + Rb.start + ":G" + wsBarang.getLastRow()).getValues();
 
   for (var k = 0; k < items.length; k++) {
     var itb    = items[k];
@@ -146,7 +146,7 @@ function _apiAddPembelian(ss, items) {
   var wsToko = ss.getSheetByName(SHEET.TOKO);
   if (wsToko) {
     var Rt       = ROWS.TOKO;
-    var tokoData = wsToko.getRange("B" + Rt.start + ":B" + Rt.end).getValues();
+    var tokoData = wsToko.getRange("B" + Rt.start + ":B" + wsToko.getLastRow()).getValues();
     var tokoList = tokoData.map(function(row){ return String(row[0]).trim().toLowerCase(); });
     for (var ti = 0; ti < items.length; ti++) {
       var tokoName = String(items[ti].toko || "").trim();
@@ -168,7 +168,7 @@ function _apiDeletePembelian(ss, d) {
   var ws = ss.getSheetByName(SHEET.PEMBELIAN);
   if (!ws) return;
   var R     = ROWS.PEMBELIAN;
-  var data  = ws.getRange("B" + R.start + ":D" + R.end).getValues();
+  var data  = ws.getRange("B" + R.start + ":D" + ws.getLastRow()).getValues();
   var tglT  = String(d.tgl        || "").trim();
   var projT = String(d.kodeProj   || "").trim();
   var namaT = String(d.namaBarang || "").trim().toLowerCase();
@@ -268,7 +268,7 @@ function _apiDeleteAbsensi(ss, d) {
   var ws = ss.getSheetByName(SHEET.ABSENSI);
   if (!ws) return;
   var R    = ROWS.ABSENSI;
-  var data = ws.getRange("B" + R.start + ":C" + R.end).getValues();
+  var data = ws.getRange("B" + R.start + ":C" + ws.getLastRow()).getValues();
   var tglT = String(d.tgl        || "").trim();
   var idT  = String(d.idKaryawan || "").trim();
   for (var i = 0; i < data.length; i++) {
@@ -307,7 +307,7 @@ function _apiDeleteKasbon(ss, d) {
   var ws = ss.getSheetByName(SHEET.KASBON);
   if (!ws) return;
   var R    = ROWS.KASBON;
-  var data = ws.getRange("B" + R.start + ":H" + R.end).getValues();
+  var data = ws.getRange("B" + R.start + ":H" + ws.getLastRow()).getValues();
   var tglT  = String(d.tgl        || "").trim();
   var idT   = String(d.idKaryawan || "").trim();
   var tipeT = String(d.tipe       || "").trim();
@@ -352,7 +352,7 @@ function _apiDeletePembayaran(ss, d) {
   var ws = ss.getSheetByName(SHEET.PEMBAYARAN);
   if (!ws) return;
   var R    = ROWS.PEMBAYARAN;
-  var data = ws.getRange("B" + R.start + ":E" + R.end).getValues();
+  var data = ws.getRange("B" + R.start + ":E" + ws.getLastRow()).getValues();
   var tglT  = String(d.tgl      || "").trim();
   var projT = String(d.kodeProj || "").trim();
   var nomT  = _sanitizeNum(d.nominal);
@@ -388,7 +388,7 @@ function _apiFinalizeClosing(ss, d) {
   var Ra           = ROWS.ABSENSI;
   var Rk           = ROWS.KASBON;
 
-  var absData = wsAbs.getRange("A" + Ra.start + ":L" + Ra.end).getValues();
+  var absData = wsAbs.getRange("A" + Ra.start + ":L" + wsAbs.getLastRow()).getValues();
   for (var i = 0; i < absData.length; i++) {
     var row         = absData[i];
     var id          = String(row[2]).trim();
@@ -451,7 +451,7 @@ function _apiDeleteClosing(ss, d) {
   var wsAbs = ss.getSheetByName(SHEET.ABSENSI);
   if (wsAbs) {
     var Ra      = ROWS.ABSENSI;
-    var absData = wsAbs.getRange("A" + Ra.start + ":L" + Ra.end).getValues();
+    var absData = wsAbs.getRange("A" + Ra.start + ":L" + wsAbs.getLastRow()).getValues();
     for (var i = 0; i < absData.length; i++) {
       if (String(absData[i][9]).trim() !== noClosing) continue;
       var rN = i + Ra.start;
@@ -465,7 +465,7 @@ function _apiDeleteClosing(ss, d) {
   if (wsKsb) {
     var Rk      = ROWS.KASBON;
     // Range D:G → index 0=tipe, 1=nominal, 2=nama, 3=noClosing
-    var ksbData = wsKsb.getRange("D" + Rk.start + ":G" + Rk.end).getValues();
+    var ksbData = wsKsb.getRange("D" + Rk.start + ":G" + wsKsb.getLastRow()).getValues();
     for (var j = ksbData.length - 1; j >= 0; j--) {
       var tipeRow      = String(ksbData[j][0]).trim();
       var noClosingRow = String(ksbData[j][3]).trim();
@@ -585,13 +585,13 @@ function _apiUpdateLogSubkon(ss, d) {
   var R      = ROWS.LOG_SUBKON;
   var rowNum = -1;
   if (d.id) {
-    var colA = ws.getRange("A" + R.start + ":A" + R.end).getValues();
+    var colA = ws.getRange("A" + R.start + ":A" + ws.getLastRow()).getValues();
     for (var i = 0; i < colA.length; i++) {
       if (String(colA[i][0]).trim() === String(d.id).trim()) { rowNum = i + R.start; break; }
     }
   }
   if (rowNum < 0 && d.kodeProj && d.uraian) {
-    var data = ws.getRange("C" + R.start + ":G" + R.end).getValues();
+    var data = ws.getRange("C" + R.start + ":G" + ws.getLastRow()).getValues();
     for (var j = data.length - 1; j >= 0; j--) {
       if (String(data[j][0]).trim() === String(d.kodeProj).trim() &&
           String(data[j][4]).trim().toLowerCase() === String(d.uraian).trim().toLowerCase()) {
@@ -612,13 +612,13 @@ function _apiDeleteLogSubkon(ss, d) {
   var R      = ROWS.LOG_SUBKON;
   var rowNum = -1;
   if (d.id) {
-    var colA = ws.getRange("A" + R.start + ":A" + R.end).getValues();
+    var colA = ws.getRange("A" + R.start + ":A" + ws.getLastRow()).getValues();
     for (var i = 0; i < colA.length; i++) {
       if (String(colA[i][0]).trim() === String(d.id).trim()) { rowNum = i + R.start; break; }
     }
   }
   if (rowNum < 0 && d.kodeProj && d.uraian) {
-    var data = ws.getRange("C" + R.start + ":G" + R.end).getValues();
+    var data = ws.getRange("C" + R.start + ":G" + ws.getLastRow()).getValues();
     for (var j = data.length - 1; j >= 0; j--) {
       if (String(data[j][0]).trim() === String(d.kodeProj).trim() &&
           String(data[j][4]).trim().toLowerCase() === String(d.uraian).trim().toLowerCase()) {
@@ -682,19 +682,40 @@ function _apiUpdatePembelian(ss, d) {
   ws.getRange(rowNum,  9).setNumberFormat("#,##0"); // I = diskon
   ws.getRange(rowNum, 12).setNumberFormat("#,##0"); // L = total
 
-  // Update hargaTerakhir di MASTER BARANG
+  // Update MASTER BARANG: rename entri lama → nama baru + update hargaTerakhir
   var wsBarang = ss.getSheetByName(SHEET.BARANG);
-  if (wsBarang && d.namaBarang && harga > 0) {
+  if (wsBarang) {
     var Rb     = ROWS.BARANG;
     var endBrg = wsBarang.getLastRow();
     if (endBrg >= Rb.start) {
-      var brg     = wsBarang.getRange("C" + Rb.start + ":G" + endBrg).getValues();
-      var namaNew = String(d.namaBarang || "").toLowerCase();
+      var brg      = wsBarang.getRange("C" + Rb.start + ":G" + endBrg).getValues();
+      var namaOld  = String(d.oldNamaBarang || d.namaBarang || "").toLowerCase();
+      var namaNew  = String(d.namaBarang    || "").toLowerCase();
+      var nameChanged = namaOld !== namaNew;
+      var found = false;
       for (var k = 0; k < brg.length; k++) {
-        if (String(brg[k][0]).toLowerCase() === namaNew) {
-          wsBarang.getRange(k + Rb.start, 7).setValue(harga).setNumberFormat("#,##0");
+        var cellNama = String(brg[k][0]).toLowerCase();
+        // Cari berdasarkan nama LAMA (jika nama berubah) atau nama baru (jika sama)
+        if (cellNama === namaOld || (!nameChanged && cellNama === namaNew)) {
+          if (nameChanged) {
+            wsBarang.getRange(k + Rb.start, 3).setValue(_sanitizeStr(d.namaBarang)); // rename di kolom C
+          }
+          if (harga > 0) {
+            wsBarang.getRange(k + Rb.start, 7).setValue(harga).setNumberFormat("#,##0"); // update hargaTerakhir kolom G
+          }
+          found = true;
           break;
         }
+      }
+      // Jika nama baru belum ada di MASTER BARANG sama sekali, tambah entri baru
+      if (!found && d.namaBarang && harga > 0) {
+        var nextBrg = wsBarang.getLastRow() + 1;
+        var nBrg    = nextBrg - Rb.start + 1;
+        wsBarang.getRange(nextBrg, 1, 1, 7).setValues([[
+          nBrg, "BRG-" + _padNum(nBrg, 3),
+          _sanitizeStr(d.namaBarang), _sanitizeStr(d.kategori) || "",
+          _sanitizeStr(d.satuan) || "pcs", harga, harga
+        ]]);
       }
     }
   }
