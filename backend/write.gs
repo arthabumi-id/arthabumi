@@ -596,6 +596,34 @@ function _apiUpdateLogSubkon(ss, d) {
   ws.getRange(rowNum,10).setValue(_sanitizeNum(d.nominalBayar)).setNumberFormat("#,##0");
   var tglBayar = _apiParseDate(d.tglBayar);
   if (tglBayar) ws.getRange(rowNum,11).setValue(tglBayar).setNumberFormat("dd/MM/yyyy");
+
+  // ── Potongan kasbon (v1.25) ──────────────────────────────────────────
+  // Jika ada potongan, tulis ke LOG SUBKON kolom M/N/O
+  // dan tambahkan entri POTONG ke LOG KASBON untuk karyawan terkait
+  var potongan = _sanitizeNum(d.potongan);
+  if (potongan > 0 && d.idKaryawanPotong) {
+    ws.getRange(rowNum,13).setValue(potongan).setNumberFormat("#,##0");          // M = potongan
+    ws.getRange(rowNum,14).setValue(_sanitizeStr(d.idKaryawanPotong) || "");     // N = idKaryawanPotong
+    var ketPot = _sanitizeStr(d.ketPotongan) || ("Dipotong dari bayar subkon " + (d.kodeProj || ""));
+    ws.getRange(rowNum,15).setValue(ketPot);                                      // O = ketPotongan
+
+    // Tambah entri POTONG ke LOG KASBON
+    var wsKsb   = ss.getSheetByName(SHEET.KASBON);
+    if (wsKsb) {
+      var Rk      = ROWS.KASBON;
+      var nextKsb = _apiFindNext(wsKsb, "C", Rk.start, Rk.end);
+      var tglPot  = tglBayar || new Date();
+      wsKsb.getRange(nextKsb, 1).setValue(nextKsb - 3);
+      wsKsb.getRange(nextKsb, 2).setValue(tglPot).setNumberFormat("dd/MM/yyyy");
+      wsKsb.getRange(nextKsb, 3).setValue(_sanitizeStr(d.idKaryawanPotong));      // C = idKaryawan
+      wsKsb.getRange(nextKsb, 4).setValue("POTONG");                               // D = tipe
+      wsKsb.getRange(nextKsb, 5).setValue(potongan).setNumberFormat("#,##0");     // E = nominal
+      wsKsb.getRange(nextKsb, 6).setValue(_sanitizeStr(d.namaKaryawanPotong) || ""); // F = nama
+      wsKsb.getRange(nextKsb, 7).setValue("");                                     // G = noClosing (kosong)
+      wsKsb.getRange(nextKsb, 8).setValue(ketPot);                                 // H = ket
+      wsKsb.getRange(nextKsb, 9).setValue(_sanitizeStr(d.kodeProj) || "");        // I = kodeProj
+    }
+  }
 }
 
 function _apiDeleteLogSubkon(ss, d) {

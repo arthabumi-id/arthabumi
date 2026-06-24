@@ -2654,9 +2654,12 @@ function subkonLog(){
         const riwayatHtml=rw.length>0
           ?`<details style="margin-top:4px"><summary style="list-style:none;display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:#64748b;padding:2px 0"><span>▾</span><span>${rw.length} transaksi pembayaran</span></summary>
             <div style="margin-top:6px;background:#f0fdf4;border-radius:8px;padding:8px">
-              ${rw.map((r,ri)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0${ri<rw.length-1?';border-bottom:1px dashed #bbf7d0':''}">
+              ${rw.map((r,ri)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:11px;padding:4px 0${ri<rw.length-1?';border-bottom:1px dashed #bbf7d0':''}">
                 <span style="color:#64748b">📅 ${fDate(r.tgl)}</span>
-                <span style="font-weight:700;color:#16a34a">+${fRp(r.nominal)}</span>
+                <div style="text-align:right">
+                  <span style="font-weight:700;color:#16a34a">+${fRp(r.nominal)}</span>
+                  ${r.potongan?`<div style="font-size:10px;color:#9333ea">✂ Potong kasbon: ${fRp(r.potongan)}</div>`:''}
+                </div>
               </div>`).join('')}
             </div></details>`
           :ls.tglBayar?`<div style="font-size:11px;color:#64748b;margin-top:2px">📅 Dibayar: ${fDate(ls.tglBayar)}</div>`:'';
@@ -2679,37 +2682,105 @@ function subkonLog(){
 function openBayarSubkon(idx){
   const ls=S.logSubkon[idx];
   const sudahBayar=ls.nominalBayar||0;const sisa=ls.nilaiKontrak-sudahBayar;
+  // Karyawan dengan hutang kasbon aktif
+  const hutangByKar={};
+  S.logKasbon.forEach(k=>{
+    const id=k.idKaryawan;if(!id)return;
+    if(!hutangByKar[id])hutangByKar[id]={nama:k.nama||'',hutang:0};
+    if(k.tipe==='AMBIL')hutangByKar[id].hutang+=(Number(k.nominal)||0);
+    if(k.tipe==='POTONG')hutangByKar[id].hutang-=(Number(k.nominal)||0);
+  });
+  const karHutang=Object.entries(hutangByKar).filter(([id,v])=>v.hutang>0);
+  const karOpts=karHutang.length
+    ?karHutang.map(([id,v])=>`<option value="${esc(id)}">${esc(v.nama)} (hutang ${fRp(v.hutang)})</option>`).join('')
+    :'<option value="">-- Tidak ada hutang kasbon --</option>';
   openModal(`<div class="modal-title">💰 Catat Pembayaran Subkon</div>
     <div style="margin-bottom:12px"><div class="item-name">${esc(ls.namaSubkon)}</div>
       <div class="item-sub">${esc(ls.uraian)} · ${esc(ls.namaProj||ls.kodeProj)}</div></div>
     <div class="g3" style="margin-bottom:12px">
       <div class="chip"><div class="chip-lbl">Kontrak</div><div class="chip-val">${fRp(ls.nilaiKontrak)}</div></div>
       <div class="chip" style="background:#f0fdf4"><div class="chip-lbl">Sudah Dibayar</div><div class="chip-val" style="color:#16a34a">${fRp(sudahBayar)}</div></div>
-      <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa Hutang</div><div class="chip-val" style="color:#c2410c">${fRp(sisa)}</div></div>
+      <div class="chip" style="background:#fff7ed"><div class="chip-lbl">Sisa</div><div class="chip-val" style="color:#c2410c">${fRp(sisa)}</div></div>
     </div>
     <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="sb-tgl" value="${today()}"></div>
-    <div class="fg"><label class="fl">Nominal Bayar (Rp)</label>
-      ${numInp('sb-nom',sisa,String(sisa.toLocaleString('id-ID')))}
-      <div class="num-hint">Maks sisa hutang: ${fRp(sisa)}</div></div>
+    <div class="fg"><label class="fl">Cash Dibayar (Rp)<span class="req">*</span></label>
+      ${numInp('sb-nom',sisa,'0','oninput="applyNiFmt(this);sbPreview()"')}
+      <div class="num-hint">Uang tunai yang diberikan langsung</div></div>
+    <div class="fg" style="margin-top:4px"><label class="fl">Potongan Kasbon (Rp)</label>
+      ${numInp('sb-pot',0,'0','oninput="applyNiFmt(this);toggleKarPot()"')}
+      <div class="num-hint">Isi 0 jika tidak ada potongan kasbon</div></div>
+    <div class="fg" id="kar-pot-wrap" style="display:none">
+      <label class="fl">Karyawan yang Dipotong<span class="req">*</span></label>
+      <select class="fc" id="sb-kar">${karOpts}</select></div>
+    <div id="sb-net-preview" style="margin:6px 0 4px;font-size:12px;color:#64748b;text-align:right;min-height:18px"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
       <button class="btn btn-p" onclick="saveBayarSubkon(${idx})">💾 Simpan</button></div>`);
 }
+function sbPreview(){
+  const p=document.getElementById('sb-net-preview');if(!p)return;
+  const cash=getNum('sb-nom')||0;const pot=getNum('sb-pot')||0;const total=cash+pot;
+  p.innerHTML=total>0?`Cash <strong>${fRp(cash)}</strong>${pot?` + Potong <strong style="color:#9333ea">${fRp(pot)}</strong>`:''} = Total <strong style="color:#7c3aed">${fRp(total)}</strong>`:'';
+}
+function toggleKarPot(){
+  const pot=getNum('sb-pot');
+  const wrap=document.getElementById('kar-pot-wrap');
+  if(wrap)wrap.style.display=pot>0?'block':'none';
+  sbPreview();
+}
+
 function saveBayarSubkon(idx){
-  const nom=getNum('sb-nom');const tgl=document.getElementById('sb-tgl').value;
-  if(!nom||nom<=0){showToast('Masukkan nominal pembayaran','err');return;}
+  const cash=getNum('sb-nom')||0;const pot=getNum('sb-pot')||0;
+  const nom=cash+pot; // total settlement = cash + potongan kasbon
+  const tgl=document.getElementById('sb-tgl').value;
+  if(nom<=0){showToast('Masukkan nominal pembayaran atau potongan','err');return;}
+  if(pot>0&&(!document.getElementById('sb-kar')||!document.getElementById('sb-kar').value)){
+    showToast('Pilih karyawan yang dipotong kasbonnya','err');return;}
   const ls=S.logSubkon[idx];
   const totalBayar=(ls.nominalBayar||0)+nom;
   const sisa=ls.nilaiKontrak-totalBayar;
   const sts=sisa<=0?'Lunas':totalBayar>0?'DP':'Belum Dibayar';
-  S.logSubkon[idx].nominalBayar=totalBayar;S.logSubkon[idx].statusBayar=sts;S.logSubkon[idx].tglBayar=tgl;
+  // Update logSubkon state
+  S.logSubkon[idx].nominalBayar=totalBayar;
+  S.logSubkon[idx].statusBayar=sts;
+  S.logSubkon[idx].tglBayar=tgl;
+  if(pot>0) S.logSubkon[idx].potongan=(S.logSubkon[idx].potongan||0)+pot;
+  // Riwayat bayar (simpan breakdown)
   if(!S.riwayatBayarSubkon[ls.id])S.riwayatBayarSubkon[ls.id]=[];
-  S.riwayatBayarSubkon[ls.id].push({tgl,nominal:nom});
+  const riwEntry={tgl,nominal:nom};
+  if(pot>0)riwEntry.potongan=pot;
+  S.riwayatBayarSubkon[ls.id].push(riwEntry);
   ss(KS.rbsk,S.riwayatBayarSubkon);
-  ss(KS.lsk,S.logSubkon);closeModal();
+  ss(KS.lsk,S.logSubkon);
+  // Jika ada potongan kasbon, tambah entri POTONG ke logKasbon (client-side)
+  let idKar='',namaKar='',ketPot='';
+  if(pot>0){
+    const sel=document.getElementById('sb-kar');
+    if(sel&&sel.value){
+      idKar=sel.value;
+      namaKar=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text.split(' (hutang')[0]:'';
+    }
+    ketPot='Dipotong dari bayar subkon '+(ls.kodeProj||'');
+    if(idKar){
+      S.logKasbon.push({
+        id:'KSB-POT-'+Date.now(),tgl,
+        idKaryawan:idKar,tipe:'POTONG',nominal:pot,
+        nama:namaKar,noClosing:'',ket:ketPot,kodeProj:ls.kodeProj||''
+      });
+      ss(KS.ksb,S.logKasbon);
+    }
+  }
+  closeModal();
   showToast(sts==='Lunas'?'✅ Lunas! Pembayaran selesai':'✅ Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
   go('subkon');
-  doSync('updateLogSubkon',{id:ls.id,kodeProj:ls.kodeProj,uraian:ls.uraian,nominalBayar:totalBayar,statusBayar:sts,tglBayar:tgl});
+  doSync('updateLogSubkon',{
+    id:ls.id,kodeProj:ls.kodeProj,uraian:ls.uraian,
+    nominalBayar:totalBayar,statusBayar:sts,tglBayar:tgl,
+    potongan:pot>0?pot:0,
+    idKaryawanPotong:idKar,
+    namaKaryawanPotong:namaKar,
+    ketPotongan:ketPot
+  });
 }
 function subkonMaster(){
   return `<div class="row" style="margin-bottom:11px"><div></div>

@@ -302,30 +302,34 @@ function _apiReadSubkon(ss) {
 
 // Sheet: A=id(no) B=tgl C=kodeProj D=namaProj E=idSubkon F=namaSubkon
 //        G=uraian H=nilaiKontrak I=statusBayar J=nominalBayar K=tglBayar L=ket
+//        M=potongan N=idKaryawanPotong O=ketPotongan (v1.25)
 function _apiReadLogSubkon(ss) {
   var ws = ss.getSheetByName(SHEET.LOG_SUBKON);
   if (!ws) return [];
   var s = ROWS.LOG_SUBKON.start;
   var e = _endRow(ws, s); if (e < s) return [];
-  var data = ws.getRange("A" + s + ":L" + e).getValues();
+  var data = ws.getRange("A" + s + ":O" + e).getValues();
   var out  = [], cnt = 0;
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
     if (String(r[2]).trim() === "") continue; // C = kodeProj
     cnt++;
     out.push({
-      id:           String(r[0]).trim() || ("LSK-GS-" + cnt),
-      tgl:          _apiSerDate(r[1]),
-      kodeProj:     String(r[2]  || ""),
-      namaProj:     String(r[3]  || ""),
-      idSubkon:     String(r[4]  || ""),
-      namaSubkon:   String(r[5]  || ""),
-      uraian:       String(r[6]  || ""),
-      nilaiKontrak: Number(r[7]) || 0,
-      statusBayar:  String(r[8]  || "Belum Dibayar"),
-      nominalBayar: Number(r[9]) || 0,
-      tglBayar:     _apiSerDate(r[10]),
-      ket:          String(r[11] || "")
+      id:               String(r[0]).trim() || ("LSK-GS-" + cnt),
+      tgl:              _apiSerDate(r[1]),
+      kodeProj:         String(r[2]  || ""),
+      namaProj:         String(r[3]  || ""),
+      idSubkon:         String(r[4]  || ""),
+      namaSubkon:       String(r[5]  || ""),
+      uraian:           String(r[6]  || ""),
+      nilaiKontrak:     Number(r[7]) || 0,
+      statusBayar:      String(r[8]  || "Belum Dibayar"),
+      nominalBayar:     Number(r[9]) || 0,
+      tglBayar:         _apiSerDate(r[10]),
+      ket:              String(r[11] || ""),
+      potongan:         Number(r[12]) || 0,
+      idKaryawanPotong: String(r[13] || ""),
+      ketPotongan:      String(r[14] || "")
     });
   }
   return out;
