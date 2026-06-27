@@ -164,7 +164,7 @@ const S={
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
   rabLabels:{mat:'',upah:'',subkon:'',overhead:''},
   dashFilter:'Berjalan',
-  beliFilter:'',absFilter:'',beliSearchQ:'',catatanKode:'',
+  beliFilter:'',beliTokoFilter:'',beliLogQ:'',absFilter:'',beliSearchQ:'',catatanKode:'',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
@@ -1185,7 +1185,7 @@ function beliInput(){
     </div></div>`;
 }
 function setBeliFilter(v){S.beliFilter=v;go('beli');}
-function setBeliDateFilter(v){S.tab.beliDateMode=v;if(v==='custom'){document.getElementById('beli-date-from').style.display='block';document.getElementById('beli-date-to').style.display='block';}else{document.getElementById('beli-date-from').style.display='none';document.getElementById('beli-date-to').style.display='none';}go('beli');}
+function setBeliDateFilter(v){S.tab.beliDateMode=v;go('beli');}
 function setBeliView(v){ S.tab.beliView=v; go('beli'); }
 function toggleBeliToko(name){
   const o=S.tab.beliOpenToko||(S.tab.beliOpenToko=[]);
@@ -1208,18 +1208,16 @@ function beliItemCard(b,showToko){
       <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
 }
 function beliLog(){
-  const view=S.tab.beliView||'date';
   const dateMode=S.tab.beliDateMode||'all';
   const fromD=S.tab.beliDateFrom||'';
   const toD=S.tab.beliDateTo||'';
-  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.beliFilter===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
-  const viewBar=`<div style="display:flex;gap:6px;margin-bottom:10px">
-      <button class="tab ${view==='date'?'tab-on':'tab-off'} btn-sm" onclick="setBeliView('date')">📅 Per Tanggal</button>
-      <button class="tab ${view==='toko'?'tab-on':'tab-off'} btn-sm" onclick="setBeliView('toko')">🏪 Per Toko</button>
-    </div>`;
-  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setBeliFilter(this.value)">${prjFilterOpts}</select></div>
-    <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+  // Toko list: gabung masterToko + unique dari pembelian
+  const tokoSet=new Set([...S.masterToko,...S.pembelian.map(b=>(b.toko||'').trim()).filter(Boolean)]);
+  const tokoSorted=[...tokoSet].sort((a,b)=>a.localeCompare(b,'id'));
+  const prjOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${S.beliFilter===p.kode?' selected':''}>${esc(p.nama)}</option>`).join('');
+  const tokoOpts=`<option value="">Semua Toko</option>`+tokoSorted.map(t=>`<option value="${esc(t)}"${(S.beliTokoFilter||'')===t?' selected':''}>${esc(t)}</option>`).join('');
+  const filterBar=`
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
       <button class="tab ${dateMode==='all'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('all')">Semua</button>
       <button class="tab ${dateMode==='today'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('today')">Hari Ini</button>
       <button class="tab ${dateMode==='yesterday'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('yesterday')">Kemarin</button>
@@ -1227,50 +1225,38 @@ function beliLog(){
       <button class="tab ${dateMode==='thismonth'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('thismonth')">Bulan Ini</button>
       <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('custom')">Custom</button>
     </div>
-    <div id="beli-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
-      <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value">
+    ${dateMode==='custom'?`<div class="g2" style="margin-bottom:8px">
+      <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;go('beli')"></div>
+      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;go('beli')"></div>
+    </div>`:''}
+    <div class="g2" style="margin-bottom:8px">
+      <select class="fc" onchange="S.beliFilter=this.value;go('beli')">${prjOpts}</select>
+      <select class="fc" onchange="S.beliTokoFilter=this.value;go('beli')">${tokoOpts}</select>
     </div>
-    <div id="beli-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
-      <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value">
-    </div>
-    ${dateMode==='custom'?`<button class="btn btn-o btn-sm btn-w" onclick="go('beli')" style="margin-top:4px">🔍 Terapkan Filter</button>`:''}
-    </div>`;
-  const all=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
-  let filtered=S.beliFilter?all.filter(b=>b.kodeProj===S.beliFilter):all;
-  filtered=filterByDate(filtered,dateMode,fromD,toD);
-  const namaProj=S.beliFilter?(S.projects.find(p=>p.kode===S.beliFilter)?.nama||S.beliFilter):'';
-  const emptyMsg=S.beliFilter?`<div class="empty">Tidak ada pembelian untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
-  const head=viewBar+filterBar;
-  if(filtered.length===0)return head+emptyMsg;
-  if(view==='toko'){
-    const open=S.tab.beliOpenToko||[];
-    const groups={};
-    filtered.forEach(b=>{
-      const k=(b.toko||'').trim()||'(Tanpa Toko)';
-      (groups[k]||(groups[k]={items:[],total:0,last:''})).items.push(b);
-      groups[k].total+=calcTotal(b);
-      const t=String(b.tgl||''); if(t>groups[k].last)groups[k].last=t;
-    });
-    const sorted=Object.keys(groups).sort((a,b)=>groups[b].last.localeCompare(groups[a].last));
-    const cards=sorted.map(name=>{
-      const g=groups[name]; const isOpen=open.includes(name);
-      const detail=isOpen?`<div style="margin-top:8px">${g.items.map(b=>beliItemCard(b,false)).join('')}</div>`:'';
-      return `<div class="card">
-        <div class="row" style="cursor:pointer;align-items:center" data-toko="${esc(name)}" onclick="toggleBeliToko(this.dataset.toko)">
-          <div style="flex:1;min-width:0">
-            <div class="item-name">${isOpen?'▾':'▸'} 🏪 ${esc(name)}</div>
-            <div class="item-sub">${g.items.length} item · belanja terakhir ${fDate(g.last)}</div>
-          </div>
-          <div style="font-weight:700;font-size:14px;color:#10b981;margin-left:8px;flex-shrink:0">${fRp(g.total)}</div>
-        </div>${detail}</div>`;
-    }).join('');
-    return head+cards;
-  }
-  const list=filtered.slice(0,60);
-  return head+list.map(b=>beliItemCard(b,true)).join('');
+    <input class="fc" type="search" id="beli-log-q" placeholder="🔍 Cari nama barang..."
+      value="${esc(S.beliLogQ||'')}"
+      oninput="S.beliLogQ=this.value;_renderBeliItems()"
+      style="font-size:14px;margin-bottom:10px">`;
+  return filterBar+`<div id="beli-items">${_beliItemsList()}</div>`;
 }
+function _beliItemsList(){
+  const dateMode=S.tab.beliDateMode||'all';
+  const fromD=S.tab.beliDateFrom||'';
+  const toD=S.tab.beliDateTo||'';
+  const q=(S.beliLogQ||'').toLowerCase().trim();
+  let filtered=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  if(S.beliFilter)       filtered=filtered.filter(b=>b.kodeProj===S.beliFilter);
+  if(S.beliTokoFilter)   filtered=filtered.filter(b=>(b.toko||'').trim()===S.beliTokoFilter);
+  filtered=filterByDate(filtered,dateMode,fromD,toD);
+  if(q) filtered=filtered.filter(b=>(b.namaBarang||'').toLowerCase().includes(q));
+  if(!filtered.length)return`<div class="empty">Tidak ada data yang sesuai filter</div>`;
+  return filtered.slice(0,80).map(b=>beliItemCard(b,true)).join('');
+}
+function _renderBeliItems(){
+  const el=document.getElementById('beli-items');
+  if(el)el.innerHTML=_beliItemsList();
+}
+
 // ── CEK HARGA ─────────────────────────────────────────────────────────
 function beliCekHarga(){
   return `<div class="fg" style="margin-bottom:10px">
