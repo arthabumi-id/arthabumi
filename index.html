@@ -128,6 +128,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.26</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -168,6 +169,14 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
+const APP_VERSION='v1.26';
+const APP_CHANGELOG=[
+  {v:'v1.26',date:'27 Jun 2026',desc:'Unified filter + grouped by toko di Log Pembelian; real-time search barang'},
+  {v:'v1.25',date:'21 Jun 2026',desc:'Kasbon/potongan di bayar subkon — terhubung ke LOG KASBON karyawan'},
+  {v:'v1.24',date:'20 Jun 2026',desc:'Edit pembelian (✏️); fix Cek Harga nama barang; backend unlimited mode'},
+  {v:'v1.23',date:'17 Jun 2026',desc:'Fix bug white screen (DOMContentLoaded); timeout 10 dtk GSheet fetch'},
+  {v:'v1.22',date:'17 Jun 2026',desc:'Export Excel berwarna (xlsx-js-style); print PDF dengan Chart.js'},
+];
 const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 function loadLocal(){
@@ -360,6 +369,20 @@ function closeModal(){document.getElementById('overlay').classList.remove('show'
 function openSettings(){
   openModal(`
     <div class="modal-title">⚙️ Pengaturan</div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:10px 12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+        <span style="font-weight:700;font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.5px">🚀 Versi Aplikasi</span>
+        <span style="background:#1e3a5f;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${APP_VERSION}</span>
+      </div>
+      <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:5px">5 Update Terakhir:</div>
+      ${APP_CHANGELOG.map((c,i)=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:4px 0${i<APP_CHANGELOG.length-1?';border-bottom:1px dashed #e2e8f0':''}">
+        <span style="background:${i===0?'#1e3a5f':'#e2e8f0'};color:${i===0?'#fff':'#64748b'};font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;white-space:nowrap;margin-top:1px">${c.v}</span>
+        <div style="flex:1;min-width:0">
+          <span style="font-size:10px;color:#94a3b8">${c.date} · </span>
+          <span style="font-size:11px;color:#334155">${c.desc}</span>
+        </div>
+      </div>`).join('')}
+    </div>
     <div style="font-weight:700;font-size:12px;color:#334155;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏢 Profil Perusahaan</div>
     <div class="fg"><label class="fl">Nama Perusahaan</label>
       <input class="fc" id="cfg-co-name" value="${esc(S.companyName)}" placeholder="Arthabumi"></div>
