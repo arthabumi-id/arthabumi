@@ -1245,12 +1245,34 @@ function _beliItemsList(){
   const toD=S.tab.beliDateTo||'';
   const q=(S.beliLogQ||'').toLowerCase().trim();
   let filtered=[...S.pembelian].sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
-  if(S.beliFilter)       filtered=filtered.filter(b=>b.kodeProj===S.beliFilter);
-  if(S.beliTokoFilter)   filtered=filtered.filter(b=>(b.toko||'').trim()===S.beliTokoFilter);
+  if(S.beliFilter)     filtered=filtered.filter(b=>b.kodeProj===S.beliFilter);
+  if(S.beliTokoFilter) filtered=filtered.filter(b=>(b.toko||'').trim()===S.beliTokoFilter);
   filtered=filterByDate(filtered,dateMode,fromD,toD);
   if(q) filtered=filtered.filter(b=>(b.namaBarang||'').toLowerCase().includes(q));
-  if(!filtered.length)return`<div class="empty">Tidak ada data yang sesuai filter</div>`;
-  return filtered.slice(0,80).map(b=>beliItemCard(b,true)).join('');
+  if(!filtered.length) return`<div class="empty">Tidak ada data yang sesuai filter</div>`;
+  // Group by toko, sorted by tanggal terakhir
+  const groups={};
+  filtered.forEach(b=>{
+    const k=(b.toko||'').trim()||'(Tanpa Toko)';
+    if(!groups[k])groups[k]={items:[],total:0,last:''};
+    groups[k].items.push(b);
+    groups[k].total+=calcTotal(b);
+    const t=String(b.tgl||''); if(t>groups[k].last)groups[k].last=t;
+  });
+  const sorted=Object.keys(groups).sort((a,b)=>groups[b].last.localeCompare(groups[a].last));
+  return sorted.map(toko=>{
+    const g=groups[toko];
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f1f5f9;border-radius:10px;margin-bottom:6px">
+        <div>
+          <span style="font-weight:700;font-size:13px">🏪 ${esc(toko)}</span>
+          <span style="font-size:11px;color:#64748b;margin-left:6px">${g.items.length} item · ${fDate(g.last)}</span>
+        </div>
+        <span style="font-weight:700;color:#10b981;font-size:13px">${fRp(g.total)}</span>
+      </div>
+      ${g.items.map(b=>beliItemCard(b,false)).join('')}
+    </div>`;
+  }).join('');
 }
 function _renderBeliItems(){
   const el=document.getElementById('beli-items');
