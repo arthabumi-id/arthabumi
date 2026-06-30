@@ -121,6 +121,7 @@ function _apiHandleAction(ss, action, data) {
     case "deleteSubkon":      _apiDeleteSubkon(ss, data);      break;
     case "addLogSubkon":      _apiAddLogSubkon(ss, data);      break;
     case "updateLogSubkon":   _apiUpdateLogSubkon(ss, data);   break;
+    case "editLogSubkon":     _apiEditLogSubkon(ss, data);     break;
     case "deleteLogSubkon":   _apiDeleteLogSubkon(ss, data);   break;
 
     // Rekap GSheet

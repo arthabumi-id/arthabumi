@@ -2706,9 +2706,48 @@ function subkonLog(){
       </div>`:''}
       <div class="act-row">
         ${!isLunas?`<button class="btn btn-o btn-sm" onclick="openBayarSubkon(${ri})">💰 Bayar (sisa ${fRp(sisa)})</button>`:''}
+        <button class="btn btn-sm" style="background:#dbeafe;color:#1d4ed8;border:none;border-radius:8px;padding:6px 12px;cursor:pointer" onclick="openEditLogSubkon(${ri})">✏️ Edit</button>
         <button class="btn btn-d btn-sm" onclick="delLogSubkon(${ri})">🗑 Hapus</button>
       </div></div>`;
   }).join('');
+}
+function openEditLogSubkon(idx){
+  const ls=S.logSubkon[idx];
+  const sudahBayar=ls.nominalBayar||0;
+  const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${ls.kodeProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}"${ls.idSubkon===sk.id?' selected':''}>${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
+  openModal(`<div class="modal-title">✏️ Edit Pekerjaan Subkon</div>
+    ${sudahBayar>0?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:9px;padding:8px 12px;font-size:11px;color:#c2410c;margin-bottom:12px">⚠️ Sudah ada pembayaran ${fRp(sudahBayar)}. Edit nilai kontrak akan mengubah sisa hutang.</div>`:''}
+    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="elk-tgl" value="${esc(ls.tgl||'')}"></div>
+    <div class="fg"><label class="fl">Proyek<span class="req">*</span></label><select class="fc" id="elk-prj">${prjOpts}</select></div>
+    <div class="fg"><label class="fl">Subkontraktor<span class="req">*</span></label><select class="fc" id="elk-sk">${skOpts}</select></div>
+    <div class="fg"><label class="fl">Uraian Pekerjaan<span class="req">*</span></label><input class="fc" id="elk-urai" value="${esc(ls.uraian||'')}"></div>
+    <div class="fg"><label class="fl">Nilai Kontrak<span class="req">*</span></label>
+      ${numInp('elk-kontrak',ls.nilaiKontrak,'')}
+    </div>
+    <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="elk-ket" value="${esc(ls.ket||'')}"></div>
+    <div class="act-row" style="justify-content:flex-end">
+      <button class="btn btn-g" onclick="closeModal()">Batal</button>
+      <button class="btn btn-p" onclick="saveEditLogSubkon(${idx})">💾 Simpan</button>
+    </div>`);
+}
+function saveEditLogSubkon(idx){
+  const tgl=document.getElementById('elk-tgl').value;
+  const kodeProj=document.getElementById('elk-prj').value;
+  const idSubkon=document.getElementById('elk-sk').value;
+  const uraian=(document.getElementById('elk-urai').value||'').trim();
+  const nilaiKontrak=getNum('elk-kontrak');
+  const ket=(document.getElementById('elk-ket').value||'').trim();
+  if(!kodeProj||!idSubkon||!uraian||!nilaiKontrak){showToast('Lengkapi data wajib','err');return;}
+  const projData=S.projects.find(p=>p.kode===kodeProj);
+  const skData=S.masterSubkon.find(sk=>sk.id===idSubkon);
+  const ls=S.logSubkon[idx];
+  S.logSubkon[idx]={...ls,tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,ket};
+  ss(KS.lsk,S.logSubkon);
+  closeModal();
+  showToast('✅ Pekerjaan subkon diupdate');
+  go('subkon');
+  doSync('editLogSubkon',{id:ls.id,tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,ket});
 }
 function openBayarSubkon(idx){
   const ls=S.logSubkon[idx];

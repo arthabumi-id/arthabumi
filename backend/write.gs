@@ -571,6 +571,39 @@ function _apiAddLogSubkon(ss, d) {
   ws.getRange(r,12).setValue(_sanitizeStr(d.ket) || "");
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// EDIT LOG SUBKON — v1.27 (Session 20)
+// Edit detail pekerjaan (tgl, proyek, subkon, uraian, nilaiKontrak, ket)
+// TIDAK menyentuh kolom bayar (I,J,K) maupun kolom potongan (M,N,O)
+// ════════════════════════════════════════════════════════════════════════
+function _apiEditLogSubkon(ss, d) {
+  var ws = ss.getSheetByName(SHEET.LOG_SUBKON);
+  if (!ws) return;
+  var R      = ROWS.LOG_SUBKON;
+  var rowNum = -1;
+  // Find by ID (column A)
+  var colA = ws.getRange("A" + R.start + ":A" + ws.getLastRow()).getValues();
+  for (var i = 0; i < colA.length; i++) {
+    if (String(colA[i][0]).trim() === String(d.id).trim()) { rowNum = i + R.start; break; }
+  }
+  if (rowNum < 0) return;
+  // Update cols B-H (2-8): tgl, kodeProj, namaProj, idSubkon, namaSubkon, uraian, nilaiKontrak
+  var tgl = _apiParseDate(d.tgl);
+  ws.getRange(rowNum, 2, 1, 7).setValues([[
+    tgl || String(d.tgl || ""),
+    _sanitizeStr(d.kodeProj)                 || "",
+    _sanitizeStr(d.namaProj  || d.kodeProj)  || "",
+    _sanitizeStr(d.idSubkon)                 || "",
+    _sanitizeStr(d.namaSubkon|| d.idSubkon)  || "",
+    _sanitizeStr(d.uraian)                   || "",
+    _sanitizeNum(d.nilaiKontrak)
+  ]]);
+  if (tgl) ws.getRange(rowNum, 2).setNumberFormat("dd/MM/yyyy");
+  ws.getRange(rowNum, 8).setNumberFormat("#,##0");
+  // Update col L (12): ket
+  ws.getRange(rowNum, 12).setValue(_sanitizeStr(d.ket) || "");
+}
+
 function _apiUpdateLogSubkon(ss, d) {
   var ws = ss.getSheetByName(SHEET.LOG_SUBKON);
   if (!ws) return;
