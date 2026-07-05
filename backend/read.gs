@@ -80,7 +80,7 @@ function _apiReadPembelian(ss) {
   if (!ws) return [];
   var s = ROWS.PEMBELIAN.start;
   var e = _endRow(ws, s); if (e < s) return [];
-  var data = ws.getRange("A" + s + ":L" + e).getValues();
+  var data = ws.getRange("A" + s + ":M" + e).getValues();
   var out  = [], cnt = 0;
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
@@ -98,7 +98,8 @@ function _apiReadPembelian(ss) {
       diskon:     Number(r[8]) || 0,
       status:     String(r[9]  || "HABIS"),
       toko:       String(r[10] || ""),
-      total:      Number(r[11]) || 0
+      total:      Number(r[11]) || 0,
+      bayarToko:  String(r[12]  || "Lunas")
     });
   }
   return out;

@@ -105,6 +105,7 @@ function _apiAddPembelian(ss, items) {
     ws.getRange(r, 9).setValue(_sanitizeNum(it.diskon) || "").setNumberFormat("#,##0");
     ws.getRange(r,10).setValue(_sanitizeStr(it.status)     || "HABIS");
     ws.getRange(r,11).setValue(_sanitizeStr(it.toko)       || "");
+    ws.getRange(r,13).setValue(_sanitizeStr(it.bayarToko) || "Lunas");
     // Formula total — MAX(0, qty*harga - diskon)
     ws.getRange(r,12).setFormula(
       "=IF(OR(D"+r+"=\"\",G"+r+"=\"\",H"+r+"=\"\"),\"\",IF(J"+r+"=\"ASET\",0,MAX(0,G"+r+"*H"+r+"-IFERROR(I"+r+",0))))"
@@ -718,7 +719,7 @@ function _apiUpdatePembelian(ss, d) {
   var diskon  = _sanitizeNum(d.diskon);
   var total   = _sanitizeNum(d.total) || Math.max(0, qty * harga - diskon);
 
-  ws.getRange(rowNum, 2, 1, 11).setValues([[
+  ws.getRange(rowNum, 2, 1, 12).setValues([[
     tglDate || String(d.tgl || ""),         // B = tgl
     _sanitizeStr(d.kodeProj)   || "",       // C = kodeProj
     _sanitizeStr(d.namaBarang) || "",       // D = namaBarang
@@ -729,7 +730,8 @@ function _apiUpdatePembelian(ss, d) {
     diskon,                                 // I = diskon
     _sanitizeStr(d.status)     || "HABIS",  // J = status
     _sanitizeStr(d.toko)       || "",       // K = toko
-    total                                   // L = total
+    total,                                  // L = total
+    _sanitizeStr(d.bayarToko)  || "Lunas"  // M = bayarToko
   ]]);
   ws.getRange(rowNum,  8).setNumberFormat("#,##0"); // H = harga
   ws.getRange(rowNum,  9).setNumberFormat("#,##0"); // I = diskon
@@ -770,6 +772,28 @@ function _apiUpdatePembelian(ss, d) {
           _sanitizeStr(d.satuan) || "pcs", harga, harga
         ]]);
       }
+    }
+  }
+}
+
+function _apiMarkBayarToko(ss, d) {
+  // Mark satu item pembelian sebagai Lunas di kolom M
+  // d = { tgl, kodeProj, namaBarang }
+  var ws = ss.getSheetByName(SHEET.PEMBELIAN);
+  if (!ws) return;
+  var R      = ROWS.PEMBELIAN;
+  var endRow = ws.getLastRow();
+  if (endRow < R.start) return;
+  var data  = ws.getRange("B" + R.start + ":D" + endRow).getValues();
+  var tglT  = String(d.tgl        || "").trim();
+  var projT = String(d.kodeProj   || "").trim();
+  var namaT = String(d.namaBarang || "").trim().toLowerCase();
+  for (var i = 0; i < data.length; i++) {
+    if (_apiSerDate(data[i][0]) === tglT &&
+        String(data[i][1]).trim()              === projT &&
+        String(data[i][2]).trim().toLowerCase() === namaT) {
+      ws.getRange(i + R.start, 13).setValue("Lunas");
+      return;
     }
   }
 }

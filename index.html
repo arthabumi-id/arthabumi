@@ -128,7 +128,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.27</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.28</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -165,17 +165,18 @@ const S={
   rabKodeProj:'',rabNominal:{material:0,upah:0,subkon:0,overhead:0},
   rabLabels:{mat:'',upah:'',subkon:'',overhead:''},
   dashFilter:'Berjalan',
-  beliFilter:'',beliTokoFilter:'',beliLogQ:'',absFilter:'',beliSearchQ:'',catatanKode:'',
+  beliFilter:'',beliTokoFilter:'',beliLogQ:'',absFilter:'',absKarFilter:'',beliSearchQ:'',catatanKode:'',
+  formBayarToko:'Lunas',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
-const APP_VERSION='v1.27';
+const APP_VERSION='v1.28';
 const APP_CHANGELOG=[
+  {v:'v1.28',date:'2 Jul 2026',desc:'Hutang ke Toko (tab baru + tandai lunas); Sync merge aman (tidak overwrite lokal); Filter Absensi per karyawan'},
   {v:'v1.27',date:'30 Jun 2026',desc:'Edit entri kerja subkon (✏️); version display di header & Settings'},
   {v:'v1.26',date:'27 Jun 2026',desc:'Unified filter + grouped by toko di Log Pembelian; real-time search barang'},
   {v:'v1.25',date:'21 Jun 2026',desc:'Kasbon/potongan di bayar subkon — terhubung ke LOG KASBON karyawan'},
   {v:'v1.24',date:'20 Jun 2026',desc:'Edit pembelian (✏️); fix Cek Harga nama barang; backend unlimited mode'},
-  {v:'v1.23',date:'17 Jun 2026',desc:'Fix bug white screen (DOMContentLoaded); timeout 10 dtk GSheet fetch'},
 ];
 const sg=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
@@ -238,19 +239,32 @@ async function gsWrite(url,action,data){
   }finally{clearTimeout(tid);}
 }
 
+// Merge GSheet array into local array.
+// Strategy: GSheet is source of truth. Local entries without ID prefix "BLI-GS-" / "ABN-GS-" etc.
+// are considered unsynced (written locally but not yet confirmed by GSheet).
+// We keep them if GSheet doesn't have them yet, drop them once they appear in GSheet.
+function _mergeArr(local, remote, idPrefix){
+  if(!remote||!remote.length) return local||[];
+  const remoteIds=new Set(remote.map(x=>x.id));
+  // Preserve local-only entries (those with non-GSheet IDs) that aren't yet in remote
+  const localOnly=(local||[]).filter(x=>x.id&&!x.id.startsWith(idPrefix)&&!remoteIds.has(x.id));
+  return [...remote,...localOnly];
+}
 function applyGS(d){
   if(!d)return;
+  // Master tables: always overwrite (no local-only entries for these)
   if(d.projects){S.projects=d.projects;ss(KS.p,d.projects);}
-  if(d.pembelian){S.pembelian=d.pembelian;ss(KS.beli,d.pembelian);}
   if(d.karyawan){S.karyawan=d.karyawan;ss(KS.kr,d.karyawan);}
-  if(d.logAbsensi){S.logAbsensi=d.logAbsensi;ss(KS.abs,d.logAbsensi);}
-  if(d.logKasbon){S.logKasbon=d.logKasbon;ss(KS.ksb,d.logKasbon);}
-  if(d.logPembayaran){S.logPembayaran=d.logPembayaran;ss(KS.bayar,d.logPembayaran);}
   if(d.barang){S.masterBarang=d.barang;ss(KS.brg,d.barang);}
   if(d.toko){S.masterToko=d.toko;ss(KS.toko,d.toko);}
   if(d.rab){S.rab=d.rab;ss(KS.rab,d.rab);}
   if(d.subkon){S.masterSubkon=d.subkon;ss(KS.sk,d.subkon);}
-  if(d.logSubkon){S.logSubkon=d.logSubkon;ss(KS.lsk,d.logSubkon);}
+  // Log tables: merge — keep local-only unsynced entries until GSheet confirms them
+  if(d.pembelian){const m=_mergeArr(S.pembelian,d.pembelian,'BLI-GS-');S.pembelian=m;ss(KS.beli,m);}
+  if(d.logAbsensi){const m=_mergeArr(S.logAbsensi,d.logAbsensi,'ABN-GS-');S.logAbsensi=m;ss(KS.abs,m);}
+  if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-');S.logKasbon=m;ss(KS.ksb,m);}
+  if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-');S.logPembayaran=m;ss(KS.bayar,m);}
+  if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-');S.logSubkon=m;ss(KS.lsk,m);}
   S.lastSync=new Date();S.syncError=null;updateSyncBadge();
 }
 async function doFetch(url){
@@ -1153,14 +1167,17 @@ function delVariasi(kode,idx){
 // ── PEMBELIAN
 function pgBeli(){
   const tab=S.tab.beli||'input';
+  const nHutangToko=S.pembelian.filter(b=>b.bayarToko==='Hutang').length;
+  const htBadge=nHutangToko>0?` <span style="background:#dc2626;color:#fff;border-radius:9px;padding:1px 5px;font-size:10px;vertical-align:middle">${nHutangToko}</span>`:'';
   return `<div class="row" style="margin-bottom:11px">
     <div class="sec-title" style="margin:0">Pembelian</div>
     <div class="tabs">
       <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('beli','input')">Input</button>
       <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('beli','log')">Log</button>
       <button class="tab ${tab==='harga'?'tab-on':'tab-off'}" onclick="setTab('beli','harga')">Cek Harga</button>
+      <button class="tab ${tab==='hutang'?'tab-on':'tab-off'}" onclick="setTab('beli','hutang')">Hutang Toko${htBadge}</button>
     </div>
-  </div>${tab==='input'?beliInput():tab==='log'?beliLog():beliCekHarga()}`;
+  </div>${tab==='input'?beliInput():tab==='log'?beliLog():tab==='hutang'?beliHutang():beliCekHarga()}`;
 }
 function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
@@ -1202,6 +1219,11 @@ function beliInput(){
       <input class="fc" list="tk-dl" id="beli-toko" value="${esc(currentShop)}" placeholder="Pilih toko" oninput="S.formItems.forEach(x=>x.toko=this.value)">
       <datalist id="tk-dl">${tk}</datalist></div>
     ${items}
+    <div class="fg"><label class="fl">Status Bayar ke Toko</label>
+      <div style="display:flex;gap:8px">
+        <button class="tab ${S.formBayarToko!=='Hutang'?'tab-on':'tab-off'} btn-sm" onclick="S.formBayarToko='Lunas';go('beli')" style="flex:1">✅ Sudah Lunas</button>
+        <button class="tab ${S.formBayarToko==='Hutang'?'tab-on':'tab-off'} btn-sm" onclick="S.formBayarToko='Hutang';go('beli')" style="flex:1;${S.formBayarToko==='Hutang'?'color:#dc2626;font-weight:700':''}">💳 Hutang</button>
+      </div></div>
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
       <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
@@ -1210,6 +1232,54 @@ function beliInput(){
 function setBeliFilter(v){S.beliFilter=v;go('beli');}
 function setBeliDateFilter(v){S.tab.beliDateMode=v;go('beli');}
 function setBeliView(v){ S.tab.beliView=v; go('beli'); }
+function beliHutang(){
+  const items=S.pembelian.filter(b=>b.bayarToko==='Hutang');
+  if(!items.length)return '<div class="empty">Tidak ada hutang ke toko 🎉</div>';
+  const grouped={};
+  items.forEach(b=>{const k=b.toko||'(Toko tidak diisi)';if(!grouped[k])grouped[k]={items:[],total:0,lastTgl:''};grouped[k].items.push(b);grouped[k].total+=(b.total||0);if(!grouped[k].lastTgl||b.tgl>grouped[k].lastTgl)grouped[k].lastTgl=b.tgl;});
+  const sorted=Object.keys(grouped).sort((a,b)=>grouped[b].lastTgl.localeCompare(grouped[a].lastTgl));
+  return sorted.map(toko=>{
+    const g=grouped[toko];
+    const rows=g.items.map(b=>{
+      const ri=S.pembelian.findIndex(x=>x.id===b.id);
+      return `<div style="padding:7px 0;border-top:1px solid #f1f5f9">
+        <div class="row">
+          <div style="flex:1"><div style="font-weight:600;font-size:13px">${esc(b.namaBarang)}</div>
+            <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj||'—')} · ${b.qty}× ${fRp(b.harga)}</div></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-weight:600;color:#dc2626">${fRp(b.total)}</span>
+            <button class="btn btn-g btn-sm" onclick="tandaiLunasBeli(${ri})" style="font-size:11px;padding:3px 8px">✅ Lunas</button>
+          </div></div></div>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:10px">
+      <div class="row" style="margin-bottom:8px">
+        <div><div class="item-name">🏢 ${esc(toko)}</div>
+          <div class="item-sub">${g.items.length} item · Terakhir ${fDate(g.lastTgl)}</div></div>
+        <div style="font-weight:700;color:#dc2626;font-size:15px">${fRp(g.total)}</div>
+      </div>
+      ${rows}
+      <div style="border-top:1px solid #f1f5f9;padding-top:8px;margin-top:4px;text-align:right">
+        <button class="btn btn-g btn-sm" onclick="tandaiLunasTokoAll('${esc(toko)}')" style="font-size:11px">✅ Lunasi Semua ke ${esc(toko)}</button>
+      </div></div>`;
+  }).join('');
+}
+function tandaiLunasBeli(idx){
+  const b=S.pembelian[idx];if(!b)return;
+  if(!confirm('Tandai "'+b.namaBarang+'" sudah lunas ke toko?'))return;
+  S.pembelian[idx]={...b,bayarToko:'Lunas'};
+  ss(KS.beli,S.pembelian);showToast('✅ Ditandai Lunas');go('beli');
+  doSync('markBayarToko',{tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
+}
+function tandaiLunasTokoAll(toko){
+  const items=S.pembelian.filter(b=>b.bayarToko==='Hutang'&&(b.toko||'(Toko tidak diisi)')===toko);
+  if(!items.length)return;
+  if(!confirm('Tandai semua '+items.length+' item ke '+toko+' sebagai Lunas?'))return;
+  items.forEach(b=>{
+    const ri=S.pembelian.findIndex(x=>x.id===b.id);
+    if(ri>=0){S.pembelian[ri]={...S.pembelian[ri],bayarToko:'Lunas'};doSync('markBayarToko',{tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});}
+  });
+  ss(KS.beli,S.pembelian);showToast('✅ '+items.length+' item Lunas');go('beli');
+}
 function toggleBeliToko(name){
   const o=S.tab.beliOpenToko||(S.tab.beliOpenToko=[]);
   const i=o.indexOf(name);
@@ -1397,17 +1467,18 @@ function executeBeli(){
   const kodeProj=document.getElementById('beli-prj').value;
   if(!kodeProj){showToast('Pilih proyek','err');return;}
   if(S.formItems.some(it=>!it.namaBarang||!it.harga)){showToast('Lengkapi nama & harga','err');return;}
-  const newItems=S.formItems.map(it=>({id:'BLI-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,kodeProj,...it,harga:Number(it.harga),qty:Number(it.qty),diskon:Number(it.diskon)||0}));
+  const bayarToko=S.formBayarToko||'Lunas';
+  const newItems=S.formItems.map(it=>({id:'BLI-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,kodeProj,...it,harga:Number(it.harga),qty:Number(it.qty),diskon:Number(it.diskon)||0,bayarToko}));
   S.pembelian.push(...newItems);ss(KS.beli,S.pembelian);
   const brg=[...S.masterBarang],tk=[...S.masterToko];
   newItems.forEach(it=>{if(!brg.find(b=>b.nama.toLowerCase()===it.namaBarang.toLowerCase()))brg.push({id:padId('BRG',brg,'id'),nama:it.namaBarang,kategori:it.kategori,satuan:it.satuan,hargaTerakhir:it.harga});if(it.toko&&!tk.includes(it.toko))tk.push(it.toko);});
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
   showToast('✅ '+newItems.length+' item disimpan');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
-  S.formBeliProj='';S.formBeliTgl=today();
+  S.formBeliProj='';S.formBeliTgl=today();S.formBayarToko='Lunas';
   setTab('beli','log');
   closeModal();
-  doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko})));
+  doSync('addPembelian',newItems.map(it=>({tgl:it.tgl,kodeProj:it.kodeProj,namaBarang:it.namaBarang,kategori:it.kategori,satuan:it.satuan,qty:it.qty,harga:it.harga,diskon:it.diskon,status:it.status,toko:it.toko,bayarToko:it.bayarToko})));
 }
 function submitBeli(){
   const tgl=S.formBeliTgl||today();
@@ -1449,7 +1520,9 @@ function openEditBeli(idx){
       <div class="fg" style="flex:1"><label class="fl">Harga (Rp)</label><input class="fc" type="number" id="eb-hrg" value="${b.harga}"></div>
       <div class="fg" style="flex:1"><label class="fl">Diskon (Rp)</label><input class="fc" type="number" id="eb-dis" value="${b.diskon||0}"></div>
     </div>
-    <div class="fg" style="margin-bottom:12px"><label class="fl">Toko</label><input class="fc" list="tk-dl" id="eb-toko" value="${esc(b.toko||'')}"></div>
+    <div class="fg" style="margin-bottom:9px"><label class="fl">Toko</label><input class="fc" list="tk-dl" id="eb-toko" value="${esc(b.toko||'')}"></div>
+    <div class="fg" style="margin-bottom:12px"><label class="fl">Status Bayar ke Toko</label>
+      <select class="fc" id="eb-bayartoko"><option value="Lunas" ${(b.bayarToko||'Lunas')==='Lunas'?'selected':''}>✅ Sudah Lunas</option><option value="Hutang" ${b.bayarToko==='Hutang'?'selected':''}>💳 Hutang</option></select></div>
     <div class="act-row">
       <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
       <button class="btn btn-p btn-sm" onclick="submitEditBeli()">💾 Simpan Perubahan</button>
@@ -1468,9 +1541,10 @@ function submitEditBeli(){
   const diskon=Number(document.getElementById('eb-dis')?.value)||0;
   const status=document.getElementById('eb-sts')?.value||'HABIS';
   const toko=(document.getElementById('eb-toko')?.value||'').trim();
+  const bayarToko=document.getElementById('eb-bayartoko')?.value||'Lunas';
   if(!namaBarang||!harga){showToast('Nama & harga wajib diisi','err');return;}
   const total=Math.max(0,qty*harga-diskon);
-  const updated={...S.pembelian[idx],tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total};
+  const updated={...S.pembelian[idx],tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total,bayarToko};
   S.pembelian[idx]=updated;
   ss(KS.beli,S.pembelian);
   // Sync S.masterBarang agar Cek Harga langsung reflect nama & harga baru
@@ -1481,7 +1555,7 @@ function submitEditBeli(){
   closeModal();
   showToast('✅ Pembelian diupdate');
   go('beli');
-  doSync('updatePembelian',{oldTgl:orig.tgl,oldKodeProj:orig.kodeProj,oldNamaBarang:orig.namaBarang,tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total});
+  doSync('updatePembelian',{oldTgl:orig.tgl,oldKodeProj:orig.kodeProj,oldNamaBarang:orig.namaBarang,tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total,bayarToko});
 }
 function openPasteBeli(){
   openModal(`<div class="modal-title">📋 Paste Daftar Pembelian</div>
@@ -1714,13 +1788,14 @@ function executeAbsensi(){
   doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
-function setAbsDateFilter(v){S.tab.absDateMode=v;if(v==='custom'){document.getElementById('abs-date-from').style.display='block';document.getElementById('abs-date-to').style.display='block';}else{document.getElementById('abs-date-from').style.display='none';document.getElementById('abs-date-to').style.display='none';}go('absensi');}
+function setAbsDateFilter(v){S.tab.absDateMode=v;go('absensi');}
 function absLog(){
   const dateMode=S.tab.absDateMode||'all';
   const fromD=S.tab.absDateFrom||'';
   const toD=S.tab.absDateTo||'';
-  const prjFilterOpts=`<option value="">Semua Proyek</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${S.absFilter===p.kode?'selected':''}>${esc(p.nama)}</option>`).join('');
-  const filterBar=`<div class="fg" style="margin-bottom:10px"><select class="fc" onchange="setAbsFilter(this.value)">${prjFilterOpts}</select></div>
+  const krOpts=`<option value="">Semua Karyawan</option>`+S.karyawan.map(k=>`<option value="${esc(k.id)}" ${S.absKarFilter===k.id?'selected':''}>${esc(k.nama)}</option>`).join('');
+  const filterBar=`<div class="fg" style="margin-bottom:10px">
+    <select class="fc" onchange="S.absKarFilter=this.value;_renderAbsItems()">${krOpts}</select></div>
     <div class="fg" style="margin-bottom:10px"><label class="fl" style="margin-bottom:6px">Filter Tanggal</label>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
       <button class="tab ${dateMode==='all'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('all')">Semua</button>
@@ -1730,22 +1805,25 @@ function absLog(){
       <button class="tab ${dateMode==='thismonth'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('thismonth')">Bulan Ini</button>
       <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('custom')">Custom</button>
     </div>
-    <div id="abs-date-from" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px;margin-top:8px">
-      <label class="fl">Dari Tanggal</label>
-      <input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value">
-    </div>
-    <div id="abs-date-to" style="display:${dateMode==='custom'?'block':'none'};margin-bottom:8px">
-      <label class="fl">Sampai Tanggal</label>
-      <input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value">
-    </div>
-    ${dateMode==='custom'?`<button class="btn btn-o btn-sm btn-w" onclick="go('absensi')" style="margin-top:4px">🔍 Terapkan Filter</button>`:''}
+    ${dateMode==='custom'?`<div class="g2" style="margin-bottom:8px">
+      <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;go('absensi')"></div>
+      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;go('absensi')"></div>
+    </div>`:''}
     </div>`;
-  const all=[...S.logAbsensi].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
-  let list=S.absFilter?all.filter(a=>a.kodeProj===S.absFilter):all;
+  return filterBar+`<div id="abs-items">${_absItemsList()}</div>`;
+}
+function _absItemsList(){
+  const dateMode=S.tab.absDateMode||'all';
+  const fromD=S.tab.absDateFrom||'';
+  const toD=S.tab.absDateTo||'';
+  let list=[...S.logAbsensi].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||'')));
+  if(S.absKarFilter) list=list.filter(a=>a.idKaryawan===S.absKarFilter);
   list=filterByDate(list,dateMode,fromD,toD).slice(0,80);
-  const namaProj=S.absFilter?(S.projects.find(p=>p.kode===S.absFilter)?.nama||S.absFilter):'';
-  const emptyMsg=S.absFilter?`<div class="empty">Tidak ada absensi untuk proyek ${esc(namaProj)}</div>`:'<div class="empty">Belum ada data</div>';
-  return filterBar+(list.length===0?emptyMsg:list.map(a=>{
+  if(!list.length){
+    const namaKar=S.absKarFilter?(S.karyawan.find(k=>k.id===S.absKarFilter)?.nama||S.absKarFilter):'';
+    return S.absKarFilter?`<div class="empty">Tidak ada absensi untuk ${esc(namaKar)}</div>`:'<div class="empty">Belum ada data</div>';
+  }
+  return list.map(a=>{
     const ri=S.logAbsensi.findIndex(x=>x.id===a.id);
     const namaP=S.projects.find(p=>p.kode===a.kodeProj)?.nama||a.kodeProj||'';
     return `<div class="card"><div class="row" style="margin-bottom:6px">
@@ -1757,7 +1835,11 @@ function absLog(){
         ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${ri})">🗑</button>`:''}
       </div></div>
       <div>${bdg(a.statusBayar)}</div></div>`;
-  }).join(''));
+  }).join('');
+}
+function _renderAbsItems(){
+  const el=document.getElementById('abs-items');
+  if(el)el.innerHTML=_absItemsList();
 }
 function delAbsensi(idx){
   const a=S.logAbsensi[idx];if(!a)return;
