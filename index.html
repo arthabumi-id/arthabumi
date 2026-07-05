@@ -243,11 +243,16 @@ async function gsWrite(url,action,data){
 // Strategy: GSheet is source of truth. Local entries without ID prefix "BLI-GS-" / "ABN-GS-" etc.
 // are considered unsynced (written locally but not yet confirmed by GSheet).
 // We keep them if GSheet doesn't have them yet, drop them once they appear in GSheet.
-function _mergeArr(local, remote, idPrefix){
+function _mergeArr(local, remote, idPrefix, keyFn){
   if(!remote||!remote.length) return local||[];
   const remoteIds=new Set(remote.map(x=>x.id));
-  // Preserve local-only entries (those with non-GSheet IDs) that aren't yet in remote
-  const localOnly=(local||[]).filter(x=>x.id&&!x.id.startsWith(idPrefix)&&!remoteIds.has(x.id));
+  const remoteKeys=keyFn?new Set(remote.map(keyFn)):null;
+  const localOnly=(local||[]).filter(x=>{
+    if(!x.id||x.id.startsWith(idPrefix)) return false;
+    if(remoteIds.has(x.id)) return false;
+    if(remoteKeys&&remoteKeys.has(keyFn(x))) return false; // content-match → already synced
+    return true;
+  });
   return [...remote,...localOnly];
 }
 function applyGS(d){
@@ -260,11 +265,11 @@ function applyGS(d){
   if(d.rab){S.rab=d.rab;ss(KS.rab,d.rab);}
   if(d.subkon){S.masterSubkon=d.subkon;ss(KS.sk,d.subkon);}
   // Log tables: merge — keep local-only unsynced entries until GSheet confirms them
-  if(d.pembelian){const m=_mergeArr(S.pembelian,d.pembelian,'BLI-GS-');S.pembelian=m;ss(KS.beli,m);}
-  if(d.logAbsensi){const m=_mergeArr(S.logAbsensi,d.logAbsensi,'ABN-GS-');S.logAbsensi=m;ss(KS.abs,m);}
-  if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-');S.logKasbon=m;ss(KS.ksb,m);}
-  if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-');S.logPembayaran=m;ss(KS.bayar,m);}
-  if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-');S.logSubkon=m;ss(KS.lsk,m);}
+  if(d.pembelian){const m=_mergeArr(S.pembelian,d.pembelian,'BLI-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.namaBarang}`);S.pembelian=m;ss(KS.beli,m);}
+  if(d.logAbsensi){const m=_mergeArr(S.logAbsensi,d.logAbsensi,'ABN-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.kodeProj}`);S.logAbsensi=m;ss(KS.abs,m);}
+  if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.tipe}|${x.nominal}`);S.logKasbon=m;ss(KS.ksb,m);}
+  if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.nominal}`);S.logPembayaran=m;ss(KS.bayar,m);}
+  if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-',x=>`${x.tgl}|${x.idSubkon}|${x.kodeProj}`);S.logSubkon=m;ss(KS.lsk,m);}
   S.lastSync=new Date();S.syncError=null;updateSyncBadge();
 }
 async function doFetch(url){
@@ -1249,6 +1254,7 @@ function beliHutang(){
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-weight:600;color:#dc2626">${fRp(b.total)}</span>
             <button class="btn btn-g btn-sm" onclick="tandaiLunasBeli(${ri})" style="font-size:11px;padding:3px 8px">✅ Lunas</button>
+              <button style="background:#fee2e2;border:none;border-radius:7px;padding:3px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delPembelian(${ri})">🗑</button>
           </div></div></div>`;
     }).join('');
     return `<div class="card" style="margin-bottom:10px">
