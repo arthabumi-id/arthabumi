@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.15 (Latest) — 2026-06-09
+- **Versi aktif:** v1.29 (Latest) — 2026-07-05
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -99,7 +99,7 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 |---|---|---|
 | dashboard | `pgDashboard()` | `setDashFilter(v)`, `pgPiutang()`, `pgHutang()` — semua pakai `vSum(p).final` |
 | project | `pgProject()` | `openAddProject()`, `saveProject()`, `delProject()`, `openRekapProyek()`, `openVariasiForm()`, `saveVariasi()`, `delVariasi()` |
-| beli | `pgBeli()` | `beliInput()`, `beliLog()` (toggle Per Tanggal/Per Toko: `setBeliView()`, `toggleBeliToko()`, `beliItemCard()`), `submitBeli()`, `delPembelian()`, `openPasteBeli()` |
+| beli | `pgBeli()` (tab: Input/Log/Cek Harga/Hutang Toko) | `beliInput()`, `beliLog()` → `_beliFiltered()` (filter tunggal) + `_beliGroupTanggal()`/`_beliGroupToko()` (toggle `setBeliView()`), `beliHutang()`, `beliCekHarga()`, `submitBeli()`, `openEditBeli()`, `delPembelian()`, `openPasteBeli()` |
 | karyawan | `pgKaryawan()` | `saveKaryawan()`, `delKaryawan()` |
 | absensi | `pgAbsensi()` | `absInput()`, `absLog()`, `submitAbsensi()`, `delAbsensi()` |
 | kasbon | `pgKasbon()` | `kasbonInput()`, `kasbonRekap()`, `submitKasbon()` |
@@ -140,7 +140,7 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 | Sheet | Kolom penting |
 |---|---|
 | MASTER PROJECT | B=kode, C=nama, F=nilaiKontrak(awal), O=catatan, P=progress, **Q=variasi (JSON kerja tambah/kurang)** |
-| PEMBELIAN | B=tgl, C=kodeProj, D=namaBarang, G=qty, H=harga, K=toko |
+| PEMBELIAN | **A=ID app (BLI-..., v1.29; baris legacy = nomor urut)**, B=tgl, C=kodeProj, D=namaBarang, G=qty, H=harga, I=diskon(Rp), K=toko, L=total(formula), M=bayarToko |
 | MASTER KARYAWAN | B=id, C=nama, E=upahHarian |
 | LOG ABSENSI | B=tgl, C=idKaryawan, E=status, I=statusBayar |
 | LOG KASBON | B=tgl, C=idKaryawan, D=tipe, E=nominal |
@@ -197,17 +197,19 @@ Tab:     tabs, tab tab-on/tab-off
 
 ---
 
-## VERSI AKTIF: v1.15 — 2026-06-09
+## VERSI AKTIF: v1.29 — 2026-07-05
 Perubahan terakhir:
-- ✅ **Log Pembelian Per Toko** — toggle 📅 Per Tanggal / 🏪 Per Toko; tiap toko diringkas (total + jumlah item), tekan untuk expand rincian. Filter Proyek & Tanggal tetap jalan.
-- ✅ **Kerja Tambah / Kurang per Proyek** — disimpan ringan sebagai JSON di **kolom Q** MASTER PROJECT (`p.variasi=[{tgl,jenis,nominal,catatan}]`). Nilai Final = awal ± variasi, dipakai di Dashboard, Piutang, Rekap proyek, kartu proyek (via `vSum`). Kartu proyek bisa diklik → modal detail. Numpang di action `updateProject` (tanpa action API baru).
-- ✅ **Fix:** Dashboard & tab Piutang sekarang ikut nilai final.
-- 🧹 **Cleanup:** hapus monolit `arthabumi-webapi.gs` (root & backend/) + 4 `index.html.bak-*`. Backend live = file terpisah dengan `config.gs` sebagai router.
+- ✅ **Log Pembelian view toggle kembali** — 📅 Per Tanggal (grup per hari + subtotal) / 🏪 Per Toko (collapsible). Ringkasan jumlah item + grand total sesuai filter. Refactor `_beliFiltered()` sebagai satu-satunya jalur filter.
+- ✅ **ID unik pembelian (pola LOG SUBKON)** — ID app `BLI-...` disimpan di kolom A sheet PEMBELIAN. `deletePembelian`/`updatePembelian`/`markBayarToko` lookup by ID dulu (`_findBeliRowById`), fallback `tgl+proj+nama` untuk baris legacy; backfill ID saat edit. Menghilangkan risiko salah baris saat ada pembelian duplikat.
+- ✅ **Fix filter Custom** — satu sisi tanggal kosong = rentang terbuka (sebelumnya filter mati diam-diam).
+- ✅ Sync merge pembelian pakai flag `pending:true` (bukan prefix ID) — item terhapus di device lain tidak muncul lagi.
+- 🐛 `deletePembelian` clear 13 kolom (M=bayarToko ikut terhapus).
 
 ### Versi sebelumnya
-- v1.14 (2026-05-28) — Kasbon Hutang Riwayat Pelunasan + Biaya Model Final
-- v1.11 — Cashflow per proyek, Single Shop Name, Confirmation Modal, Date Filter
-- v1.10 — Progress %, Alert System, Dashboard filtering, Backup system
+- v1.28 (2026-07-02) — Hutang ke Toko (tab + tandai lunas), sync merge aman, filter absensi per karyawan
+- v1.26 (2026-06-27) — Unified filter + grouped by toko di Log Pembelian, real-time search
+- v1.20 (2026-06-17) — Nav swap + bug fix form pembelian
+- v1.15 (2026-06-09) — Log Per Toko + Kerja Tambah/Kurang (kolom Q) + cleanup monolit
 
 **Lihat:** `docs/CHANGELOG.md` untuk riwayat lengkap.
 

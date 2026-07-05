@@ -86,10 +86,8 @@ function _apiReadPembelian(ss) {
     var r = data[i];
     if (String(r[3]).trim() === "") continue; // D = namaBarang (index 3 dari A)
     cnt++;
-    // Kolom A = ID app (BLI-...) untuk baris baru; baris legacy masih nomor urut → fallback BLI-GS-n
-    var rawId = String(r[0] || "").trim();
     out.push({
-      id:         rawId.indexOf("BLI-") === 0 ? rawId : "BLI-GS-" + cnt,
+      id:         "BLI-GS-" + cnt,
       tgl:        _apiSerDate(r[1]),
       kodeProj:   String(r[2]  || ""),
       namaBarang: String(r[3]  || ""),

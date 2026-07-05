@@ -93,8 +93,7 @@ function _apiAddPembelian(ss, items) {
   for (var i = 0; i < items.length; i++) {
     var it = items[i];
     var r  = nextRow + i;
-    // Kolom A = ID unik dari app (pola LOG SUBKON) — fallback nomor urut utk kompatibilitas
-    ws.getRange(r, 1).setValue(_sanitizeStr(it.id) || (r - 3));
+    ws.getRange(r, 1).setValue(r - 3);
     var tgl = _apiParseDate(it.tgl);
     if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy");
     ws.getRange(r, 3).setValue(_sanitizeStr(it.kodeProj)   || "");
@@ -158,45 +157,22 @@ function _apiAddPembelian(ss, items) {
   }
 }
 
-// Cari baris pembelian by ID unik (kolom A). Return -1 kalau tidak ketemu / id kosong / id legacy (BLI-GS-).
-function _findBeliRowById(ws, R, id) {
-  var idT = String(id || "").trim();
-  if (!idT || idT.indexOf("BLI-") !== 0 || idT.indexOf("BLI-GS-") === 0) return -1;
-  var endRow = ws.getLastRow();
-  if (endRow < R.start) return -1;
-  var ids = ws.getRange("A" + R.start + ":A" + endRow).getValues();
-  for (var i = 0; i < ids.length; i++) {
-    if (String(ids[i][0]).trim() === idT) return i + R.start;
-  }
-  return -1;
-}
-
-// Fallback legacy: cari baris by tgl+kodeProj+namaBarang (match pertama)
-function _findBeliRowByKey(ws, R, tgl, kodeProj, namaBarang) {
-  var endRow = ws.getLastRow();
-  if (endRow < R.start) return -1;
-  var data  = ws.getRange("B" + R.start + ":D" + endRow).getValues();
-  var tglT  = String(tgl        || "").trim();
-  var projT = String(kodeProj   || "").trim();
-  var namaT = String(namaBarang || "").trim().toLowerCase();
+function _apiDeletePembelian(ss, d) {
+  var ws = ss.getSheetByName(SHEET.PEMBELIAN);
+  if (!ws) return;
+  var R     = ROWS.PEMBELIAN;
+  var data  = ws.getRange("B" + R.start + ":D" + ws.getLastRow()).getValues();
+  var tglT  = String(d.tgl        || "").trim();
+  var projT = String(d.kodeProj   || "").trim();
+  var namaT = String(d.namaBarang || "").trim().toLowerCase();
   for (var i = 0; i < data.length; i++) {
     if (_apiSerDate(data[i][0]) === tglT &&
         String(data[i][1]).trim() === projT &&
         String(data[i][2]).trim().toLowerCase() === namaT) {
-      return i + R.start;
+      ws.getRange(i + R.start, 1, 1, 12).clearContent();
+      return;
     }
   }
-  return -1;
-}
-
-function _apiDeletePembelian(ss, d) {
-  var ws = ss.getSheetByName(SHEET.PEMBELIAN);
-  if (!ws) return;
-  var R = ROWS.PEMBELIAN;
-  var rowNum = _findBeliRowById(ws, R, d.id);
-  if (rowNum < 0) rowNum = _findBeliRowByKey(ws, R, d.tgl, d.kodeProj, d.namaBarang);
-  if (rowNum < 0) return;
-  ws.getRange(rowNum, 1, 1, 13).clearContent(); // 13 kolom termasuk M=bayarToko
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -720,15 +696,21 @@ function _apiUpdatePembelian(ss, d) {
   var endRow = ws.getLastRow();
   if (endRow < R.start) return;
 
-  // Cari baris: ID unik dulu (kolom A), fallback nilai LAMA (baris legacy)
-  var rowNum = _findBeliRowById(ws, R, d.id);
-  if (rowNum < 0) rowNum = _findBeliRowByKey(ws, R, d.oldTgl, d.oldKodeProj, d.oldNamaBarang);
-  if (rowNum < 0) return; // Row tidak ditemukan (belum sync atau sudah dihapus)
-  // Backfill ID ke baris legacy agar operasi berikutnya presisi
-  var newId = String(d.id || "").trim();
-  if (newId.indexOf("BLI-") === 0 && newId.indexOf("BLI-GS-") !== 0) {
-    ws.getRange(rowNum, 1).setValue(newId);
+  // Cari baris berdasarkan nilai LAMA
+  var data  = ws.getRange("B" + R.start + ":D" + endRow).getValues();
+  var tglT  = String(d.oldTgl        || "").trim();
+  var projT = String(d.oldKodeProj   || "").trim();
+  var namaT = String(d.oldNamaBarang || "").trim().toLowerCase();
+  var rowNum = -1;
+  for (var i = 0; i < data.length; i++) {
+    if (_apiSerDate(data[i][0]) === tglT &&
+        String(data[i][1]).trim()              === projT &&
+        String(data[i][2]).trim().toLowerCase() === namaT) {
+      rowNum = i + R.start;
+      break;
+    }
   }
+  if (rowNum < 0) return; // Row tidak ditemukan (belum sync atau sudah dihapus)
 
   // Update 11 kolom sekaligus (B:L), kolom A (no urut) dibiarkan
   var tglDate = _apiParseDate(String(d.tgl || ""));
@@ -802,9 +784,16 @@ function _apiMarkBayarToko(ss, d) {
   var R      = ROWS.PEMBELIAN;
   var endRow = ws.getLastRow();
   if (endRow < R.start) return;
-  // ID unik dulu (kolom A), fallback tgl+proj+nama (baris legacy)
-  var rowNum = _findBeliRowById(ws, R, d.id);
-  if (rowNum < 0) rowNum = _findBeliRowByKey(ws, R, d.tgl, d.kodeProj, d.namaBarang);
-  if (rowNum < 0) return;
-  ws.getRange(rowNum, 13).setValue("Lunas");
+  var data  = ws.getRange("B" + R.start + ":D" + endRow).getValues();
+  var tglT  = String(d.tgl        || "").trim();
+  var projT = String(d.kodeProj   || "").trim();
+  var namaT = String(d.namaBarang || "").trim().toLowerCase();
+  for (var i = 0; i < data.length; i++) {
+    if (_apiSerDate(data[i][0]) === tglT &&
+        String(data[i][1]).trim()              === projT &&
+        String(data[i][2]).trim().toLowerCase() === namaT) {
+      ws.getRange(i + R.start, 13).setValue("Lunas");
+      return;
+    }
+  }
 }

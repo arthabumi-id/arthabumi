@@ -13,6 +13,33 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 14 (v1.29) — 2026-07-05
+
+## [2026-07-05] v1.29 — Log Pembelian: View Toggle Kembali + ID Unik Pembelian
+
+### UX: Toggle 📅 Per Tanggal / 🏪 Per Toko (index.html)
+- ✨ Toggle view kembali (hilang sejak v1.26): **Per Tanggal** = grup per hari kronologis (baru terbaru dulu, subtotal per hari), **Per Toko** = grup per toko collapsible (▸ tap untuk expand)
+- ✨ Baris ringkasan hijau di atas daftar: jumlah item + grand total sesuai kombinasi filter aktif
+- ✨ Semua filter (proyek, toko, tanggal, search) berlaku di kedua view; refactor `_beliFiltered()` sebagai satu sumber filter
+- 🐛 Fix filter tanggal **Custom**: isi "Dari" saja atau "Sampai" saja sekarang berfungsi sebagai rentang terbuka (sebelumnya filter diam-diam nonaktif dan semua data tampil)
+- 🐛 Filter & grouping toko case-insensitive; label seragam `(Tanpa Toko)` di Log & Hutang Toko
+
+### DATA INTEGRITY: ID Unik Pembelian (index.html + backend read.gs & write.gs) — pola LOG SUBKON
+- 🐛 **Root cause**: baris pembelian di GSheet diidentifikasi via `tgl+kodeProj+namaBarang` (match pertama). Beli barang sama 2× di hari & proyek sama → edit/hapus/tandai-lunas bisa kena baris yang salah.
+- ✅ `addPembelian` kirim `id` app (`BLI-<timestamp>-<rand>`) → disimpan di **kolom A** sheet PEMBELIAN (menggantikan nomor urut untuk baris baru)
+- ✅ `_apiReadPembelian` baca ID dari kolom A (fallback `BLI-GS-n` untuk baris legacy bernomor)
+- ✅ `deletePembelian` / `updatePembelian` / `markBayarToko`: lookup **by ID dulu** (`_findBeliRowById`), fallback legacy key (`_findBeliRowByKey`)
+- ✅ `updatePembelian` backfill ID ke kolom A baris legacy saat diedit (migrasi bertahap tanpa setup script)
+- ✅ `deletePembelian` clear 13 kolom (A–M, sebelumnya 12 — kolom M bayarToko tertinggal)
+- ✅ Sync merge: item lokal baru ditandai `pending:true`; `_mergeArr` pakai flag ini untuk pembelian (mencegah item terhapus di device lain "hidup lagi" setelah ID remote berformat `BLI-...`)
+
+### DEPLOY
+- Frontend: push `index.html` (v1.29) ke GitHub
+- Backend: paste ulang `read.gs` + `write.gs` ke Apps Script editor → Deploy → **New version**
+- Tanpa migrasi sheet: baris lama tetap jalan via fallback, baris baru otomatis pakai ID
+
+---
+
 # 🔧 SESSION 13 (v1.20) — 2026-06-17
 
 ## [2026-06-17] v1.20 — Nav Swap + Bug Fix Pembelian
