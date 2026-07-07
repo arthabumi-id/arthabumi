@@ -23,6 +23,7 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - ✨ Semua filter (proyek, toko, tanggal, search) berlaku di kedua view; refactor `_beliFiltered()` sebagai satu sumber filter
 - 🐛 Fix filter tanggal **Custom**: isi "Dari" saja atau "Sampai" saja sekarang berfungsi sebagai rentang terbuka (sebelumnya filter diam-diam nonaktif dan semua data tampil)
 - 🐛 Filter & grouping toko case-insensitive; label seragam `(Tanpa Toko)` di Log & Hutang Toko
+- ✨ Modal Konfirmasi Pembelian sekarang menampilkan 📅 Tanggal, 📁 Nama Proyek, 🏪 Toko, dan Status Bayar di atas total — cek dulu sebelum simpan
 
 ### DATA INTEGRITY: ID Unik Pembelian (index.html + backend read.gs & write.gs) — pola LOG SUBKON
 - 🐛 **Root cause**: baris pembelian di GSheet diidentifikasi via `tgl+kodeProj+namaBarang` (match pertama). Beli barang sama 2× di hari & proyek sama → edit/hapus/tandai-lunas bisa kena baris yang salah.

@@ -1501,7 +1501,18 @@ function showBeliConfirmation(items, total){
     </div>`;
   }).join('');
 
+  const cTgl=S.formBeliTgl||today();
+  const cProj=S.projects.find(x=>x.kode===S.formBeliProj);
+  const cNamaProj=cProj?cProj.nama:(S.formBeliProj||'—');
+  const cToko=(document.getElementById('beli-toko')?.value||items[0]?.toko||'').trim()||'(Tanpa Toko)';
+  const cBayar=S.formBayarToko==='Hutang'?'<span style="color:#dc2626;font-weight:700">💳 Hutang</span>':'✅ Lunas';
   openModal(`<div class="modal-title">✅ Konfirmasi Pembelian</div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:10px 12px;margin-bottom:10px;font-size:12.5px">
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#64748b">📅 Tanggal</span><span style="font-weight:600">${fDate(cTgl)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;gap:10px"><span style="color:#64748b;flex-shrink:0">📁 Proyek</span><span style="font-weight:600;text-align:right">${esc(cNamaProj)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;gap:10px"><span style="color:#64748b;flex-shrink:0">🏪 Toko</span><span style="font-weight:600;text-align:right">${esc(cToko)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#64748b">Status Bayar</span><span>${cBayar}</span></div>
+    </div>
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:11px;margin-bottom:12px;font-size:12px;color:#15803d">
       <strong>Total Pembelian</strong><br><span style="font-size:18px;font-weight:800;color:#10b981">${fRp(total)}</span>
     </div>
