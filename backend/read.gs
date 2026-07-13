@@ -145,8 +145,10 @@ function _apiReadLogAbsensi(ss) {
     var r = data[i];
     if (String(r[2]).trim() === "") continue; // C = idKaryawan
     cnt++;
+    // Kolom A = ID app (ABS-...) untuk baris baru; baris legacy masih nomor urut → fallback ABS-GS-n
+    var rawIdAbs = String(r[0] || "").trim();
     out.push({
-      id:          "ABS-GS-" + cnt,
+      id:          (rawIdAbs.indexOf("ABS-") === 0 && rawIdAbs.indexOf("ABS-GS-") !== 0) ? rawIdAbs : "ABS-GS-" + cnt,
       tgl:         _apiSerDate(r[1]),
       idKaryawan:  String(r[2]  || ""),
       nama:        String(r[3]  || ""),

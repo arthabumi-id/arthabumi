@@ -89,12 +89,19 @@ function _apiAddPembelian(ss, items) {
   var wsBarang = ss.getSheetByName(SHEET.BARANG);
   var R        = ROWS.PEMBELIAN;
   var nextRow  = _apiFindNext(ws, "D", R.start, R.end);
+  // Idempotency guard: ID yang sudah ada di kolom A di-skip (retry setelah timeout tidak bikin baris dobel)
+  var existBeli = _collectExistingIds(ws, R, "BLI-");
+  var writtenB = 0;
 
   for (var i = 0; i < items.length; i++) {
-    var it = items[i];
-    var r  = nextRow + i;
+    var it   = items[i];
+    var itIdB = _sanitizeStr(it.id) || "";
+    if (itIdB && existBeli[itIdB]) continue;
+    if (itIdB) existBeli[itIdB] = true;
+    var r  = nextRow + writtenB;
+    writtenB++;
     // Kolom A = ID unik dari app (pola LOG SUBKON) — fallback nomor urut utk kompatibilitas
-    ws.getRange(r, 1).setValue(_sanitizeStr(it.id) || (r - 3));
+    ws.getRange(r, 1).setValue(itIdB || (r - 3));
     var tgl = _apiParseDate(it.tgl);
     if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy");
     ws.getRange(r, 3).setValue(_sanitizeStr(it.kodeProj)   || "");
@@ -260,11 +267,18 @@ function _apiAddAbsensi(ss, items) {
   var ws      = ss.getSheetByName(SHEET.ABSENSI);
   var R       = ROWS.ABSENSI;
   var nextRow = _apiFindNext(ws, "C", R.start, R.end);
+  // Idempotency guard: kumpulkan ID (kolom A) yang sudah ada — retry/duplikat di-skip, tidak dobel
+  var existAbs = _collectExistingIds(ws, R, "ABS-");
+  var written = 0;
   for (var i = 0; i < items.length; i++) {
-    var it  = items[i];
-    var r   = nextRow + i;
+    var it   = items[i];
+    var itId = _sanitizeStr(it.id) || "";
+    if (itId && existAbs[itId]) continue; // sudah pernah tertulis (retry setelah timeout) → skip
+    if (itId) existAbs[itId] = true;
+    var r   = nextRow + written;
+    written++;
     var tgl = _apiParseDate(it.tgl);
-    ws.getRange(r, 1).setValue(r - 3);
+    ws.getRange(r, 1).setValue(itId || (r - 3));
     if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy");
     ws.getRange(r, 3).setValue(_sanitizeStr(it.idKaryawan) || "");
     ws.getRange(r, 4).setValue(_sanitizeStr(it.nama)       || "");
@@ -281,19 +295,51 @@ function _apiAddAbsensi(ss, items) {
   }
 }
 
+// Kumpulkan ID app yang sudah ada di kolom A (untuk idempotency & lookup)
+function _collectExistingIds(ws, R, prefix) {
+  var out = {};
+  var endRow = ws.getLastRow();
+  if (endRow < R.start) return out;
+  var vals = ws.getRange("A" + R.start + ":A" + endRow).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    var v = String(vals[i][0]).trim();
+    if (v.indexOf(prefix) === 0 && v.indexOf(prefix + "GS-") !== 0) out[v] = true;
+  }
+  return out;
+}
+
+// Cari baris absensi by ID unik (kolom A). Return -1 kalau tidak ketemu / id legacy (ABS-GS-).
+function _findAbsRowById(ws, R, id) {
+  var idT = String(id || "").trim();
+  if (!idT || idT.indexOf("ABS-") !== 0 || idT.indexOf("ABS-GS-") === 0) return -1;
+  var endRow = ws.getLastRow();
+  if (endRow < R.start) return -1;
+  var ids = ws.getRange("A" + R.start + ":A" + endRow).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).trim() === idT) return i + R.start;
+  }
+  return -1;
+}
+
 function _apiDeleteAbsensi(ss, d) {
   var ws = ss.getSheetByName(SHEET.ABSENSI);
   if (!ws) return;
-  var R    = ROWS.ABSENSI;
-  var data = ws.getRange("B" + R.start + ":C" + ws.getLastRow()).getValues();
-  var tglT = String(d.tgl        || "").trim();
-  var idT  = String(d.idKaryawan || "").trim();
-  for (var i = 0; i < data.length; i++) {
-    if (_apiSerDate(data[i][0]) === tglT && String(data[i][1]).trim() === idT) {
-      ws.getRange(i + R.start, 1, 1, 12).clearContent();
-      return;
+  var R = ROWS.ABSENSI;
+  var rowNum = _findAbsRowById(ws, R, d.id);
+  if (rowNum < 0) {
+    // Fallback legacy: match pertama by tgl + idKaryawan
+    var data = ws.getRange("B" + R.start + ":C" + ws.getLastRow()).getValues();
+    var tglT = String(d.tgl        || "").trim();
+    var idT  = String(d.idKaryawan || "").trim();
+    for (var i = 0; i < data.length; i++) {
+      if (_apiSerDate(data[i][0]) === tglT && String(data[i][1]).trim() === idT) {
+        rowNum = i + R.start;
+        break;
+      }
     }
   }
+  if (rowNum < 0) return;
+  ws.getRange(rowNum, 1, 1, 14).clearContent(); // 14 kolom termasuk M=jamLembur, N=upahLembur
 }
 
 // ════════════════════════════════════════════════════════════════════════

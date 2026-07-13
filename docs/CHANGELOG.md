@@ -34,6 +34,16 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - ✅ `deletePembelian` clear 13 kolom (A–M, sebelumnya 12 — kolom M bayarToko tertinggal)
 - ✅ Sync merge: item lokal baru ditandai `pending:true`; `_mergeArr` pakai flag ini untuk pembelian (mencegah item terhapus di device lain "hidup lagi" setelah ID remote berformat `BLI-...`)
 
+### BUG FIX: Absensi Dobel di Closing (index.html + read.gs + write.gs)
+- 🐛 **Gejala**: input absensi 1 hari + lembur 5 jam → closing menghitung 2 Hadir + 10 jam lembur (upah 2×)
+- 🐛 **Root cause**: baris absensi duplikat di GSheet. Dua lubang: (1) `doSync` timeout 45 detik padahal tulis di Apps Script sukses → `retryQ` kirim ulang → baris dobel; (2) tidak ada peringatan saat input absensi 2× untuk karyawan+tanggal yang sama
+- ✅ **ID unik absensi** di kolom A LOG ABSENSI (pola sama dgn pembelian): `_apiAddAbsensi` **idempotent** — ID yang sudah ada di-skip, retry tidak lagi bikin baris dobel
+- ✅ `_apiAddPembelian` juga idempotent (lubang retry yang sama)
+- ✅ **Guard duplikat** di `submitAbsensi`: konfirmasi eksplisit kalau karyawan sudah punya absensi di tanggal itu
+- ✅ Fix prefix merge `'ABN-GS-'` → `'ABS-GS-'` (salah ketik lama — absensi yang dihapus di device lain bisa muncul lagi) + flag `pending` seperti pembelian
+- ✅ `deleteAbsensi` lookup by ID dulu + clear **14 kolom** (sebelumnya 12 — kolom M jamLembur & N upahLembur tertinggal sebagai residu)
+- 🧹 **Cleanup data existing**: cek sheet LOG ABSENSI / tab Log Absensi untuk baris dobel (mis. Rudi), hapus salah satu via tombol 🗑 sebelum closing
+
 ### DEPLOY
 - Frontend: push `index.html` (v1.29) ke GitHub
 - Backend: paste ulang `read.gs` + `write.gs` ke Apps Script editor → Deploy → **New version**

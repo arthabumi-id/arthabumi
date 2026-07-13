@@ -172,7 +172,7 @@ const S={
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
 const APP_VERSION='v1.29';
 const APP_CHANGELOG=[
-  {v:'v1.29',date:'5 Jul 2026',desc:'Log Pembelian: toggle 📅 Per Tanggal / 🏪 Per Toko kembali + total sesuai filter; fix filter Custom satu sisi; ID unik pembelian (edit/hapus/lunas presisi, anti salah baris)'},
+  {v:'v1.29',date:'5 Jul 2026',desc:'Log Pembelian: toggle 📅 Per Tanggal / 🏪 Per Toko kembali + total sesuai filter; fix filter Custom satu sisi; ID unik pembelian & absensi (anti salah baris + anti dobel saat retry); guard input absensi duplikat; info tanggal/proyek/toko di konfirmasi pembelian'},
   {v:'v1.28',date:'2 Jul 2026',desc:'Hutang ke Toko (tab baru + tandai lunas); Sync merge aman (tidak overwrite lokal); Filter Absensi per karyawan'},
   {v:'v1.27',date:'30 Jun 2026',desc:'Edit entri kerja subkon (✏️); version display di header & Settings'},
   {v:'v1.26',date:'27 Jun 2026',desc:'Unified filter + grouped by toko di Log Pembelian; real-time search barang'},
@@ -269,7 +269,7 @@ function applyGS(d){
   if(d.subkon){S.masterSubkon=d.subkon;ss(KS.sk,d.subkon);}
   // Log tables: merge — keep local-only unsynced entries until GSheet confirms them
   if(d.pembelian){const m=_mergeArr(S.pembelian,d.pembelian,'BLI-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.namaBarang}`,x=>x.pending===true);S.pembelian=m;ss(KS.beli,m);}
-  if(d.logAbsensi){const m=_mergeArr(S.logAbsensi,d.logAbsensi,'ABN-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.kodeProj}`);S.logAbsensi=m;ss(KS.abs,m);}
+  if(d.logAbsensi){const m=_mergeArr(S.logAbsensi,d.logAbsensi,'ABS-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.kodeProj}`,x=>x.pending===true);S.logAbsensi=m;ss(KS.abs,m);}
   if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.tipe}|${x.nominal}`);S.logKasbon=m;ss(KS.ksb,m);}
   if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.nominal}`);S.logPembayaran=m;ss(KS.bayar,m);}
   if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-',x=>`${x.tgl}|${x.idSubkon}|${x.kodeProj}`);S.logSubkon=m;ss(KS.lsk,m);}
@@ -1802,12 +1802,15 @@ function submitAbsensi(){
   const defProj=document.getElementById('abs-prj')?.value||'';
   const active=S.karyawan.map((k,i)=>({k,r:S.absRows[i]||{}})).filter(({r})=>r.status&&r.status!=='Tidak Hadir'&&r.status!=='Libur');
   if(!active.length){showToast('Pilih status minimal 1 karyawan','err');return;}
+  // Guard duplikat: cegah absensi dobel utk karyawan yang sudah tercatat di tanggal ini
+  const dups=active.filter(({k})=>S.logAbsensi.some(a=>a.tgl===tgl&&a.idKaryawan===k.id));
+  if(dups.length&&!confirm('⚠️ Sudah ada absensi tanggal '+fDate(tgl)+' untuk: '+dups.map(({k})=>k.nama).join(', ')+'.\n\nKalau lanjut, absensi akan DOBEL (hari kerja & lembur terhitung 2x di closing).\n\nTetap simpan?'))return;
   const newAbs=active.map(({k,r})=>{
     const baseUpah=r.status==='Hadir'?k.upahHarian:r.status==='Setengah Hari'?k.upahHarian*0.5:0;
     const jamLembur=Number(r.jamLembur)||0;
     const upahLembur=Math.round(jamLembur*k.upahHarian/8);
     const upahHariIni=baseUpah+upahLembur;
-    return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni,jamLembur,upahLembur,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||''};
+    return{id:'ABS-'+Date.now()+'-'+k.id,tgl,idKaryawan:k.id,nama:k.nama,status:r.status,kodeProj:r.kodeProj||defProj,upahHariIni,jamLembur,upahLembur,statusBayar:'Belum Dibayar',noClosing:'',ket:r.ket||'',pending:true};
   });
   showAbsensiConfirmation(newAbs,tgl);
 }
@@ -1853,7 +1856,7 @@ function executeAbsensi(){
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
   closeModal();
   showToast('✅ Absensi '+newAbs.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
-  doSync('addAbsensi',newAbs.map(a=>({tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
+  doSync('addAbsensi',newAbs.map(a=>({id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
 function setAbsDateFilter(v){S.tab.absDateMode=v;go('absensi');}
@@ -1914,7 +1917,7 @@ function delAbsensi(idx){
   if(a.statusBayar==='Sudah Dibayar'){showToast('Tidak bisa hapus -- sudah di-closing','err');return;}
   if(!confirm('Hapus absensi '+esc(a.nama)+'?'))return;
   S.logAbsensi.splice(idx,1);ss(KS.abs,S.logAbsensi);showToast('🗑 Dihapus');go('absensi');
-  doSync('deleteAbsensi',{tgl:a.tgl,idKaryawan:a.idKaryawan});
+  doSync('deleteAbsensi',{id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan});
 }
 // ── KASBON [v1.8 + tombol hapus di log]
 function pgKasbon(){
