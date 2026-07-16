@@ -13,7 +13,8 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
-# 🔧 SESSION 14 (v1.29) — 2026-07-05
+# 🔧 SESSION 14–15 (v1.29 → v1.30) — 2026-07-05
+> Catatan: v1.29 dan v1.30 dirilis sebagai SATU paket deploy. **Versi aktif = v1.30.**
 
 ## [2026-07-05] v1.29 — Log Pembelian: View Toggle Kembali + ID Unik Pembelian
 
@@ -33,6 +34,8 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - ✅ `updatePembelian` backfill ID ke kolom A baris legacy saat diedit (migrasi bertahap tanpa setup script)
 - ✅ `deletePembelian` clear 13 kolom (A–M, sebelumnya 12 — kolom M bayarToko tertinggal)
 - ✅ Sync merge: item lokal baru ditandai `pending:true`; `_mergeArr` pakai flag ini untuk pembelian (mencegah item terhapus di device lain "hidup lagi" setelah ID remote berformat `BLI-...`)
+
+## [2026-07-05] v1.30 — Fix Absensi Dobel + Audit Menyeluruh + Upload Bukti Subkon
 
 ### BUG FIX: Absensi Dobel di Closing (index.html + read.gs + write.gs)
 - 🐛 **Gejala**: input absensi 1 hari + lembur 5 jam → closing menghitung 2 Hadir + 10 jam lembur (upah 2×)

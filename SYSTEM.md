@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.29 (Latest) — 2026-07-05
+- **Versi aktif:** v1.30 (Latest) — 2026-07-05
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -198,13 +198,13 @@ Tab:     tabs, tab tab-on/tab-off
 
 ---
 
-## VERSI AKTIF: v1.29 — 2026-07-05
-Perubahan terakhir:
-- ✅ **Log Pembelian view toggle kembali** — 📅 Per Tanggal (grup per hari + subtotal) / 🏪 Per Toko (collapsible). Ringkasan jumlah item + grand total sesuai filter. Refactor `_beliFiltered()` sebagai satu-satunya jalur filter.
-- ✅ **ID unik pembelian (pola LOG SUBKON)** — ID app `BLI-...` disimpan di kolom A sheet PEMBELIAN. `deletePembelian`/`updatePembelian`/`markBayarToko` lookup by ID dulu (`_findBeliRowById`), fallback `tgl+proj+nama` untuk baris legacy; backfill ID saat edit. Menghilangkan risiko salah baris saat ada pembelian duplikat.
-- ✅ **Fix filter Custom** — satu sisi tanggal kosong = rentang terbuka (sebelumnya filter mati diam-diam).
-- ✅ Sync merge pembelian pakai flag `pending:true` (bukan prefix ID) — item terhapus di device lain tidak muncul lagi.
-- 🐛 `deletePembelian` clear 13 kolom (M=bayarToko ikut terhapus).
+## VERSI AKTIF: v1.30 — 2026-07-05
+Perubahan terakhir (v1.29 + v1.30, satu paket deploy):
+- 📷 **Upload bukti bayar subkon** — foto/screenshot dikompres di browser, kirim via `gsPost()` (POST text/plain), simpan ke Drive "Arthabumi Bukti Pembayaran", link di kolom P LOG SUBKON, chip 📎 di Log Subkon. Redeploy minta izin Drive sekali.
+- ✅ **ID unik + add idempotent di SEMUA log** (BLI/ABS/KSB/PAY/LSK di kolom A) — retry setelah timeout tidak lagi bikin baris dobel; delete/update lookup by ID dulu. Fix kasus absensi dobel di closing.
+- ✅ **Fix form reset** — Absensi (tgl+proyek default), Kasbon (semua field), Pembayaran (tgl), Subkon (semua field), Closing (periode+no) sekarang state-backed; tidak hilang saat re-render.
+- ✅ **Guard absensi duplikat** + fix `numInp` oninput dobel (dropdown karyawan potongan tidak muncul) + fix prefix merge `ABN-GS-`→`ABS-GS-` + auto No Closing pakai `today()` bukan UTC.
+- ✅ **Log Pembelian**: toggle 📅 Per Tanggal / 🏪 Per Toko kembali, ringkasan total sesuai filter, fix filter Custom satu sisi, info tanggal/proyek/toko di modal konfirmasi.
 
 ### Versi sebelumnya
 - v1.28 (2026-07-02) — Hutang ke Toko (tab + tandai lunas), sync merge aman, filter absensi per karyawan

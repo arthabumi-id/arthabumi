@@ -128,7 +128,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.29</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.30</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -170,9 +170,10 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
-const APP_VERSION='v1.29';
+const APP_VERSION='v1.30';
 const APP_CHANGELOG=[
-  {v:'v1.29',date:'5 Jul 2026',desc:'📷 Upload foto bukti bayar subkon ke Drive; toggle 📅/🏪 Log Pembelian kembali + total sesuai filter; ID unik & anti-dobel retry di semua log (pembelian, absensi, kasbon, pembayaran, subkon); fix form reset (kasbon, bayar, subkon, closing, absensi); guard absensi duplikat'},
+  {v:'v1.30',date:'5 Jul 2026',desc:'📷 Upload foto bukti bayar subkon ke Drive; fix absensi dobel di closing (ID unik + anti-dobel retry di SEMUA log: pembelian, absensi, kasbon, pembayaran, subkon); fix form reset (absensi, kasbon, bayar, subkon, closing); guard absensi duplikat; fix dropdown karyawan potongan tidak muncul'},
+  {v:'v1.29',date:'5 Jul 2026',desc:'Log Pembelian: toggle 📅 Per Tanggal / 🏪 Per Toko kembali + total sesuai filter; fix filter Custom satu sisi; ID unik pembelian (edit/hapus/lunas presisi); info tanggal/proyek/toko di konfirmasi pembelian'},
   {v:'v1.28',date:'2 Jul 2026',desc:'Hutang ke Toko (tab baru + tandai lunas); Sync merge aman (tidak overwrite lokal); Filter Absensi per karyawan'},
   {v:'v1.27',date:'30 Jun 2026',desc:'Edit entri kerja subkon (✏️); version display di header & Settings'},
   {v:'v1.26',date:'27 Jun 2026',desc:'Unified filter + grouped by toko di Log Pembelian; real-time search barang'},
