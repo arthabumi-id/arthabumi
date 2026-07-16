@@ -172,7 +172,7 @@ const S={
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
 const APP_VERSION='v1.29';
 const APP_CHANGELOG=[
-  {v:'v1.29',date:'5 Jul 2026',desc:'Log Pembelian: toggle 📅 Per Tanggal / 🏪 Per Toko kembali + total sesuai filter; fix filter Custom satu sisi; ID unik pembelian & absensi (anti salah baris + anti dobel saat retry); guard input absensi duplikat; info tanggal/proyek/toko di konfirmasi pembelian'},
+  {v:'v1.29',date:'5 Jul 2026',desc:'📷 Upload foto bukti bayar subkon ke Drive; toggle 📅/🏪 Log Pembelian kembali + total sesuai filter; ID unik & anti-dobel retry di semua log (pembelian, absensi, kasbon, pembayaran, subkon); fix form reset (kasbon, bayar, subkon, closing, absensi); guard absensi duplikat'},
   {v:'v1.28',date:'2 Jul 2026',desc:'Hutang ke Toko (tab baru + tandai lunas); Sync merge aman (tidak overwrite lokal); Filter Absensi per karyawan'},
   {v:'v1.27',date:'30 Jun 2026',desc:'Edit entri kerja subkon (✏️); version display di header & Settings'},
   {v:'v1.26',date:'27 Jun 2026',desc:'Unified filter + grouped by toko di Log Pembelian; real-time search barang'},
@@ -215,7 +215,9 @@ function getNum(id){
 const parseNum=v=>parseInt(String(v||'').replace(/\./g,'').replace(/[^0-9]/g,''),10)||0;
 const numInp=(id,val=0,ph='0',extra='')=>{
   const fv=val&&val!=0?Number(val).toLocaleString('id-ID'):'';
-  return `<input class="fc" id="${id}" type="text" inputmode="numeric" value="${fv}" placeholder="${ph}" data-raw="${val||0}" oninput="applyNiFmt(this)" ${extra}>`;
+  // Jangan emit oninput default kalau extra sudah bawa oninput sendiri (atribut dobel = handler kedua diabaikan browser)
+  const oi=extra.indexOf('oninput')>=0?'':'oninput="applyNiFmt(this)"';
+  return `<input class="fc" id="${id}" type="text" inputmode="numeric" value="${fv}" placeholder="${ph}" data-raw="${val||0}" ${oi} ${extra}>`;
 };
 // ── GSheet API
 async function gsFetch(url){
@@ -240,6 +242,38 @@ async function gsWrite(url,action,data){
   }finally{clearTimeout(tid);}
 }
 
+// POST ke Apps Script (untuk payload besar spt foto — GET dibatasi ±50KB).
+// Content-Type text/plain = "simple request", tidak kena preflight CORS.
+async function gsPost(action,data){
+  if(!S.webAppUrl)throw new Error('URL GSheet belum diatur');
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),90000); // foto + Drive bisa lama
+  try{
+    const r=await fetch(S.webAppUrl,{method:'POST',redirect:'follow',cache:'no-cache',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action,data}),signal:ctrl.signal});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
+    if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
+  }finally{clearTimeout(tid);}
+}
+// Kompres gambar di browser (canvas → JPEG) sebelum upload. Return base64 tanpa prefix.
+function compressImage(file,maxW=1280,quality=0.72){
+  return new Promise((res,rej)=>{
+    const img=new Image();const url=URL.createObjectURL(file);
+    img.onload=()=>{URL.revokeObjectURL(url);
+      try{
+        const scale=Math.min(1,maxW/img.width);
+        const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+        const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        res(cv.toDataURL('image/jpeg',quality).split(',')[1]);
+      }catch(e){rej(e);}
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Gagal membaca gambar'));};
+    img.src=url;
+  });
+}
 // Merge GSheet array into local array.
 // Strategy: GSheet is source of truth. Local entries without ID prefix "BLI-GS-" / "ABN-GS-" etc.
 // are considered unsynced (written locally but not yet confirmed by GSheet).
@@ -270,9 +304,9 @@ function applyGS(d){
   // Log tables: merge — keep local-only unsynced entries until GSheet confirms them
   if(d.pembelian){const m=_mergeArr(S.pembelian,d.pembelian,'BLI-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.namaBarang}`,x=>x.pending===true);S.pembelian=m;ss(KS.beli,m);}
   if(d.logAbsensi){const m=_mergeArr(S.logAbsensi,d.logAbsensi,'ABS-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.kodeProj}`,x=>x.pending===true);S.logAbsensi=m;ss(KS.abs,m);}
-  if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.tipe}|${x.nominal}`);S.logKasbon=m;ss(KS.ksb,m);}
-  if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.nominal}`);S.logPembayaran=m;ss(KS.bayar,m);}
-  if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-',x=>`${x.tgl}|${x.idSubkon}|${x.kodeProj}`);S.logSubkon=m;ss(KS.lsk,m);}
+  if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.tipe}|${x.nominal}`,x=>x.pending===true);S.logKasbon=m;ss(KS.ksb,m);}
+  if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.nominal}`,x=>x.pending===true);S.logPembayaran=m;ss(KS.bayar,m);}
+  if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-',x=>`${x.tgl}|${x.idSubkon}|${x.kodeProj}`,x=>x.pending===true);S.logSubkon=m;ss(KS.lsk,m);}
   S.lastSync=new Date();S.syncError=null;updateSyncBadge();
 }
 async function doFetch(url){
@@ -1769,8 +1803,8 @@ function absInput(){
   }).join('');
   return `<div class="card" style="margin-bottom:10px">
     <div class="g2">
-      <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${today()}"></div>
-      <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select></div></div>
+      <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${S.absTgl||today()}" onchange="S.absTgl=this.value"></div>
+      <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj" onchange="S.absDefProj=this.value"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}"${S.absDefProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select></div></div>
     <div style="font-size:11px;color:#94a3b8;margin-top:-4px">💡 Proyek default untuk karyawan yang belum pilih</div>
   </div>
   ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':rows}
@@ -1798,8 +1832,8 @@ function setLembur(i,val){
   if(netEl)netEl.textContent=fRp(net);
 }
 function submitAbsensi(){
-  const tgl=document.getElementById('abs-tgl')?.value||today();
-  const defProj=document.getElementById('abs-prj')?.value||'';
+  const tgl=S.absTgl||document.getElementById('abs-tgl')?.value||today();
+  const defProj=S.absDefProj||document.getElementById('abs-prj')?.value||'';
   const active=S.karyawan.map((k,i)=>({k,r:S.absRows[i]||{}})).filter(({r})=>r.status&&r.status!=='Tidak Hadir'&&r.status!=='Libur');
   if(!active.length){showToast('Pilih status minimal 1 karyawan','err');return;}
   // Guard duplikat: cegah absensi dobel utk karyawan yang sudah tercatat di tanggal ini
@@ -1855,7 +1889,7 @@ function executeAbsensi(){
   S._pendingAbsensi=null;
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
   closeModal();
-  showToast('✅ Absensi '+newAbs.length+' karyawan tersimpan');S.absRows=[];setTab('absensi','log');
+  showToast('✅ Absensi '+newAbs.length+' karyawan tersimpan');S.absRows=[];S.absTgl='';S.absDefProj='';setTab('absensi','log');
   doSync('addAbsensi',newAbs.map(a=>({id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
@@ -1934,30 +1968,34 @@ function pgKasbon(){
     </div></div>${tab==='input'?kasbonInput():tab==='rekap'?kasbonRekap():tab==='hutang'?kasbonHutang():kasbonLog()}`;
 }
 function kasbonInput(){
-  const krOpts=`<option value="">-- Pilih Karyawan --</option>`+S.karyawan.map(k=>`<option value="${esc(k.id)}">${esc(k.nama)}</option>`).join('');
-  const projOpts=`<option value="">— Tidak Terkait Proyek —</option>`+S.projects.filter(p=>p.status==='Berjalan').map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)}</option>`).join('');
+  if(!S.ksbF)S.ksbF={tgl:'',kr:'',tipe:'AMBIL',nom:0,proj:'',ket:''};
+  const f=S.ksbF;
+  const krOpts=`<option value="">-- Pilih Karyawan --</option>`+S.karyawan.map(k=>`<option value="${esc(k.id)}"${f.kr===k.id?' selected':''}>${esc(k.nama)}</option>`).join('');
+  const projOpts=`<option value="">— Tidak Terkait Proyek —</option>`+S.projects.filter(p=>p.status==='Berjalan').map(p=>`<option value="${esc(p.kode)}"${f.proj===p.kode?' selected':''}>${esc(p.nama)}</option>`).join('');
   return `<div class="card">
-    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="ksb-tgl" value="${today()}"></div>
-    <div class="fg"><label class="fl">Karyawan</label><select class="fc" id="ksb-kr">${krOpts}</select></div>
-    <div class="fg"><label class="fl">Tipe</label><select class="fc" id="ksb-tipe"><option>AMBIL</option><option>POTONG</option></select></div>
+    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="ksb-tgl" value="${f.tgl||today()}" onchange="S.ksbF.tgl=this.value"></div>
+    <div class="fg"><label class="fl">Karyawan</label><select class="fc" id="ksb-kr" onchange="S.ksbF.kr=this.value">${krOpts}</select></div>
+    <div class="fg"><label class="fl">Tipe</label><select class="fc" id="ksb-tipe" onchange="S.ksbF.tipe=this.value"><option${f.tipe!=='POTONG'?' selected':''}>AMBIL</option><option${f.tipe==='POTONG'?' selected':''}>POTONG</option></select></div>
     <div class="fg"><label class="fl">Nominal (Rp)</label>
-      ${numInp('ksb-nom',0,'500.000')}
+      ${numInp('ksb-nom',f.nom||0,'500.000','oninput="applyNiFmt(this);S.ksbF.nom=parseInt(this.dataset.raw)||0"')}
       <div class="num-hint">Contoh: 500.000</div></div>
     <div class="fg"><label class="fl">Proyek <span style="color:#94a3b8;font-weight:400">(opsional — jika AMBIL untuk keperluan proyek)</span></label>
-      <select class="fc" id="ksb-proj">${projOpts}</select>
+      <select class="fc" id="ksb-proj" onchange="S.ksbF.proj=this.value">${projOpts}</select>
       <div class="num-hint" style="color:#d97706">⚠️ Jika diisi, kasbon ini akan menjadi beban biaya proyek tersebut</div></div>
     <div class="fg"><label class="fl">Keterangan <span style="color:#94a3b8;font-weight:400">(keperluan kasbon)</span></label>
-      <input class="fc" id="ksb-ket" placeholder="Contoh: Beli material cat, Ongkos transport, Kebutuhan keluarga…"></div>
+      <input class="fc" id="ksb-ket" value="${esc(f.ket||'')}" oninput="S.ksbF.ket=this.value" placeholder="Contoh: Beli material cat, Ongkos transport, Kebutuhan keluarga…"></div>
     <button class="btn btn-p btn-w" onclick="submitKasbon()">💾 Simpan Kasbon</button></div>`;
 }
 function submitKasbon(){
-  const id=document.getElementById('ksb-kr').value;
-  const nom=getNum('ksb-nom');
+  const f=S.ksbF||{};
+  const id=f.kr||document.getElementById('ksb-kr')?.value||'';
+  const nom=f.nom||getNum('ksb-nom');
   if(!id||!nom){showToast('Lengkapi karyawan & nominal','err');return;}
-  const kodeProj=(document.getElementById('ksb-proj')?.value||'').trim();
-  const nk={id:'KSB-'+Date.now(),tgl:document.getElementById('ksb-tgl').value,idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:document.getElementById('ksb-tipe').value,nominal:nom,kodeProj,ket:document.getElementById('ksb-ket').value,noClosing:''};
-  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('✅ Kasbon disimpan');setTab('kasbon','log');
-  doSync('addKasbon',[{tgl:nk.tgl,idKaryawan:nk.idKaryawan,nama:nk.nama,tipe:nk.tipe,nominal:nk.nominal,kodeProj,ket:nk.ket}]);
+  const kodeProj=(f.proj||'').trim();
+  const nk={id:'KSB-'+Date.now(),tgl:f.tgl||today(),idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:f.tipe||'AMBIL',nominal:nom,kodeProj,ket:f.ket||'',noClosing:'',pending:true};
+  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('✅ Kasbon disimpan');
+  S.ksbF=null;setTab('kasbon','log');
+  doSync('addKasbon',[{id:nk.id,tgl:nk.tgl,idKaryawan:nk.idKaryawan,nama:nk.nama,tipe:nk.tipe,nominal:nk.nominal,kodeProj,ket:nk.ket}]);
 }
 function kasbonRekap(){
   return S.karyawan.map(k=>{
@@ -2096,7 +2134,7 @@ function delKasbon(idx){
   if(k.noClosing&&k.noClosing.trim()!==''){showToast('Tidak bisa hapus -- terkait closing '+k.noClosing,'err');return;}
   if(!confirm('Hapus kasbon '+fRp(k.nominal)+' ('+k.tipe+') untuk '+k.nama+'?'))return;
   S.logKasbon.splice(idx,1);ss(KS.ksb,S.logKasbon);showToast('🗑 Kasbon dihapus');go('kasbon');
-  doSync('deleteKasbon',{tgl:k.tgl,idKaryawan:k.idKaryawan,tipe:k.tipe,nominal:k.nominal});
+  doSync('deleteKasbon',{id:k.id,tgl:k.tgl,idKaryawan:k.idKaryawan,tipe:k.tipe,nominal:k.nominal});
 }
 // ── CLOSING
 let clsRekap=[],clsSel={};
@@ -2137,14 +2175,16 @@ function pgClosing(){
 }
 
 function closingBaru(){
-  const autoNo='CLO-'+new Date().toISOString().slice(0,7).replace('-','')+'-'+String(getClosingList().length+1).padStart(3,'0');
+  if(!S.clsF)S.clsF={dari:'',smp:'',bayar:'',noc:''};
+  const f=S.clsF;
+  const autoNo='CLO-'+today().slice(0,7).replace('-','')+'-'+String(getClosingList().length+1).padStart(3,'0');
   return `<div class="card">
     <div class="g2">
-      <div class="fg"><label class="fl">Dari Tanggal</label><input class="fc" type="date" id="cls-dari"></div>
-      <div class="fg"><label class="fl">Sampai Tanggal</label><input class="fc" type="date" id="cls-smp" value="${today()}"></div></div>
+      <div class="fg"><label class="fl">Dari Tanggal</label><input class="fc" type="date" id="cls-dari" value="${f.dari||''}" onchange="S.clsF.dari=this.value"></div>
+      <div class="fg"><label class="fl">Sampai Tanggal</label><input class="fc" type="date" id="cls-smp" value="${f.smp||today()}" onchange="S.clsF.smp=this.value"></div></div>
     <div class="g2">
-      <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${today()}"></div>
-      <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="${autoNo}"></div></div>
+      <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${f.bayar||today()}" onchange="S.clsF.bayar=this.value"></div>
+      <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="${esc(f.noc||autoNo)}" oninput="S.clsF.noc=this.value"></div></div>
     <button class="btn btn-o btn-w" onclick="genClosing()">📊 Generate Rekap</button>
   </div>
   <div id="cls-rekap">${clsRekap.length>0?buildClsRekap():''}</div>`;
@@ -2579,7 +2619,7 @@ function bayarInput(){
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" value="${esc(it.ket)}" oninput="S.payItems[${i}].ket=this.value"></div>
   </div>`).join('');
   return `<div class="card">
-    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="pay-tgl" value="${today()}"></div>
+    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="pay-tgl" value="${S.payTgl||today()}" onchange="S.payTgl=this.value"></div>
     ${items}
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addPayRow()">+ Baris</button>
@@ -2589,11 +2629,11 @@ function addPayRow(){S.payItems.push({kodeProj:'',nominal:0,metode:'Transfer',ba
 function delPayRow(i){S.payItems.splice(i,1);go('bayar');}
 function submitPay(){
   if(S.payItems.some(it=>!it.kodeProj||!it.nominal)){showToast('Lengkapi proyek & nominal','err');return;}
-  const tgl=document.getElementById('pay-tgl').value;
-  const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||''}));
+  const tgl=S.payTgl||document.getElementById('pay-tgl')?.value||today();
+  const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||'',pending:true}));
   S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast('✅ '+ni.length+' pembayaran dicatat');
-  S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];setTab('bayar','log');
-  doSync('addPembayaran',ni.map(it=>({tgl,kodeProj:it.kodeProj,namaProj:it.namaProj||'',nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
+  S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];S.payTgl='';setTab('bayar','log');
+  doSync('addPembayaran',ni.map(it=>({id:it.id,tgl,kodeProj:it.kodeProj,namaProj:it.namaProj||'',nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
 }
 function bayarLog(){
   const list=[...S.logPembayaran].reverse().sort((a,b)=>String(b.tgl||'').localeCompare(String(a.tgl||''))).slice(0,60);
@@ -2615,7 +2655,7 @@ function delPembayaran(idx){
   const p=S.logPembayaran[idx];if(!p)return;
   if(!confirm('Hapus pembayaran '+fRp(p.nominal)+' dari proyek '+p.kodeProj+'?'))return;
   S.logPembayaran.splice(idx,1);ss(KS.bayar,S.logPembayaran);showToast('🗑 Pembayaran dihapus');go('bayar');
-  doSync('deletePembayaran',{tgl:p.tgl,kodeProj:p.kodeProj,nominal:p.nominal});
+  doSync('deletePembayaran',{id:p.id,tgl:p.tgl,kodeProj:p.kodeProj,nominal:p.nominal});
 }
 // ── RAB
 function pgRAB(){
@@ -2788,30 +2828,36 @@ function subkonInput(){
   if(!S.masterSubkon.length)return `<div class="info-box">💡 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}">${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
+  if(!S.skF)S.skF={tgl:'',prj:'',sk:'',urai:'',kontrak:0,start:'',ket:''};
+  const f=S.skF;
+  const prjOptsSel=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${f.prj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const skOptsSel=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}"${f.sk===sk.id?' selected':''}>${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
   return `<div class="card">
-    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="sk-tgl" value="${today()}"></div>
-    <div class="fg"><label class="fl">Proyek<span class="req">*</span></label><select class="fc" id="sk-prj">${prjOpts}</select></div>
-    <div class="fg"><label class="fl">Subkontraktor<span class="req">*</span></label><select class="fc" id="sk-sk">${skOpts}</select></div>
-    <div class="fg"><label class="fl">Uraian Pekerjaan<span class="req">*</span></label><input class="fc" id="sk-urai" placeholder="Contoh: Waterproofing atap lantai 2"></div>
+    <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="sk-tgl" value="${f.tgl||today()}" onchange="S.skF.tgl=this.value"></div>
+    <div class="fg"><label class="fl">Proyek<span class="req">*</span></label><select class="fc" id="sk-prj" onchange="S.skF.prj=this.value">${prjOptsSel}</select></div>
+    <div class="fg"><label class="fl">Subkontraktor<span class="req">*</span></label><select class="fc" id="sk-sk" onchange="S.skF.sk=this.value">${skOptsSel}</select></div>
+    <div class="fg"><label class="fl">Uraian Pekerjaan<span class="req">*</span></label><input class="fc" id="sk-urai" value="${esc(f.urai||'')}" oninput="S.skF.urai=this.value" placeholder="Contoh: Waterproofing atap lantai 2"></div>
     <div class="g2">
       <div class="fg"><label class="fl">Nilai Kontrak<span class="req">*</span></label>
-        ${numInp('sk-kontrak',0,'5.000.000')}
+        ${numInp('sk-kontrak',f.kontrak||0,'5.000.000','oninput="applyNiFmt(this);S.skF.kontrak=parseInt(this.dataset.raw)||0"')}
         <div class="num-hint">Contoh: 5.000.000</div></div>
-      <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" type="date" id="sk-start" value="${today()}"></div></div>
-    <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="sk-ket"></div>
+      <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" type="date" id="sk-start" value="${f.start||today()}" onchange="S.skF.start=this.value"></div></div>
+    <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="sk-ket" value="${esc(f.ket||'')}" oninput="S.skF.ket=this.value"></div>
     <button class="btn btn-p btn-w" onclick="submitSubkon()">💾 Simpan Pekerjaan Subkon</button></div>`;
 }
 function submitSubkon(){
-  const tgl=document.getElementById('sk-tgl').value;
-  const kodeProj=document.getElementById('sk-prj').value;
-  const idSubkon=document.getElementById('sk-sk').value;
-  const uraian=document.getElementById('sk-urai').value.trim();
-  const nilaiKontrak=getNum('sk-kontrak');
+  const f=S.skF||{};
+  const tgl=f.tgl||today();
+  const kodeProj=f.prj||'';
+  const idSubkon=f.sk||'';
+  const uraian=(f.urai||'').trim();
+  const nilaiKontrak=f.kontrak||getNum('sk-kontrak');
   if(!kodeProj||!idSubkon||!uraian||!nilaiKontrak){showToast('Lengkapi data wajib','err');return;}
   const skData=S.masterSubkon.find(sk=>sk.id===idSubkon);
   const projData=S.projects.find(p=>p.kode===kodeProj);
-  const newLS={id:'LSK-'+Date.now(),tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,tglMulai:document.getElementById('sk-start').value,statusBayar:'Belum Dibayar',nominalBayar:0,tglBayar:'',ket:document.getElementById('sk-ket').value};
-  S.logSubkon.push(newLS);ss(KS.lsk,S.logSubkon);showToast('✅ Pekerjaan subkon dicatat');setTab('subkon','log');
+  const newLS={id:'LSK-'+Date.now(),tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,tglMulai:f.start||today(),statusBayar:'Belum Dibayar',nominalBayar:0,tglBayar:'',ket:f.ket||'',pending:true};
+  S.logSubkon.push(newLS);ss(KS.lsk,S.logSubkon);showToast('✅ Pekerjaan subkon dicatat');
+  S.skF=null;setTab('subkon','log');
   doSync('addLogSubkon',newLS);
 }
 function subkonLog(){
@@ -2853,6 +2899,7 @@ function subkonLog(){
           ${riwayatHtml}
         </div>`;
       })():''}
+      ${ls.buktiUrls?`<div style="margin-bottom:8px">${String(ls.buktiUrls).split('\n').map(u=>u.trim()).filter(Boolean).map((u,bi)=>`<a href="${esc(u)}" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:3px 9px;margin:0 6px 4px 0;text-decoration:none">📎 Bukti ${bi+1}</a>`).join('')}</div>`:''}
       ${!isLunas?`<div style="margin-bottom:6px">
         <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(sudahBayar/ls.nilaiKontrak*100)}%;background:#10b981"></div></div>
         <div style="font-size:10px;color:#94a3b8;margin-top:2px">${Math.round(sudahBayar/ls.nilaiKontrak*100)}% terbayar</div>
@@ -2935,6 +2982,9 @@ function openBayarSubkon(idx){
     <div class="fg" id="kar-pot-wrap" style="display:none">
       <label class="fl">Karyawan yang Dipotong<span class="req">*</span></label>
       <select class="fc" id="sb-kar">${karOpts}</select></div>
+    <div class="fg"><label class="fl">📷 Foto Bukti Transfer <span style="color:#94a3b8;font-weight:400">(opsional — screenshot PC / foto HP)</span></label>
+      <input class="fc" type="file" id="sb-foto" accept="image/*" style="padding:8px">
+      <div class="num-hint">Otomatis dikompres & disimpan ke Google Drive, link tercatat di pembayaran ini</div></div>
     <div id="sb-net-preview" style="margin:6px 0 4px;font-size:12px;color:#64748b;text-align:right;min-height:18px"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
@@ -2956,6 +3006,8 @@ function saveBayarSubkon(idx){
   const cash=getNum('sb-nom')||0;const pot=getNum('sb-pot')||0;
   const nom=cash+pot; // total settlement = cash + potongan kasbon
   const tgl=document.getElementById('sb-tgl').value;
+  const fotoEl=document.getElementById('sb-foto');
+  const fotoFile=(fotoEl&&fotoEl.files&&fotoEl.files[0])?fotoEl.files[0]:null;
   if(nom<=0){showToast('Masukkan nominal pembayaran atau potongan','err');return;}
   if(pot>0&&(!document.getElementById('sb-kar')||!document.getElementById('sb-kar').value)){
     showToast('Pilih karyawan yang dipotong kasbonnya','err');return;}
@@ -2976,7 +3028,7 @@ function saveBayarSubkon(idx){
   ss(KS.rbsk,S.riwayatBayarSubkon);
   ss(KS.lsk,S.logSubkon);
   // Jika ada potongan kasbon, tambah entri POTONG ke logKasbon (client-side)
-  let idKar='',namaKar='',ketPot='';
+  let idKar='',namaKar='',ketPot='',potId='';
   if(pot>0){
     const sel=document.getElementById('sb-kar');
     if(sel&&sel.value){
@@ -2985,10 +3037,11 @@ function saveBayarSubkon(idx){
     }
     ketPot='Dipotong dari bayar subkon '+(ls.kodeProj||'');
     if(idKar){
+      potId='KSB-POT-'+Date.now();
       S.logKasbon.push({
-        id:'KSB-POT-'+Date.now(),tgl,
+        id:potId,tgl,
         idKaryawan:idKar,tipe:'POTONG',nominal:pot,
-        nama:namaKar,noClosing:'',ket:ketPot,kodeProj:ls.kodeProj||''
+        nama:namaKar,noClosing:'',ket:ketPot,kodeProj:ls.kodeProj||'',pending:true
       });
       ss(KS.ksb,S.logKasbon);
     }
@@ -3002,8 +3055,22 @@ function saveBayarSubkon(idx){
     potongan:pot>0?pot:0,
     idKaryawanPotong:idKar,
     namaKaryawanPotong:namaKar,
-    ketPotongan:ketPot
+    ketPotongan:ketPot,
+    potId:potId
   });
+  if(fotoFile)uploadBuktiSubkon(ls.id,fotoFile);
+}
+async function uploadBuktiSubkon(idLog,file){
+  try{
+    showToast('📤 Mengupload bukti transfer…','info');
+    const b64=await compressImage(file);
+    const d=await gsPost('uploadBuktiSubkon',{idLog,b64,mime:'image/jpeg',filename:'bukti-'+idLog+'-'+Date.now()+'.jpg'});
+    if(d)applyGS(d);
+    showToast('✅ Bukti tersimpan di Google Drive');
+    go(S.page);
+  }catch(e){
+    showToast('⚠️ Upload bukti gagal: '+e.message+' — pembayaran tetap tercatat','err');
+  }
 }
 function subkonMaster(){
   return `<div class="row" style="margin-bottom:11px"><div></div>

@@ -178,8 +178,9 @@ function _apiReadLogKasbon(ss) {
     var r = data[i];
     if (String(r[2]).trim() === "") continue; // C = idKaryawan
     cnt++;
+    var rawIdKsb = String(r[0] || "").trim();
     out.push({
-      id:         "KSB-GS-" + cnt,
+      id:         (rawIdKsb.indexOf("KSB-") === 0 && rawIdKsb.indexOf("KSB-GS-") !== 0) ? rawIdKsb : "KSB-GS-" + cnt,
       tgl:        _apiSerDate(r[1]),
       idKaryawan: String(r[2] || ""),
       tipe:       String(r[3] || ""),
@@ -204,8 +205,9 @@ function _apiReadLogPembayaran(ss) {
     var r = data[i];
     if (String(r[2]).trim() === "") continue; // C = kodeProj
     cnt++;
+    var rawIdPay = String(r[0] || "").trim();
     out.push({
-      id:       "PAY-GS-" + cnt,
+      id:       (rawIdPay.indexOf("PAY-") === 0 && rawIdPay.indexOf("PAY-GS-") !== 0) ? rawIdPay : "PAY-GS-" + cnt,
       tgl:      _apiSerDate(r[1]),
       kodeProj: String(r[2] || ""),
       namaProj: String(r[3] || ""),
@@ -313,7 +315,7 @@ function _apiReadLogSubkon(ss) {
   if (!ws) return [];
   var s = ROWS.LOG_SUBKON.start;
   var e = _endRow(ws, s); if (e < s) return [];
-  var data = ws.getRange("A" + s + ":O" + e).getValues();
+  var data = ws.getRange("A" + s + ":P" + e).getValues(); // P = buktiUrls (v1.29)
   var out  = [], cnt = 0;
   for (var i = 0; i < data.length; i++) {
     var r = data[i];
@@ -334,7 +336,8 @@ function _apiReadLogSubkon(ss) {
       ket:              String(r[11] || ""),
       potongan:         Number(r[12]) || 0,
       idKaryawanPotong: String(r[13] || ""),
-      ketPotongan:      String(r[14] || "")
+      ketPotongan:      String(r[14] || ""),
+      buktiUrls:        String(r[15] || "")
     });
   }
   return out;

@@ -133,7 +133,8 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 | `addAbsensi` | `[{tgl, idKaryawan, status, kodeProj, upahHariIni, ket}]` |
 | `deleteAbsensi` | `{tgl, idKaryawan}` |
 | `addKasbon` | `[{tgl, idKaryawan, tipe, nominal, ket}]` |
-| `addPembayaran` | `[{tgl, kodeProj, nominal, metode, bank, ket, ref}]` |
+| `addPembayaran` | `[{id, tgl, kodeProj, nominal, metode, bank, ket, ref}]` |
+| `uploadBuktiSubkon` (via **POST**, bukan GET) | `{idLog, b64, mime, filename}` → simpan foto ke Drive, link ke kolom P LOG SUBKON |
 | `finalizeClosing` | `{dari, sampai, tglBayar, noClosing, selectedIds[], kasbonItems[]}` |
 
 ### Sheet → Kolom Kunci

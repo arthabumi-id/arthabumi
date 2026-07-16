@@ -346,15 +346,35 @@ function _apiDeleteAbsensi(ss, d) {
 // LOG KASBON
 // ════════════════════════════════════════════════════════════════════════
 
+// Generic: cari baris by ID app di kolom A (prefix mis. "KSB-"; ID legacy "<prefix>GS-" ditolak)
+function _findRowByIdColA(ws, R, id, prefix) {
+  var idT = String(id || "").trim();
+  if (!idT || idT.indexOf(prefix) !== 0 || idT.indexOf(prefix + "GS-") === 0) return -1;
+  var endRow = ws.getLastRow();
+  if (endRow < R.start) return -1;
+  var ids = ws.getRange("A" + R.start + ":A" + endRow).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).trim() === idT) return i + R.start;
+  }
+  return -1;
+}
+
 function _apiAddKasbon(ss, items) {
   var ws      = ss.getSheetByName(SHEET.KASBON);
   var R       = ROWS.KASBON;
   var nextRow = _apiFindNext(ws, "C", R.start, R.end);
+  // Idempotency guard: ID yang sudah ada di kolom A di-skip (retry tidak bikin kasbon dobel)
+  var existKsb = _collectExistingIds(ws, R, "KSB-");
+  var writtenK = 0;
   for (var i = 0; i < items.length; i++) {
-    var it  = items[i];
-    var r   = nextRow + i;
+    var it   = items[i];
+    var itIdK = _sanitizeStr(it.id) || "";
+    if (itIdK && existKsb[itIdK]) continue;
+    if (itIdK) existKsb[itIdK] = true;
+    var r   = nextRow + writtenK;
+    writtenK++;
     var tgl = _apiParseDate(it.tgl);
-    ws.getRange(r, 1).setValue(r - 3);
+    ws.getRange(r, 1).setValue(itIdK || (r - 3));
     if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy");
     ws.getRange(r, 3).setValue(_sanitizeStr(it.idKaryawan) || "");
     ws.getRange(r, 4).setValue(_sanitizeStr(it.tipe)       || "AMBIL");
@@ -369,22 +389,28 @@ function _apiAddKasbon(ss, items) {
 function _apiDeleteKasbon(ss, d) {
   var ws = ss.getSheetByName(SHEET.KASBON);
   if (!ws) return;
-  var R    = ROWS.KASBON;
-  var data = ws.getRange("B" + R.start + ":H" + ws.getLastRow()).getValues();
-  var tglT  = String(d.tgl        || "").trim();
-  var idT   = String(d.idKaryawan || "").trim();
-  var tipeT = String(d.tipe       || "").trim();
-  var nomT  = _sanitizeNum(d.nominal);
-  for (var i = 0; i < data.length; i++) {
-    if (_apiSerDate(data[i][0]) === tglT &&
-        String(data[i][1]).trim() === idT &&
-        String(data[i][2]).trim() === tipeT &&
-        _sanitizeNum(data[i][3]) === nomT &&
-        String(data[i][5]).trim() === "") {
-      ws.getRange(i + R.start, 1, 1, 8).clearContent();
-      return;
+  var R = ROWS.KASBON;
+  // ID unik dulu (kolom A), fallback legacy match pertama
+  var rowNum = _findRowByIdColA(ws, R, d.id, "KSB-");
+  if (rowNum < 0) {
+    var data = ws.getRange("B" + R.start + ":H" + ws.getLastRow()).getValues();
+    var tglT  = String(d.tgl        || "").trim();
+    var idT   = String(d.idKaryawan || "").trim();
+    var tipeT = String(d.tipe       || "").trim();
+    var nomT  = _sanitizeNum(d.nominal);
+    for (var i = 0; i < data.length; i++) {
+      if (_apiSerDate(data[i][0]) === tglT &&
+          String(data[i][1]).trim() === idT &&
+          String(data[i][2]).trim() === tipeT &&
+          _sanitizeNum(data[i][3]) === nomT &&
+          String(data[i][5]).trim() === "") {
+        rowNum = i + R.start;
+        break;
+      }
     }
   }
+  if (rowNum < 0) return;
+  ws.getRange(rowNum, 1, 1, 9).clearContent(); // 9 kolom termasuk I=kodeProj
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -395,11 +421,18 @@ function _apiAddPembayaran(ss, items) {
   var ws      = ss.getSheetByName(SHEET.PEMBAYARAN);
   var R       = ROWS.PEMBAYARAN;
   var nextRow = _apiFindNext(ws, "C", R.start, R.end);
+  // Idempotency guard (retry tidak bikin pembayaran dobel)
+  var existPay = _collectExistingIds(ws, R, "PAY-");
+  var writtenP = 0;
   for (var i = 0; i < items.length; i++) {
-    var it  = items[i];
-    var r   = nextRow + i;
+    var it   = items[i];
+    var itIdP = _sanitizeStr(it.id) || "";
+    if (itIdP && existPay[itIdP]) continue;
+    if (itIdP) existPay[itIdP] = true;
+    var r   = nextRow + writtenP;
+    writtenP++;
     var tgl = _apiParseDate(it.tgl);
-    ws.getRange(r, 1).setValue(r - 3);
+    ws.getRange(r, 1).setValue(itIdP || (r - 3));
     if (tgl) ws.getRange(r, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy");
     ws.getRange(r, 3).setValue(_sanitizeStr(it.kodeProj)                 || "");
     ws.getRange(r, 4).setValue(_sanitizeStr(it.namaProj || it.kodeProj)  || "");
@@ -414,19 +447,25 @@ function _apiAddPembayaran(ss, items) {
 function _apiDeletePembayaran(ss, d) {
   var ws = ss.getSheetByName(SHEET.PEMBAYARAN);
   if (!ws) return;
-  var R    = ROWS.PEMBAYARAN;
-  var data = ws.getRange("B" + R.start + ":E" + ws.getLastRow()).getValues();
-  var tglT  = String(d.tgl      || "").trim();
-  var projT = String(d.kodeProj || "").trim();
-  var nomT  = _sanitizeNum(d.nominal);
-  for (var i = 0; i < data.length; i++) {
-    if (_apiSerDate(data[i][0]) === tglT &&
-        String(data[i][1]).trim() === projT &&
-        _sanitizeNum(data[i][3]) === nomT) {
-      ws.getRange(i + R.start, 1, 1, 9).clearContent();
-      return;
+  var R = ROWS.PEMBAYARAN;
+  // ID unik dulu (kolom A), fallback legacy match pertama
+  var rowNum = _findRowByIdColA(ws, R, d.id, "PAY-");
+  if (rowNum < 0) {
+    var data = ws.getRange("B" + R.start + ":E" + ws.getLastRow()).getValues();
+    var tglT  = String(d.tgl      || "").trim();
+    var projT = String(d.kodeProj || "").trim();
+    var nomT  = _sanitizeNum(d.nominal);
+    for (var i = 0; i < data.length; i++) {
+      if (_apiSerDate(data[i][0]) === tglT &&
+          String(data[i][1]).trim() === projT &&
+          _sanitizeNum(data[i][3]) === nomT) {
+        rowNum = i + R.start;
+        break;
+      }
     }
   }
+  if (rowNum < 0) return;
+  ws.getRange(rowNum, 1, 1, 9).clearContent();
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -470,11 +509,27 @@ function _apiFinalizeClosing(ss, d) {
     if (tglBayarDate) wsAbs.getRange(rN,11).setValue(tglBayarDate).setNumberFormat("dd/MM/yyyy");
   }
 
+  // Idempotency guard (retry finalizeClosing tidak boleh tulis POTONG/BONUS dobel):
+  // kumpulkan kombinasi noClosing|idKaryawan|tipe yang sudah ada di LOG KASBON
+  var existCls = {};
+  var endKsb = wsKsb.getLastRow();
+  if (endKsb >= Rk.start) {
+    var ksbData = wsKsb.getRange("C" + Rk.start + ":G" + endKsb).getValues();
+    for (var e2 = 0; e2 < ksbData.length; e2++) {
+      var noC2 = String(ksbData[e2][4] || "").trim(); // G = noClosing
+      if (!noC2) continue;
+      existCls[noC2 + "|" + String(ksbData[e2][0]).trim() + "|" + String(ksbData[e2][1]).trim()] = true;
+    }
+  }
+
   if (ksbItems.length > 0) {
     var nextRow = _apiFindNext(wsKsb, "C", Rk.start, Rk.end);
+    var wK = 0;
     for (var k = 0; k < ksbItems.length; k++) {
       var it = ksbItems[k];
-      var r  = nextRow + k;
+      if (existCls[noClosing + "|" + String(it.idKaryawan || "").trim() + "|POTONG"]) continue;
+      var r  = nextRow + wK;
+      wK++;
       wsKsb.getRange(r, 1).setValue(r - 3);
       if (tglBayarDate) wsKsb.getRange(r, 2).setValue(tglBayarDate).setNumberFormat("dd/MM/yyyy");
       wsKsb.getRange(r, 3).setValue(_sanitizeStr(it.idKaryawan) || "");
@@ -491,9 +546,12 @@ function _apiFinalizeClosing(ss, d) {
   var bonusItems = d.bonusItems || [];
   if (bonusItems.length > 0) {
     var nextBonRow = _apiFindNext(wsKsb, "C", Rk.start, Rk.end);
+    var wB = 0;
     for (var b = 0; b < bonusItems.length; b++) {
       var bn = bonusItems[b];
-      var rb = nextBonRow + b;
+      if (existCls[noClosing + "|" + String(bn.idKaryawan || "").trim() + "|BONUS"]) continue;
+      var rb = nextBonRow + wB;
+      wB++;
       wsKsb.getRange(rb, 1).setValue(rb - 3);
       if (tglBayarDate) wsKsb.getRange(rb, 2).setValue(tglBayarDate).setNumberFormat("dd/MM/yyyy");
       wsKsb.getRange(rb, 3).setValue(_sanitizeStr(bn.idKaryawan) || "");
@@ -621,10 +679,42 @@ function _apiDeleteSubkon(ss, d) {
 // LOG SUBKON
 // ════════════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════════════
+// UPLOAD BUKTI PEMBAYARAN SUBKON (v1.29)
+// Dipanggil via doPost (foto terlalu besar untuk GET). Simpan ke Drive,
+// link ditulis ke kolom P LOG SUBKON (bisa lebih dari satu, dipisah newline).
+// ════════════════════════════════════════════════════════════════════════
+function _apiUploadBuktiSubkon(ss, d) {
+  if (!d || !d.b64 || !d.idLog) return;
+  var ws = ss.getSheetByName(SHEET.LOG_SUBKON);
+  if (!ws) return;
+  var R = ROWS.LOG_SUBKON;
+  // Cari baris dulu — jangan buat file kalau baris tidak ketemu (hindari file yatim di Drive)
+  var rowNum = _findRowByIdColA(ws, R, d.idLog, "LSK-");
+  if (rowNum < 0) return;
+
+  var folderName = "Arthabumi Bukti Pembayaran";
+  var fIter  = DriveApp.getFoldersByName(folderName);
+  var folder = fIter.hasNext() ? fIter.next() : DriveApp.createFolder(folderName);
+
+  var mime = String(d.mime || "image/jpeg");
+  var name = _sanitizeStr(d.filename) || ("bukti-" + d.idLog + "-" + new Date().getTime() + ".jpg");
+  var blob = Utilities.newBlob(Utilities.base64Decode(String(d.b64)), mime, name);
+  var file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  var url  = "https://drive.google.com/file/d/" + file.getId() + "/view";
+
+  var cell = ws.getRange(rowNum, 16); // P = buktiUrls
+  var cur  = String(cell.getValue() || "").trim();
+  cell.setValue(cur ? cur + "\n" + url : url);
+}
+
 function _apiAddLogSubkon(ss, d) {
   var ws  = ss.getSheetByName(SHEET.LOG_SUBKON);
   if (!ws) return;
   var R   = ROWS.LOG_SUBKON;
+  // Idempotency guard: kalau ID sudah ada (retry setelah timeout), jangan tulis baris kedua
+  if (d.id && _findRowByIdColA(ws, R, d.id, "LSK-") > 0) return;
   var r   = _apiFindNext(ws, "C", R.start, R.end);
   var tgl = _apiParseDate(d.tgl);
   ws.getRange(r, 1).setValue(d.id || ("LSK-" + Date.now()));
@@ -713,11 +803,13 @@ function _apiUpdateLogSubkon(ss, d) {
 
     // Tambah entri POTONG ke LOG KASBON
     var wsKsb   = ss.getSheetByName(SHEET.KASBON);
+    // Idempotency: kalau potId sudah ada di kolom A (retry setelah timeout), jangan tulis POTONG kedua
+    if (wsKsb && d.potId && _findRowByIdColA(wsKsb, ROWS.KASBON, d.potId, "KSB-") > 0) wsKsb = null;
     if (wsKsb) {
       var Rk      = ROWS.KASBON;
       var nextKsb = _apiFindNext(wsKsb, "C", Rk.start, Rk.end);
       var tglPot  = tglBayar || new Date();
-      wsKsb.getRange(nextKsb, 1).setValue(nextKsb - 3);
+      wsKsb.getRange(nextKsb, 1).setValue(_sanitizeStr(d.potId) || (nextKsb - 3));
       wsKsb.getRange(nextKsb, 2).setValue(tglPot).setNumberFormat("dd/MM/yyyy");
       wsKsb.getRange(nextKsb, 3).setValue(_sanitizeStr(d.idKaryawanPotong));      // C = idKaryawan
       wsKsb.getRange(nextKsb, 4).setValue("POTONG");                               // D = tipe

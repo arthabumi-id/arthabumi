@@ -40,13 +40,36 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - ✅ **ID unik absensi** di kolom A LOG ABSENSI (pola sama dgn pembelian): `_apiAddAbsensi` **idempotent** — ID yang sudah ada di-skip, retry tidak lagi bikin baris dobel
 - ✅ `_apiAddPembelian` juga idempotent (lubang retry yang sama)
 - ✅ **Guard duplikat** di `submitAbsensi`: konfirmasi eksplisit kalau karyawan sudah punya absensi di tanggal itu
+- 🐛 **Fix form absensi reset**: Tanggal & Proyek Default balik ke awal setiap klik status karyawan (re-render baca DOM, bukan state — bug yang sama dgn form pembelian v1.20). Sekarang tersimpan di `S.absTgl`/`S.absDefProj`, reset hanya setelah simpan berhasil
 - ✅ Fix prefix merge `'ABN-GS-'` → `'ABS-GS-'` (salah ketik lama — absensi yang dihapus di device lain bisa muncul lagi) + flag `pending` seperti pembelian
 - ✅ `deleteAbsensi` lookup by ID dulu + clear **14 kolom** (sebelumnya 12 — kolom M jamLembur & N upahLembur tertinggal sebagai residu)
 - 🧹 **Cleanup data existing**: cek sheet LOG ABSENSI / tab Log Absensi untuk baris dobel (mis. Rudi), hapus salah satu via tombol 🗑 sebelum closing
 
+### FITUR: Upload Foto Bukti Pembayaran Subkon (index.html + config.gs + read.gs + write.gs)
+- ✨ Form Bayar Subkon punya input 📷 foto (screenshot PC / kamera HP). Foto dikompres di browser (canvas → JPEG max 1280px) lalu dikirim via **POST text/plain** (`gsPost()` — bebas limit 50KB GET, tanpa preflight CORS) ke action baru `uploadBuktiSubkon`
+- ✨ Backend simpan file ke folder Drive **"Arthabumi Bukti Pembayaran"** (auto-create), sharing "anyone with link view", link ditulis ke **kolom P** LOG SUBKON (multi-link dipisah newline)
+- ✨ Tab Log Subkon menampilkan chip 📎 Bukti 1/2/… yang membuka foto di Drive
+- ⚠️ `doPost` kini aktif dipakai — saat redeploy, Apps Script akan **minta izin akses Google Drive sekali** (scope baru)
+
+### AUDIT MENYELURUH — 15 temuan diperbaiki
+**Form reset (kelas bug yang sama dgn absensi):**
+- 🐛 Form Kasbon: SEMUA field (tgl, karyawan, tipe, nominal, proyek, ket) hilang saat re-render → state-backed `S.ksbF`
+- 🐛 Form Pembayaran Klien: tanggal reset → `S.payTgl`
+- 🐛 Form Input Subkon: semua field reset → `S.skF`
+- 🐛 Form Closing: dari/sampai/tglBayar/noClosing reset → `S.clsF`
+- 🐛 `numInp()` menghasilkan atribut `oninput` DOBEL saat dipakai dgn handler custom → handler kedua diabaikan browser → preview bayar subkon & dropdown "Karyawan yang Dipotong" tidak pernah muncul saat mengetik potongan (risiko potongan tercatat ke karyawan yang salah!) → numInp skip default oninput jika extra sudah bawa oninput
+- 🐛 Auto No Closing pakai `toISOString()` (UTC) — setelah jam 17:00 WIB di akhir bulan, nomor closing bisa pakai bulan berikutnya → ganti `today()`
+
+**Retry dobel (idempotency) — melengkapi absensi & pembelian:**
+- ✅ `addKasbon`, `addPembayaran`, `addLogSubkon` idempotent via ID unik kolom A (KSB-/PAY-/LSK-)
+- ✅ POTONG kasbon dari bayar subkon (`updateLogSubkon`): frontend kirim `potId`, backend skip jika sudah ada
+- ✅ `finalizeClosing`: POTONG & BONUS di-guard per `noClosing+idKaryawan+tipe` — retry tidak menggandakan potongan/bonus
+- ✅ `deleteKasbon`/`deletePembayaran` lookup by ID dulu; deleteKasbon clear 9 kolom (I=kodeProj sebelumnya tertinggal)
+- ✅ Merge sync: pending flag utk kasbon, pembayaran, logSubkon (anti resurrection + anti drop)
+
 ### DEPLOY
 - Frontend: push `index.html` (v1.29) ke GitHub
-- Backend: paste ulang `read.gs` + `write.gs` ke Apps Script editor → Deploy → **New version**
+- Backend: paste ulang `config.gs` + `read.gs` + `write.gs` ke Apps Script editor → Deploy → **New version** → authorize izin Drive saat diminta
 - Tanpa migrasi sheet: baris lama tetap jalan via fallback, baris baru otomatis pakai ID
 
 ---
