@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.30 (Latest) — 2026-07-05
+- **Versi aktif:** v1.31 (Latest) — 2026-07-16
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -198,8 +198,9 @@ Tab:     tabs, tab tab-on/tab-off
 
 ---
 
-## VERSI AKTIF: v1.30 — 2026-07-05
-Perubahan terakhir (v1.29 + v1.30, satu paket deploy):
+## VERSI AKTIF: v1.31 — 2026-07-16
+Perubahan terakhir (v1.29 → v1.31, satu paket deploy):
+- 🧭 **Bottom nav baru (v1.31)** — ··· membuka bottom sheet grid (backdrop + animasi + tap luar tutup, ganti model swap); **⚙️ Atur Menu**: user pilih & susun sendiri max 5 menu utama, tersimpan di localStorage `ab3-nav` (`getNavMain()`, `buildNavSheet()`, `openAturMenu()`).
 - 📷 **Upload bukti bayar subkon** — foto/screenshot dikompres di browser, kirim via `gsPost()` (POST text/plain), simpan ke Drive "Arthabumi Bukti Pembayaran", link di kolom P LOG SUBKON, chip 📎 di Log Subkon. Redeploy minta izin Drive sekali.
 - ✅ **ID unik + add idempotent di SEMUA log** (BLI/ABS/KSB/PAY/LSK di kolom A) — retry setelah timeout tidak lagi bikin baris dobel; delete/update lookup by ID dulu. Fix kasus absensi dobel di closing.
 - ✅ **Fix form reset** — Absensi (tgl+proyek default), Kasbon (semua field), Pembayaran (tgl), Subkon (semua field), Closing (periode+no) sekarang state-backed; tidak hilang saat re-render.

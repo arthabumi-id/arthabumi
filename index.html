@@ -30,6 +30,14 @@ button{-webkit-appearance:none;font-family:inherit}
 #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 20px}
 #nav{background:#0f172a;display:flex;flex-shrink:0;border-top:1px solid rgba(255,255,255,.08);padding-bottom:env(safe-area-inset-bottom,0px)}
 #nav .nav-btn{flex:1}
+#nav-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+#nav-backdrop.show{opacity:1;pointer-events:auto}
+#nav-sheet{position:fixed;left:0;right:0;bottom:0;background:#0f172a;border-radius:18px 18px 0 0;padding:12px 14px calc(16px + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .25s cubic-bezier(.3,.8,.3,1);z-index:41;box-shadow:0 -8px 30px rgba(0,0,0,.35)}
+#nav-sheet.show{transform:translateY(0)}
+.sheet-grab{width:36px;height:4px;background:rgba(255,255,255,.2);border-radius:4px;margin:0 auto 12px}
+.sheet-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.sheet-item{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border-radius:12px;background:rgba(255,255,255,.06);border:none;cursor:pointer;color:#cbd5e1}
+.sheet-item.on{background:rgba(16,185,129,.16);color:#10b981}
 .nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:9px 4px;min-width:0;flex-shrink:0;border:none;background:none;cursor:pointer;color:#64748b}
 .nav-btn.on{color:#10b981}
 .nav-dot{width:4px;height:4px;background:#10b981;border-radius:50%;margin-top:1px}
@@ -128,7 +136,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.30</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.31</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -139,6 +147,8 @@ button{-webkit-appearance:none;font-family:inherit}
   <div id="content"></div>
   <nav id="nav"></nav>
 </div>
+<div id="nav-backdrop" onclick="closeLainnya()"></div>
+<div id="nav-sheet"></div>
 <div id="toast"></div>
 <div id="overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -150,7 +160,7 @@ button{-webkit-appearance:none;font-family:inherit}
 'use strict';
 // ARTHABUMI v1.11 - Cashflow per Project + Single Shop Name + Confirmation Modal + Date Filter
 const S={
-  page:'dashboard',tab:{},navLain:false,formBeliProj:'',formBeliTgl:'',
+  page:'dashboard',tab:{},formBeliProj:'',formBeliTgl:'',
   projects:[],pembelian:[],karyawan:[],
   logAbsensi:[],logKasbon:[],logPembayaran:[],
   masterBarang:[],masterToko:[],
@@ -169,9 +179,10 @@ const S={
   formBayarToko:'Lunas',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
-const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk'};
-const APP_VERSION='v1.30';
+const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
+const APP_VERSION='v1.31';
 const APP_CHANGELOG=[
+  {v:'v1.31',date:'16 Jul 2026',desc:'Bottom nav baru: menu ··· jadi bottom sheet grid (tap luar utk tutup) + ⚙️ Atur Menu — pilih & susun sendiri 5 menu utama, tersimpan di HP'},
   {v:'v1.30',date:'5 Jul 2026',desc:'📷 Upload foto bukti bayar subkon ke Drive; fix absensi dobel di closing (ID unik + anti-dobel retry di SEMUA log: pembelian, absensi, kasbon, pembayaran, subkon); fix form reset (absensi, kasbon, bayar, subkon, closing); guard absensi duplikat; fix dropdown karyawan potongan tidak muncul'},
   {v:'v1.29',date:'5 Jul 2026',desc:'Log Pembelian: toggle 📅 Per Tanggal / 🏪 Per Toko kembali + total sesuai filter; fix filter Custom satu sisi; ID unik pembelian (edit/hapus/lunas presisi); info tanggal/proyek/toko di konfirmasi pembelian'},
   {v:'v1.28',date:'2 Jul 2026',desc:'Hutang ke Toko (tab baru + tandai lunas); Sync merge aman (tidak overwrite lokal); Filter Absensi per karyawan'},
@@ -379,25 +390,23 @@ const NAV_LAIN=[
   {id:'catatan',label:'Catatan',icon:'📝'},
 ];
 const NAV=[...NAV_MAIN,...NAV_LAIN];
+// Menu utama bisa diatur user (⚙️ Atur Menu di sheet Lainnya) — tersimpan di localStorage
+function getNavMain(){
+  const saved=sg(KS.nav,null);
+  const valid=Array.isArray(saved)?saved.filter(id=>NAV.some(n=>n.id===id)):[];
+  return valid.length?valid.slice(0,5):NAV_MAIN.map(n=>n.id);
+}
 function buildNav(){
-  if(S.navLain){
-    const backBtn=`<button class="nav-btn" onclick="closeLainnya()" style="flex:0 0 44px">
-      <span style="font-size:18px;line-height:1">←</span>
-      <span style="font-size:9px;font-weight:600">Back</span>
-    </button>`;
-    const lainBtns=NAV_LAIN.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
-      <span style="font-size:18px;line-height:1">${n.icon}</span>
-      <span style="font-size:9px;font-weight:600;letter-spacing:-.2px">${n.label}</span>
-      ${S.page===n.id?'<div class="nav-dot"></div>':''}
-    </button>`).join('');
-    return backBtn+lainBtns;
-  }
-  const lainActive=NAV_LAIN.some(n=>n.id===S.page);
-  const mainBtns=NAV_MAIN.map(n=>`<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
+  const mainIds=getNavMain();
+  const lainActive=!mainIds.includes(S.page);
+  const mainBtns=mainIds.map(id=>{
+    const n=NAV.find(x=>x.id===id);
+    return `<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
     <span style="font-size:20px;line-height:1">${n.icon}</span>
     <span style="font-size:10px;font-weight:600;letter-spacing:-.2px">${n.label}</span>
     ${S.page===n.id?'<div class="nav-dot"></div>':''}
-  </button>`).join('');
+  </button>`;
+  }).join('');
   const lainBtn=`<button class="nav-btn${lainActive?' on':''}" onclick="openLainnya()" style="color:${lainActive?'#10b981':'#64748b'}">
     <span style="font-size:18px;line-height:1;letter-spacing:2px">•••</span>
     <span style="font-size:10px;font-weight:600">Lainnya</span>
@@ -405,17 +414,74 @@ function buildNav(){
   </button>`;
   return mainBtns+lainBtn;
 }
+// Bottom sheet "Lainnya" — grid menu sekunder + tombol Atur Menu
+function buildNavSheet(){
+  const mainIds=getNavMain();
+  const rest=NAV.filter(n=>!mainIds.includes(n.id));
+  const grid=rest.map(n=>`<button class="sheet-item${S.page===n.id?' on':''}" onclick="go('${n.id}')">
+    <span style="font-size:22px;line-height:1">${n.icon}</span>
+    <span style="font-size:10px;font-weight:600">${n.label}</span>
+  </button>`).join('');
+  return `<div class="sheet-grab"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+      <span style="font-size:13px;font-weight:700;color:#e2e8f0">Menu Lainnya</span>
+      <button onclick="openAturMenu()" style="background:rgba(255,255,255,.08);border:none;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:600;color:#94a3b8;cursor:pointer">⚙️ Atur Menu</button>
+    </div>
+    <div class="sheet-grid">${grid}</div>`;
+}
 function openLainnya(){
-  S.navLain=true;
-  document.getElementById('nav').innerHTML=buildNav();
+  document.getElementById('nav-sheet').innerHTML=buildNavSheet();
+  document.getElementById('nav-backdrop').classList.add('show');
+  document.getElementById('nav-sheet').classList.add('show');
 }
 function closeLainnya(){
-  S.navLain=false;
-  document.getElementById('nav').innerHTML=buildNav();
+  document.getElementById('nav-backdrop').classList.remove('show');
+  document.getElementById('nav-sheet').classList.remove('show');
+}
+// ── Atur Menu: pilih & susun 5 menu utama sendiri
+function openAturMenu(){
+  closeLainnya();
+  S.navEdit=getNavMain().slice();
+  openModal(buildAturMenu());
+}
+function buildAturMenu(){
+  const rows=NAV.map(n=>{
+    const idx=S.navEdit.indexOf(n.id);
+    const on=idx>=0;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #f1f5f9;cursor:pointer;border-radius:8px${on?';background:#f0fdf4':''}" onclick="toggleNavItem('${n.id}')">
+      <span style="font-size:18px">${n.icon}</span>
+      <span style="flex:1;font-size:13px;font-weight:600;color:#1e293b">${n.label}</span>
+      ${on?`<span style="background:#10b981;color:#fff;font-size:11px;font-weight:700;border-radius:20px;padding:2px 10px">Slot ${idx+1}</span>`:'<span style="font-size:11px;color:#94a3b8">di ··· Lainnya</span>'}
+    </div>`;
+  }).join('');
+  return `<div class="modal-title">⚙️ Atur Menu Bawah</div>
+    <div class="info-box" style="font-size:11px">Ketuk untuk pilih maksimal <strong>5 menu utama</strong>. Urutan slot = urutan ketukan. Menu lainnya otomatis masuk ke <strong>···</strong></div>
+    <div id="atur-menu-list">${rows}</div>
+    <div class="act-row" style="margin-top:14px">
+      <button class="btn btn-g btn-sm" onclick="resetNavDefault()">↺ Default</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="saveNavCustom()">💾 Simpan</button>
+    </div>`;
+}
+function toggleNavItem(id){
+  const i=S.navEdit.indexOf(id);
+  if(i>=0){S.navEdit.splice(i,1);}
+  else{
+    if(S.navEdit.length>=5){showToast('Maksimal 5 menu utama — ketuk salah satu untuk melepas dulu','err');return;}
+    S.navEdit.push(id);
+  }
+  openModal(buildAturMenu());
+}
+function resetNavDefault(){S.navEdit=NAV_MAIN.map(n=>n.id);openModal(buildAturMenu());}
+function saveNavCustom(){
+  if(!S.navEdit.length){showToast('Pilih minimal 1 menu','err');return;}
+  ss(KS.nav,S.navEdit);
+  closeModal();
+  showToast('✅ Menu bawah tersimpan');
+  go(S.page);
 }
 function go(page){
   S.page=page;if(!S.tab[page])S.tab[page]='input';
-  S.navLain=false;
+  closeLainnya();
   document.getElementById('content').innerHTML=buildPage(page);
   document.getElementById('nav').innerHTML=buildNav();
   window.scrollTo&&window.scrollTo(0,0);

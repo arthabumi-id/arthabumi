@@ -13,8 +13,23 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 16 (v1.31) — 2026-07-16
+
+## [2026-07-16] v1.31 — Bottom Nav Baru: Sheet Grid + Atur Menu (index.html, frontend-only)
+
+### UX: Menu ··· Lainnya → Bottom Sheet Grid
+- ✨ Tap **···** → panel naik dari bawah (backdrop gelap, animasi slide, tutup dgn tap di luar) berisi grid ikon menu sekunder — nav utama tidak lagi "bertukar isi" (model swap v1.20 dihapus)
+- ℹ️ Beda dgn panel `#nav-lain` lama yang dihapus di v1.20: sheet baru punya backdrop penuh + animasi + tap-luar-tutup, tidak mengubah tinggi nav
+
+### ✨ Atur Menu (kustomisasi nav bawah)
+- Tombol **⚙️ Atur Menu** di sheet → pilih maksimal **5 menu utama**, urutan slot = urutan ketukan, sisanya otomatis ke ···
+- Tersimpan di localStorage (`ab3-nav`) per perangkat; tombol ↺ Default utk kembali ke bawaan
+- `buildNav()` kini baca `getNavMain()`; state `S.navLain` dihapus
+
+---
+
 # 🔧 SESSION 14–15 (v1.29 → v1.30) — 2026-07-05
-> Catatan: v1.29 dan v1.30 dirilis sebagai SATU paket deploy. **Versi aktif = v1.30.**
+> Catatan: v1.29 dan v1.30 dirilis sebagai SATU paket deploy bersama v1.31.
 
 ## [2026-07-05] v1.29 — Log Pembelian: View Toggle Kembali + ID Unik Pembelian
 
