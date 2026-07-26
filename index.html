@@ -136,7 +136,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.31</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.32</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -180,8 +180,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.31';
+const APP_VERSION='v1.32';
 const APP_CHANGELOG=[
+  {v:'v1.32',date:'16 Jul 2026',desc:'✏️ Edit absensi di Log — koreksi salah proyek, tanggal, status & jam lembur (upah dihitung ulang otomatis). Entri yang sudah closing tetap bisa dikoreksi proyeknya, upah dikunci'},
   {v:'v1.31',date:'16 Jul 2026',desc:'Bottom nav baru: menu ··· jadi bottom sheet grid (tap luar utk tutup) + ⚙️ Atur Menu — pilih & susun sendiri 5 menu utama, tersimpan di HP'},
   {v:'v1.30',date:'5 Jul 2026',desc:'📷 Upload foto bukti bayar subkon ke Drive; fix absensi dobel di closing (ID unik + anti-dobel retry di SEMUA log: pembelian, absensi, kasbon, pembayaran, subkon); fix form reset (absensi, kasbon, bayar, subkon, closing); guard absensi duplikat; fix dropdown karyawan potongan tidak muncul'},
   {v:'v1.29',date:'5 Jul 2026',desc:'Log Pembelian: toggle 📅 Per Tanggal / 🏪 Per Toko kembali + total sesuai filter; fix filter Custom satu sisi; ID unik pembelian (edit/hapus/lunas presisi); info tanggal/proyek/toko di konfirmasi pembelian'},
@@ -2004,6 +2005,7 @@ function _absItemsList(){
         ${(Number(a.jamLembur)>0)?`<div style="font-size:10px;color:#d97706;margin-top:2px;font-weight:600">⏰ Lembur ${a.jamLembur} jam &nbsp;·&nbsp; +${fRp(Number(a.upahLembur)||0)}</div>`:''}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
         ${bdg(a.status)}
+        <button style="background:#dbeafe;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#1d4ed8" onclick="openEditAbsensi(${ri})">✏️</button>
         ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:#fee2e2;border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:#b91c1c" onclick="delAbsensi(${ri})">🗑</button>`:''}
       </div></div>
       <div>${bdg(a.statusBayar)}</div></div>`;
@@ -2019,6 +2021,68 @@ function delAbsensi(idx){
   if(!confirm('Hapus absensi '+esc(a.nama)+'?'))return;
   S.logAbsensi.splice(idx,1);ss(KS.abs,S.logAbsensi);showToast('🗑 Dihapus');go('absensi');
   doSync('deleteAbsensi',{id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan});
+}
+// ── EDIT ABSENSI [v1.32] — koreksi salah input proyek/tanggal/status/lembur
+function openEditAbsensi(idx){
+  const a=S.logAbsensi[idx];if(!a)return;
+  S.editAbsIdx=idx;
+  S.editAbsOrig={id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan};
+  const locked=a.statusBayar==='Sudah Dibayar'; // sudah closing → upah tidak boleh berubah
+  const k=S.karyawan.find(x=>x.id===a.idKaryawan);
+  const projOpts=`<option value="">— Tanpa Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${a.kodeProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
+  const stsOpts=['Hadir','Setengah Hari'].map(s=>`<option${a.status===s?' selected':''}>${s}</option>`).join('');
+  openModal(`<div class="modal-title">✏️ Edit Absensi</div>
+    <div style="margin-bottom:10px">
+      <div class="item-name">${esc(a.nama)}</div>
+      <div class="item-sub">${fDate(a.tgl)} · upah tercatat ${fRp(a.upahHariIni)}</div>
+    </div>
+    ${locked?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:9px;padding:8px 12px;font-size:11px;color:#c2410c;margin-bottom:12px">🔒 Sudah di-closing (${esc(a.noClosing||'-')}). Hanya <strong>proyek</strong> yang bisa dikoreksi — status & lembur dikunci agar total closing tetap cocok.</div>`:''}
+    <div class="fg"><label class="fl">Proyek${locked?'':' '}<span style="color:#94a3b8;font-weight:400">(tempat karyawan bekerja)</span></label>
+      <select class="fc" id="ea-proj">${projOpts}</select></div>
+    <div class="fg"><label class="fl">Tanggal</label>
+      <input class="fc" type="date" id="ea-tgl" value="${esc(a.tgl||'')}" ${locked?'disabled style="background:#f1f5f9;color:#94a3b8"':''}></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Status</label>
+        <select class="fc" id="ea-sts" ${locked?'disabled style="background:#f1f5f9;color:#94a3b8"':''}>${stsOpts}</select></div>
+      <div class="fg"><label class="fl">Jam Lembur</label>
+        <input class="fc" type="number" min="0" max="24" step="0.5" id="ea-lembur" value="${Number(a.jamLembur)||0}" ${locked?'disabled style="background:#f1f5f9;color:#94a3b8"':''}></div>
+    </div>
+    ${locked?'':`<div class="num-hint" style="margin-top:-4px">Upah dihitung ulang otomatis dari upah harian ${k?fRp(k.upahHarian):'karyawan'}</div>`}
+    <div class="fg" style="margin-top:9px"><label class="fl">Keterangan</label>
+      <input class="fc" id="ea-ket" value="${esc(a.ket||'')}"></div>
+    <div class="act-row" style="margin-top:12px">
+      <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="submitEditAbsensi()">💾 Simpan Perubahan</button>
+    </div>`);
+}
+function submitEditAbsensi(){
+  const idx=S.editAbsIdx,orig=S.editAbsOrig;
+  if(idx==null||!orig){closeModal();return;}
+  const a=S.logAbsensi[idx];if(!a){closeModal();return;}
+  const locked=a.statusBayar==='Sudah Dibayar';
+  const kodeProj=document.getElementById('ea-proj')?.value||'';
+  const ket=document.getElementById('ea-ket')?.value||'';
+  const tgl=locked?a.tgl:(document.getElementById('ea-tgl')?.value||a.tgl);
+  const status=locked?a.status:(document.getElementById('ea-sts')?.value||a.status);
+  const jamLembur=locked?(Number(a.jamLembur)||0):(parseFloat(document.getElementById('ea-lembur')?.value)||0);
+  const k=S.karyawan.find(x=>x.id===a.idKaryawan);
+  const upahH=k?Number(k.upahHarian)||0:0;
+  const baseUpah=status==='Hadir'?upahH:status==='Setengah Hari'?upahH*0.5:0;
+  const upahLembur=locked?(Number(a.upahLembur)||0):Math.round(jamLembur*upahH/8);
+  const upahHariIni=locked?(Number(a.upahHariIni)||0):(baseUpah+upahLembur);
+  // Cegah bentrok: absensi lain di tanggal & karyawan yang sama
+  if(tgl!==a.tgl&&S.logAbsensi.some((x,i)=>i!==idx&&x.tgl===tgl&&x.idKaryawan===a.idKaryawan)){
+    showToast('Sudah ada absensi '+esc(a.nama)+' di tanggal itu','err');return;
+  }
+  const namaProj=S.projects.find(p=>p.kode===kodeProj)?.nama||'';
+  S.logAbsensi[idx]={...a,tgl,kodeProj,namaProj,status,jamLembur,upahLembur,upahHariIni,ket};
+  ss(KS.abs,S.logAbsensi);
+  closeModal();
+  showToast('✅ Absensi diupdate');
+  go('absensi');
+  doSync('updateAbsensi',{id:orig.id,oldTgl:orig.tgl,oldIdKaryawan:orig.idKaryawan,
+    tgl,idKaryawan:a.idKaryawan,nama:a.nama,status,kodeProj,namaProj,
+    upahHariIni,jamLembur,upahLembur,ket,locked});
 }
 // ── KASBON [v1.8 + tombol hapus di log]
 function pgKasbon(){

@@ -321,6 +321,48 @@ function _findAbsRowById(ws, R, id) {
   return -1;
 }
 
+// Edit absensi (v1.32) — koreksi salah input proyek/tanggal/status/lembur.
+// Kolom I(statusBayar) J(noClosing) K(tglBayar) TIDAK disentuh.
+// Jika d.locked = true (sudah closing), hanya kolom F/G (proyek) + L (ket) yang diubah.
+function _apiUpdateAbsensi(ss, d) {
+  var ws = ss.getSheetByName(SHEET.ABSENSI);
+  if (!ws) return;
+  var R = ROWS.ABSENSI;
+  var rowNum = _findAbsRowById(ws, R, d.id);
+  if (rowNum < 0) {
+    // Fallback legacy: match pertama by tanggal LAMA + idKaryawan
+    var data = ws.getRange("B" + R.start + ":C" + ws.getLastRow()).getValues();
+    var tglT = String(d.oldTgl        || "").trim();
+    var idT  = String(d.oldIdKaryawan || "").trim();
+    for (var i = 0; i < data.length; i++) {
+      if (_apiSerDate(data[i][0]) === tglT && String(data[i][1]).trim() === idT) {
+        rowNum = i + R.start;
+        break;
+      }
+    }
+  }
+  if (rowNum < 0) return;
+
+  // Backfill ID ke baris legacy agar operasi berikutnya presisi
+  var newId = String(d.id || "").trim();
+  if (newId.indexOf("ABS-") === 0 && newId.indexOf("ABS-GS-") !== 0) {
+    ws.getRange(rowNum, 1).setValue(newId);
+  }
+
+  // Selalu boleh dikoreksi: proyek (F/G) + keterangan (L)
+  ws.getRange(rowNum, 6).setValue(_sanitizeStr(d.kodeProj) || "");                        // F = kodeProj
+  ws.getRange(rowNum, 7).setValue(_sanitizeStr(d.namaProj || d.kodeProj) || "");          // G = namaProj
+  ws.getRange(rowNum,12).setValue(_sanitizeStr(d.ket) || "");                             // L = ket
+  if (d.locked === true) return; // sudah closing → jangan ubah tanggal/status/upah
+
+  var tgl = _apiParseDate(d.tgl);
+  if (tgl) ws.getRange(rowNum, 2).setValue(tgl).setNumberFormat("dd/MM/yyyy");            // B = tgl
+  ws.getRange(rowNum, 5).setValue(_sanitizeStr(d.status) || "Hadir");                     // E = status
+  ws.getRange(rowNum, 8).setValue(_sanitizeNum(d.upahHariIni)).setNumberFormat("#,##0");  // H = upahHariIni
+  ws.getRange(rowNum,13).setValue(_sanitizeNum(d.jamLembur)).setNumberFormat("0.#");      // M = jamLembur
+  ws.getRange(rowNum,14).setValue(_sanitizeNum(d.upahLembur)).setNumberFormat("#,##0");   // N = upahLembur
+}
+
 function _apiDeleteAbsensi(ss, d) {
   var ws = ss.getSheetByName(SHEET.ABSENSI);
   if (!ws) return;

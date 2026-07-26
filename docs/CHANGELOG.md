@@ -13,6 +13,26 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 17 (v1.32) — 2026-07-16
+
+## [2026-07-16] v1.32 — Edit Absensi (index.html + config.gs + write.gs)
+
+### ✨ Tombol ✏️ di Log Absensi
+- Koreksi **proyek** (kasus utama: salah pilih tempat karyawan bekerja), **tanggal**, **status** (Hadir / Setengah Hari), **jam lembur**, dan keterangan
+- Upah dihitung ulang otomatis dari `upahHarian` karyawan: `base(status) + round(jamLembur × upahHarian / 8)` — konsisten dgn rumus di `submitAbsensi`
+- Guard: tidak bisa pindah ke tanggal yang sudah ada absensi karyawan tsb (cegah dobel)
+
+### 🔒 Perlakuan entri yang sudah di-closing
+- Entri `Sudah Dibayar` **tetap bisa dikoreksi proyeknya** (hanya memindahkan beban biaya antar proyek, tidak mengubah jumlah yang dibayar ke karyawan) + keterangan
+- Tanggal, status, dan lembur **dikunci** (field disabled + banner penjelasan) supaya total closing yang sudah dibayar tidak jadi tidak cocok
+- Backend `_apiUpdateAbsensi` hormati flag `locked`: hanya tulis kolom F/G (proyek) + L (ket); kolom I/J/K (statusBayar, noClosing, tglBayar) tidak pernah disentuh
+
+### Teknis
+- Action baru `updateAbsensi` di router `config.gs`
+- Lookup baris: ID unik kolom A dulu (`_findAbsRowById`), fallback `oldTgl + oldIdKaryawan` untuk baris legacy, + backfill ID saat edit
+
+---
+
 # 🔧 SESSION 16 (v1.31) — 2026-07-16
 
 ## [2026-07-16] v1.31 — Bottom Nav Baru: Sheet Grid + Atur Menu (index.html, frontend-only)

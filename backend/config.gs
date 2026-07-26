@@ -102,6 +102,7 @@ function _apiHandleAction(ss, action, data) {
     case "deleteKaryawan":    _apiDeleteKaryawan(ss, data);    break;
     // Absensi
     case "addAbsensi":        _apiAddAbsensi(ss, data);        break;
+    case "updateAbsensi":     _apiUpdateAbsensi(ss, data);     break;
     case "deleteAbsensi":     _apiDeleteAbsensi(ss, data);     break;
     // Kasbon
     case "addKasbon":         _apiAddKasbon(ss, data);         break;
