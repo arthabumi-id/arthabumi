@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.32 (Latest) — 2026-07-16
+- **Versi aktif:** v1.33 (Latest) — 2026-07-16
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -199,8 +199,9 @@ Tab:     tabs, tab tab-on/tab-off
 
 ---
 
-## VERSI AKTIF: v1.32 — 2026-07-16
-Perubahan terakhir (v1.29 → v1.32, satu paket deploy):
+## VERSI AKTIF: v1.33 — 2026-07-16
+Perubahan terakhir (v1.29 → v1.33, satu paket deploy):
+- 🏗️ **Detail Closing per Proyek (v1.33)** — toggle 👷 Per Karyawan / 🏗️ Per Proyek di modal detail closing; biaya tenaga kerja per lokasi proyek (upah + bonus, potongan sbg info), absensi tanpa proyek muncul sbg `(Tanpa Proyek)`.
 - ✏️ **Edit absensi (v1.32)** — koreksi proyek/tanggal/status/lembur dari Log Absensi; upah dihitung ulang otomatis. Entri sudah-closing: proyek & ket tetap bisa dikoreksi, sisanya dikunci (`_apiUpdateAbsensi` + flag `locked`).
 - 🧭 **Bottom nav baru (v1.31)** — ··· membuka bottom sheet grid (backdrop + animasi + tap luar tutup, ganti model swap); **⚙️ Atur Menu**: user pilih & susun sendiri max 5 menu utama, tersimpan di localStorage `ab3-nav` (`getNavMain()`, `buildNavSheet()`, `openAturMenu()`).
 - 📷 **Upload bukti bayar subkon** — foto/screenshot dikompres di browser, kirim via `gsPost()` (POST text/plain), simpan ke Drive "Arthabumi Bukti Pembayaran", link di kolom P LOG SUBKON, chip 📎 di Log Subkon. Redeploy minta izin Drive sekali.

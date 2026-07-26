@@ -136,7 +136,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.32</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.33</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -180,8 +180,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.32';
+const APP_VERSION='v1.33';
 const APP_CHANGELOG=[
+  {v:'v1.33',date:'16 Jul 2026',desc:'Detail Closing: toggle 👷 Per Karyawan / 🏗️ Per Proyek — lihat biaya tenaga kerja per lokasi proyek (upah + bonus + potongan, urut dari terbesar)'},
   {v:'v1.32',date:'16 Jul 2026',desc:'✏️ Edit absensi di Log — koreksi salah proyek, tanggal, status & jam lembur (upah dihitung ulang otomatis). Entri yang sudah closing tetap bisa dikoreksi proyeknya, upah dikunci'},
   {v:'v1.31',date:'16 Jul 2026',desc:'Bottom nav baru: menu ··· jadi bottom sheet grid (tap luar utk tutup) + ⚙️ Atur Menu — pilih & susun sendiri 5 menu utama, tersimpan di HP'},
   {v:'v1.30',date:'5 Jul 2026',desc:'📷 Upload foto bukti bayar subkon ke Drive; fix absensi dobel di closing (ID unik + anti-dobel retry di SEMUA log: pembelian, absensi, kasbon, pembayaran, subkon); fix form reset (absensi, kasbon, bayar, subkon, closing); guard absensi duplikat; fix dropdown karyawan potongan tidak muncul'},
@@ -2348,10 +2349,12 @@ function closingLog(){
   }).join('');
 }
 
-// ── Detail Closing — modal rincian per karyawan
+// ── Detail Closing — modal rincian per karyawan / per proyek [v1.33]
+function setClsDetailView(noClosing,v){S.clsDetailView=v;openClosingDetail(noClosing);}
 function openClosingDetail(noClosing){
   const c=getClosingList().find(x=>x.noClosing===noClosing);
   if(!c)return;
+  const view=S.clsDetailView||'karyawan';
 
   // Kumpulkan semua absensi terkait closing ini, group per karyawan
   const absClosing=S.logAbsensi.filter(a=>a.noClosing===noClosing);
@@ -2418,6 +2421,57 @@ function openClosingDetail(noClosing){
     </div>`;
   }).join('');
 
+  // ── Rincian PER PROYEK (biaya tenaga kerja per lokasi proyek) [v1.33]
+  const byProj={};
+  absClosing.forEach(a=>{
+    const kd=a.kodeProj||'';
+    if(!byProj[kd])byProj[kd]={kode:kd,nama:kd?(S.projects.find(p=>p.kode===kd)?.nama||kd):'(Tanpa Proyek)',upah:0,hari:0,kar:{}};
+    const g=byProj[kd];
+    g.upah+=Number(a.upahHariIni)||0;
+    g.hari++;
+    if(!g.kar[a.idKaryawan])g.kar[a.idKaryawan]={nama:a.nama||a.idKaryawan,upah:0,hari:0,lembur:0};
+    g.kar[a.idKaryawan].upah+=Number(a.upahHariIni)||0;
+    g.kar[a.idKaryawan].hari++;
+    g.kar[a.idKaryawan].lembur+=Number(a.jamLembur)||0;
+  });
+  // Bonus & potongan kasbon ikut dibebankan ke proyek sesuai kodeProj-nya
+  [...bonClosing,...ksbClosing].forEach(k=>{
+    const kd=k.kodeProj||'';
+    if(!byProj[kd])byProj[kd]={kode:kd,nama:kd?(S.projects.find(p=>p.kode===kd)?.nama||kd):'(Tanpa Proyek)',upah:0,hari:0,kar:{}};
+    const g=byProj[kd];
+    if(k.tipe==='BONUS')g.bonus=(g.bonus||0)+(Number(k.nominal)||0);
+    else g.potong=(g.potong||0)+(Number(k.nominal)||0);
+  });
+  const projSorted=Object.values(byProj).sort((a,b)=>(b.upah+(b.bonus||0))-(a.upah+(a.bonus||0)));
+  const projRows=projSorted.map(g=>{
+    const karList=Object.values(g.kar).sort((a,b)=>b.upah-a.upah);
+    const biaya=g.upah+(g.bonus||0); // beban biaya proyek = upah gross + bonus (potongan = info)
+    const rows=karList.map(kk=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9">
+        <div>
+          <span style="font-size:12px;font-weight:600;color:#334155">${esc(kk.nama)}</span>
+          <span style="font-size:10px;color:#94a3b8;margin-left:6px">${kk.hari} hari</span>
+          ${kk.lembur>0?`<span style="font-size:10px;color:#d97706;margin-left:4px;font-weight:700">⏰${kk.lembur}j</span>`:''}
+        </div>
+        <span style="font-size:12px;font-weight:600;color:#16a34a">${fRp(kk.upah)}</span>
+      </div>`).join('');
+    return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:11px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:#1e293b">🏗️ ${esc(g.nama)}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px">${karList.length} karyawan · ${g.hari} hari kerja</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:8px">
+          <div style="font-size:12px;color:#64748b">Upah: <strong style="color:#16a34a">${fRp(g.upah)}</strong></div>
+          ${g.bonus?`<div style="font-size:11px;color:${g.bonus>0?'#d97706':'#dc2626'}">${g.bonus>0?'🎁 Bonus: + '+fRp(g.bonus):'↩️ Koreksi: - '+fRp(Math.abs(g.bonus))}</div>`:''}
+          ${g.potong?`<div style="font-size:11px;color:#7c3aed">✂️ Potong kasbon: -${fRp(g.potong)}</div>`:''}
+          <div style="font-size:13px;font-weight:800;color:#1d4ed8">Beban proyek: ${fRp(biaya)}</div>
+        </div>
+      </div>
+      ${rows?`<div style="max-height:200px;overflow-y:auto;padding-top:4px">${rows}</div>`:''}
+    </div>`;
+  }).join('');
+
   openModal(`
     <div class="modal-title">🔒 ${esc(noClosing)}</div>
 
@@ -2451,10 +2505,14 @@ function openClosingDetail(noClosing){
       </div>
     </div>
 
-    <!-- Per karyawan -->
-    <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Rincian per Karyawan</div>
+    <!-- Toggle tampilan rincian -->
+    <div style="display:flex;gap:6px;margin-bottom:9px">
+      <button class="tab ${view==='karyawan'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setClsDetailView('${esc(noClosing)}','karyawan')">👷 Per Karyawan</button>
+      <button class="tab ${view==='proyek'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setClsDetailView('${esc(noClosing)}','proyek')">🏗️ Per Proyek</button>
+    </div>
+    <div style="font-size:11px;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Rincian ${view==='proyek'?'per Proyek':'per Karyawan'}</div>
     <div style="max-height:50vh;overflow-y:auto">
-      ${krRows||'<div class="empty">Tidak ada data absensi</div>'}
+      ${(view==='proyek'?projRows:krRows)||'<div class="empty">Tidak ada data absensi</div>'}
     </div>
 
     <div class="act-row" style="margin-top:12px">

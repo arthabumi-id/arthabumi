@@ -13,6 +13,18 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 18 (v1.33) — 2026-07-16
+
+## [2026-07-16] v1.33 — Detail Closing: Rincian per Proyek (index.html, frontend-only)
+
+- ✨ Modal Detail Closing punya toggle **👷 Per Karyawan / 🏗️ Per Proyek** (state `S.clsDetailView`, `setClsDetailView()`)
+- ✨ View Per Proyek: absensi di-group by `kodeProj` → total upah, jumlah karyawan, jumlah hari kerja; di dalamnya rincian per karyawan (hari + jam lembur + upah), urut upah terbesar
+- ✨ Bonus & potongan kasbon ikut dibebankan ke proyek sesuai `kodeProj`-nya masing-masing; baris **Beban proyek = upah gross + bonus** (konsisten dgn model biaya v1.14 — POTONG = info saja, tidak menambah biaya proyek)
+- ✨ Absensi tanpa proyek dikelompokkan sebagai `(Tanpa Proyek)` — memudahkan deteksi salah/lupa input proyek
+- Grup proyek diurutkan dari beban terbesar
+
+---
+
 # 🔧 SESSION 17 (v1.32) — 2026-07-16
 
 ## [2026-07-16] v1.32 — Edit Absensi (index.html + config.gs + write.gs)
