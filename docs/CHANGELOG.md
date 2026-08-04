@@ -13,6 +13,20 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 19 (v1.34) — 2026-07-16
+
+## [2026-07-16] v1.34 — Auto-isi Harga dari Master Barang (index.html, frontend-only)
+
+- ✨ `beliAutoHarga(i,val)`: ketik/pilih nama barang yang cocok (case-insensitive) dgn MASTER BARANG → **harga terakhir terisi otomatis**, plus satuan & kategori ikut disamakan dgn katalog
+- ✨ Hint hijau di bawah nama barang: `✨ Harga terakhir Rp X/sat · tgl · toko` (diambil dari pembelian terakhir barang tsb)
+- 🛡 **Tidak menimpa harga manual**: flag `it.hargaAuto` — begitu Eddy mengetik harga sendiri, autofill berhenti mengganggu baris itu. Ganti nama barang → autofill aktif lagi
+- ✨ Datalist barang kini menampilkan harga terakhir sbg label bantu saat memilih
+- ✨ **Paste Daftar**: kolom harga jadi opsional — `Cat tembok, 2` cukup, harga diambil dari katalog. Error message spesifik kalau barang belum pernah dibeli
+- 🧹 Cleanup: `<datalist id="brg-dl">` & `tk-dl` sebelumnya di-render ulang di SETIAP baris item (duplicate ID, DOM bloat) → sekarang satu kali di root form
+- 🧹 Field `hargaAuto`/`hargaInfo` di-strip saat simpan (tidak ikut ke state pembelian & GSheet)
+
+---
+
 # 🔧 SESSION 18 (v1.33) — 2026-07-16
 
 ## [2026-07-16] v1.33 — Detail Closing: Rincian per Proyek (index.html, frontend-only)

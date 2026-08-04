@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.33 (Latest) — 2026-07-16
+- **Versi aktif:** v1.34 (Latest) — 2026-07-16
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -199,8 +199,9 @@ Tab:     tabs, tab tab-on/tab-off
 
 ---
 
-## VERSI AKTIF: v1.33 — 2026-07-16
-Perubahan terakhir (v1.29 → v1.33, satu paket deploy):
+## VERSI AKTIF: v1.34 — 2026-07-16
+Perubahan terakhir (v1.29 → v1.34, satu paket deploy):
+- 💰 **Auto-isi harga (v1.34)** — `beliAutoHarga()`: nama barang cocok dgn MASTER BARANG → harga terakhir + satuan + kategori terisi otomatis, hint tgl & toko terakhir. Flag `hargaAuto` jaga agar harga manual tidak ditimpa. Paste Daftar: kolom harga opsional.
 - 🏗️ **Detail Closing per Proyek (v1.33)** — toggle 👷 Per Karyawan / 🏗️ Per Proyek di modal detail closing; biaya tenaga kerja per lokasi proyek (upah + bonus, potongan sbg info), absensi tanpa proyek muncul sbg `(Tanpa Proyek)`.
 - ✏️ **Edit absensi (v1.32)** — koreksi proyek/tanggal/status/lembur dari Log Absensi; upah dihitung ulang otomatis. Entri sudah-closing: proyek & ket tetap bisa dikoreksi, sisanya dikunci (`_apiUpdateAbsensi` + flag `locked`).
 - 🧭 **Bottom nav baru (v1.31)** — ··· membuka bottom sheet grid (backdrop + animasi + tap luar tutup, ganti model swap); **⚙️ Atur Menu**: user pilih & susun sendiri max 5 menu utama, tersimpan di localStorage `ab3-nav` (`getNavMain()`, `buildNavSheet()`, `openAturMenu()`).

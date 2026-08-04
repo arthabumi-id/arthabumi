@@ -136,7 +136,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.33</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.34</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -180,8 +180,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.33';
+const APP_VERSION='v1.34';
 const APP_CHANGELOG=[
+  {v:'v1.34',date:'16 Jul 2026',desc:'Input Pembelian: pilih barang yang pernah dibeli → harga terakhir terisi otomatis (+ info tanggal & toko terakhir); datalist tampilkan harga; Paste Daftar boleh tanpa kolom harga'},
   {v:'v1.33',date:'16 Jul 2026',desc:'Detail Closing: toggle 👷 Per Karyawan / 🏗️ Per Proyek — lihat biaya tenaga kerja per lokasi proyek (upah + bonus + potongan, urut dari terbesar)'},
   {v:'v1.32',date:'16 Jul 2026',desc:'✏️ Edit absensi di Log — koreksi salah proyek, tanggal, status & jam lembur (upah dihitung ulang otomatis). Entri yang sudah closing tetap bisa dikoreksi proyeknya, upah dikunci'},
   {v:'v1.31',date:'16 Jul 2026',desc:'Bottom nav baru: menu ··· jadi bottom sheet grid (tap luar utk tutup) + ⚙️ Atur Menu — pilih & susun sendiri 5 menu utama, tersimpan di HP'},
@@ -1293,8 +1294,9 @@ function pgBeli(){
 function beliInput(){
   if(!S.formItems||!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   if(!S.formBeliTgl)S.formBeliTgl=today();
-  const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">`).join('');
-  const tk=S.masterToko.map(t=>`<option value="${esc(t)}">`).join('');
+  // Datalist barang: tampilkan harga terakhir sbg label bantu saat memilih
+  const brg=S.masterBarang.map(b=>`<option value="${esc(b.nama)}">${Number(b.hargaTerakhir)>0?esc(fRp(b.hargaTerakhir)+(b.satuan?' / '+b.satuan:'')):''}</option>`).join('');
+  const tk=S.masterToko.map(t=>`<option value="${esc(t)}"></option>`).join('');
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${S.formBeliProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const currentShop=S.formItems[0]?.toko||'';
   const items=S.formItems.map((it,i)=>`<div class="sub-card">
@@ -1303,32 +1305,29 @@ function beliInput(){
       ${S.formItems.length>1?`<button style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer" onclick="delBeliRow(${i})">✕ Hapus</button>`:''}
     </div>
     <div class="fg"><label class="fl">Nama Barang</label>
-      <input class="fc" list="brg-dl" value="${esc(it.namaBarang)}" placeholder="Nama barang" oninput="S.formItems[${i}].namaBarang=this.value">
-      <datalist id="brg-dl">${brg}</datalist></div>
+      <input class="fc" list="brg-dl" value="${esc(it.namaBarang)}" placeholder="Nama barang" oninput="beliAutoHarga(${i},this.value)" onchange="beliAutoHarga(${i},this.value)">
+      <div id="bi-hint-${i}" style="font-size:10.5px;color:#059669;margin-top:3px;display:${it.hargaAuto?'':'none'}">${it.hargaAuto?esc(it.hargaInfo||'✨ Harga terisi otomatis'):''}</div></div>
     <div class="g3">
       <div class="fg"><label class="fl">Qty</label><input class="fc" type="number" value="${it.qty}" oninput="S.formItems[${i}].qty=this.value"></div>
       <div class="fg"><label class="fl">Harga (Rp)</label>
-        <input class="fc" type="text" inputmode="numeric" value="${it.harga?Number(it.harga).toLocaleString('id-ID'):''}" placeholder="0" data-raw="${it.harga||0}"
-          oninput="let r=this.value.replace(/[^0-9]/g,'');S.formItems[${i}].harga=parseInt(r||'0');this.value=r?parseInt(r).toLocaleString('id-ID'):''"></div>
+        <input class="fc" type="text" inputmode="numeric" id="bi-hrg-${i}" value="${it.harga?Number(it.harga).toLocaleString('id-ID'):''}" placeholder="0" data-raw="${it.harga||0}"
+          oninput="let r=this.value.replace(/[^0-9]/g,'');S.formItems[${i}].harga=parseInt(r||'0');S.formItems[${i}].hargaAuto=false;this.value=r?parseInt(r).toLocaleString('id-ID'):''"></div>
       <div class="fg"><label class="fl">Diskon (Rp)</label>
         <input class="fc" type="text" inputmode="numeric" value="${it.diskon?Number(it.diskon).toLocaleString('id-ID'):''}" placeholder="0" data-raw="${it.diskon||0}"
           oninput="let r=this.value.replace(/[^0-9]/g,'');S.formItems[${i}].diskon=parseInt(r||'0');this.value=r?parseInt(r).toLocaleString('id-ID'):''"></div>
     </div>
     <div class="g2">
       <div class="fg"><label class="fl">Status</label><select class="fc" onchange="S.formItems[${i}].status=this.value"><option ${it.status==='HABIS'?'selected':''}>HABIS</option><option ${it.status==='SISA'?'selected':''}>SISA</option><option ${it.status==='ASET'?'selected':''}>ASET</option></select></div>
-      <div class="fg" style="display:none"><label class="fl">Toko</label>
-        <input class="fc" list="tk-dl" value="${esc(currentShop)}" oninput="S.formItems.forEach(x=>x.toko=this.value)">
-        <datalist id="tk-dl">${tk}</datalist></div>
     </div>
   </div>`).join('');
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+  return `<datalist id="brg-dl">${brg}</datalist><datalist id="tk-dl">${tk}</datalist>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
     <button class="btn btn-o btn-sm" onclick="openPasteBeli()">📋 Paste Daftar</button></div>
   <div class="card">
     <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${S.formBeliTgl}" onchange="S.formBeliTgl=this.value"></div>
     <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj" onchange="S.formBeliProj=this.value">${prjOpts}</select></div></div>
     <div class="fg"><label class="fl">🏢 Nama Toko (untuk semua item)</label>
-      <input class="fc" list="tk-dl" id="beli-toko" value="${esc(currentShop)}" placeholder="Pilih toko" oninput="S.formItems.forEach(x=>x.toko=this.value)">
-      <datalist id="tk-dl">${tk}</datalist></div>
+      <input class="fc" list="tk-dl" id="beli-toko" value="${esc(currentShop)}" placeholder="Pilih toko" oninput="S.formItems.forEach(x=>x.toko=this.value)"></div>
     ${items}
     <div class="fg"><label class="fl">Status Bayar ke Toko</label>
       <div style="display:flex;gap:8px">
@@ -1589,6 +1588,32 @@ function _renderCekHarga(){
   if(el)el.innerHTML=_cekHargaResults();
 }
 // ─────────────────────────────────────────────────────────────────────
+// ── Auto-isi harga dari Master Barang saat nama barang cocok [v1.34]
+// Tidak menimpa harga yang sudah diketik manual (flag hargaAuto).
+function beliAutoHarga(i,val){
+  const it=S.formItems[i];if(!it)return;
+  it.namaBarang=val;
+  const nm=String(val||'').trim().toLowerCase();
+  const hintEl=document.getElementById('bi-hint-'+i);
+  if(!nm){it.hargaAuto=false;it.hargaInfo='';if(hintEl)hintEl.style.display='none';return;}
+  const b=S.masterBarang.find(x=>String(x.nama||'').trim().toLowerCase()===nm);
+  if(!b){if(hintEl)hintEl.style.display='none';return;}
+  // Ikut bawa satuan & kategori supaya konsisten dgn katalog
+  if(b.satuan)it.satuan=b.satuan;
+  if(b.kategori)it.kategori=b.kategori;
+  const h=Number(b.hargaTerakhir)||0;
+  if(h<=0)return;
+  // Harga manual (diketik sendiri) tidak diganggu
+  if(Number(it.harga)>0&&!it.hargaAuto)return;
+  it.harga=h;it.hargaAuto=true;
+  // Info pembelian terakhir barang ini
+  const last=S.pembelian.filter(p=>String(p.namaBarang||'').trim().toLowerCase()===nm&&Number(p.harga)>0)
+    .sort((a,c)=>String(c.tgl||'').localeCompare(String(a.tgl||'')))[0];
+  it.hargaInfo='✨ Harga terakhir '+fRp(h)+(b.satuan?'/'+b.satuan:'')+(last?` · ${fDate(last.tgl)}${last.toko?' · '+last.toko:''}`:'');
+  const hrgEl=document.getElementById('bi-hrg-'+i);
+  if(hrgEl){hrgEl.value=h.toLocaleString('id-ID');hrgEl.dataset.raw=h;}
+  if(hintEl){hintEl.textContent=it.hargaInfo;hintEl.style.display='';}
+}
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
 function delBeliRow(i){S.formItems.splice(i,1);if(!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];go('beli');}
 // ── FEATURE 3: Confirmation Modal [v1.11]
@@ -1639,7 +1664,7 @@ function executeBeli(){
   if(!kodeProj){showToast('Pilih proyek','err');return;}
   if(S.formItems.some(it=>!it.namaBarang||!it.harga)){showToast('Lengkapi nama & harga','err');return;}
   const bayarToko=S.formBayarToko||'Lunas';
-  const newItems=S.formItems.map(it=>({id:'BLI-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,kodeProj,...it,harga:Number(it.harga),qty:Number(it.qty),diskon:Number(it.diskon)||0,bayarToko,pending:true}));
+  const newItems=S.formItems.map(({hargaAuto,hargaInfo,...it})=>({id:'BLI-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,kodeProj,...it,harga:Number(it.harga),qty:Number(it.qty),diskon:Number(it.diskon)||0,bayarToko,pending:true}));
   S.pembelian.push(...newItems);ss(KS.beli,S.pembelian);
   const brg=[...S.masterBarang],tk=[...S.masterToko];
   newItems.forEach(it=>{if(!brg.find(b=>b.nama.toLowerCase()===it.namaBarang.toLowerCase()))brg.push({id:padId('BRG',brg,'id'),nama:it.namaBarang,kategori:it.kategori,satuan:it.satuan,hargaTerakhir:it.harga});if(it.toko&&!tk.includes(it.toko))tk.push(it.toko);});
@@ -1731,8 +1756,9 @@ function submitEditBeli(){
 function openPasteBeli(){
   openModal(`<div class="modal-title">📋 Paste Daftar Pembelian</div>
     <div class="info-box"><strong>Format per baris:</strong><br>
-      <code style="background:#dbeafe;padding:2px 6px;border-radius:4px">nama barang, jumlah, harga, toko</code><br><br>
-      Contoh:<br><code>Semen hitam, 5, 55000, Toko A<br>Besi hollow, 10, 45.000</code></div>
+      <code style="background:#dbeafe;padding:2px 6px;border-radius:4px">nama barang, jumlah, harga, toko</code><br>
+      💡 Harga boleh dikosongkan kalau barang sudah pernah dibeli — otomatis pakai harga terakhir.<br><br>
+      Contoh:<br><code>Semen hitam, 5, 55000, Toko A<br>Besi hollow, 10, 45.000<br>Cat tembok, 2</code></div>
     <div class="fg"><label class="fl">Paste di sini</label>
       <textarea class="fc" id="paste-txt" rows="7" style="resize:vertical;font-family:monospace;font-size:13px"></textarea></div>
     <div id="paste-preview" style="margin-bottom:8px"></div>
@@ -1748,12 +1774,18 @@ function parsePasteText(text){
   const items=[],errors=[];
   lines.forEach((line,i)=>{
     const parts=line.split(',').map(p=>p.trim());
-    if(parts.length<3){errors.push(`Baris ${i+1}: kurang dari 3 kolom`);return;}
-    const nama=parts[0],qty=parseIdNum(parts[1]),harga=parseIdNum(parts[2]),toko=parts[3]||'';
+    if(parts.length<2){errors.push(`Baris ${i+1}: minimal "nama, jumlah"`);return;}
+    const nama=parts[0],qty=parseIdNum(parts[1]),toko=parts[3]||'';
+    let harga=parts[2]?parseIdNum(parts[2]):NaN;
     if(!nama){errors.push(`Baris ${i+1}: nama kosong`);return;}
     if(isNaN(qty)||qty<=0){errors.push(`Baris ${i+1}: jumlah tidak valid`);return;}
-    if(isNaN(harga)||harga<=0){errors.push(`Baris ${i+1}: harga tidak valid`);return;}
-    items.push({namaBarang:nama,kategori:'Material',satuan:'pcs',qty,harga,diskon:0,status:'HABIS',toko});
+    // Harga kosong → ambil harga terakhir dari Master Barang [v1.34]
+    const mb=S.masterBarang.find(x=>String(x.nama||'').trim().toLowerCase()===nama.toLowerCase());
+    let auto=false;
+    if((isNaN(harga)||harga<=0)&&mb&&Number(mb.hargaTerakhir)>0){harga=Number(mb.hargaTerakhir);auto=true;}
+    if(isNaN(harga)||harga<=0){errors.push(`Baris ${i+1}: harga kosong & "${nama}" belum ada di katalog`);return;}
+    items.push({namaBarang:nama,kategori:mb?.kategori||'Material',satuan:mb?.satuan||'pcs',qty,harga,diskon:0,status:'HABIS',toko,
+      hargaAuto:auto,hargaInfo:auto?'✨ Harga terakhir '+fRp(harga):''});
   });
   return{items,errors};
 }
