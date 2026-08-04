@@ -13,6 +13,17 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 20 (v1.35) — 2026-07-16
+
+## [2026-07-16] v1.35 — Keterangan Harga Terendah (index.html, frontend-only)
+
+- ✨ Helper baru `_beliHargaInfo(nm,h,satuan)` — dipakai autofill & Paste Daftar
+- ✨ Baris kedua hint: **📉 Terendah Rp X · toko · tanggal — selisih Rp Y/satuan** (dihitung dari seluruh riwayat `S.pembelian` barang tsb, harga > 0)
+- ✨ Kalau harga terakhir = harga terendah → **✅ Ini harga terendah dari N× pembelian**
+- Berguna sbg alat tawar: langsung terlihat pernah dapat berapa & di toko mana
+
+---
+
 # 🔧 SESSION 19 (v1.34) — 2026-07-16
 
 ## [2026-07-16] v1.34 — Auto-isi Harga dari Master Barang (index.html, frontend-only)

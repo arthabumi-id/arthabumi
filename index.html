@@ -136,7 +136,7 @@ button{-webkit-appearance:none;font-family:inherit}
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.34</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.35</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -180,8 +180,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.34';
+const APP_VERSION='v1.35';
 const APP_CHANGELOG=[
+  {v:'v1.35',date:'16 Jul 2026',desc:'Input Pembelian: keterangan harga TERENDAH sepanjang riwayat (toko + tanggal + selisih vs harga sekarang), atau tanda ✅ kalau harga terakhir memang yang termurah'},
   {v:'v1.34',date:'16 Jul 2026',desc:'Input Pembelian: pilih barang yang pernah dibeli → harga terakhir terisi otomatis (+ info tanggal & toko terakhir); datalist tampilkan harga; Paste Daftar boleh tanpa kolom harga'},
   {v:'v1.33',date:'16 Jul 2026',desc:'Detail Closing: toggle 👷 Per Karyawan / 🏗️ Per Proyek — lihat biaya tenaga kerja per lokasi proyek (upah + bonus + potongan, urut dari terbesar)'},
   {v:'v1.32',date:'16 Jul 2026',desc:'✏️ Edit absensi di Log — koreksi salah proyek, tanggal, status & jam lembur (upah dihitung ulang otomatis). Entri yang sudah closing tetap bisa dikoreksi proyeknya, upah dikunci'},
@@ -1306,7 +1307,7 @@ function beliInput(){
     </div>
     <div class="fg"><label class="fl">Nama Barang</label>
       <input class="fc" list="brg-dl" value="${esc(it.namaBarang)}" placeholder="Nama barang" oninput="beliAutoHarga(${i},this.value)" onchange="beliAutoHarga(${i},this.value)">
-      <div id="bi-hint-${i}" style="font-size:10.5px;color:#059669;margin-top:3px;display:${it.hargaAuto?'':'none'}">${it.hargaAuto?esc(it.hargaInfo||'✨ Harga terisi otomatis'):''}</div></div>
+      <div id="bi-hint-${i}" style="font-size:10.5px;color:#059669;margin-top:3px;line-height:1.5;display:${it.hargaAuto?'':'none'}">${it.hargaAuto?(it.hargaInfo||'✨ Harga terisi otomatis'):''}</div></div>
     <div class="g3">
       <div class="fg"><label class="fl">Qty</label><input class="fc" type="number" value="${it.qty}" oninput="S.formItems[${i}].qty=this.value"></div>
       <div class="fg"><label class="fl">Harga (Rp)</label>
@@ -1606,13 +1607,29 @@ function beliAutoHarga(i,val){
   // Harga manual (diketik sendiri) tidak diganggu
   if(Number(it.harga)>0&&!it.hargaAuto)return;
   it.harga=h;it.hargaAuto=true;
-  // Info pembelian terakhir barang ini
-  const last=S.pembelian.filter(p=>String(p.namaBarang||'').trim().toLowerCase()===nm&&Number(p.harga)>0)
-    .sort((a,c)=>String(c.tgl||'').localeCompare(String(a.tgl||'')))[0];
-  it.hargaInfo='✨ Harga terakhir '+fRp(h)+(b.satuan?'/'+b.satuan:'')+(last?` · ${fDate(last.tgl)}${last.toko?' · '+last.toko:''}`:'');
+  it.hargaInfo=_beliHargaInfo(nm,h,b.satuan);
   const hrgEl=document.getElementById('bi-hrg-'+i);
   if(hrgEl){hrgEl.value=h.toLocaleString('id-ID');hrgEl.dataset.raw=h;}
-  if(hintEl){hintEl.textContent=it.hargaInfo;hintEl.style.display='';}
+  if(hintEl){hintEl.innerHTML=it.hargaInfo;hintEl.style.display='';}
+}
+// Bangun keterangan harga: terakhir + terendah sepanjang riwayat pembelian [v1.35]
+function _beliHargaInfo(nm,h,satuan){
+  const hist=S.pembelian.filter(p=>String(p.namaBarang||'').trim().toLowerCase()===nm&&Number(p.harga)>0);
+  const last=[...hist].sort((a,c)=>String(c.tgl||'').localeCompare(String(a.tgl||'')))[0];
+  let html='✨ Harga terakhir <strong>'+fRp(h)+'</strong>'+(satuan?'/'+esc(satuan):'')
+    +(last?' · '+fDate(last.tgl)+(last.toko?' · '+esc(last.toko):''):'');
+  if(!hist.length)return html;
+  const min=Math.min(...hist.map(p=>Number(p.harga)));
+  const minRec=hist.filter(p=>Number(p.harga)===min)
+    .sort((a,c)=>String(c.tgl||'').localeCompare(String(a.tgl||'')))[0];
+  if(min<h){
+    html+='<br><span style="color:#b45309">📉 Terendah <strong>'+fRp(min)+'</strong>'
+      +(minRec&&minRec.toko?' · '+esc(minRec.toko):'')+(minRec?' · '+fDate(minRec.tgl):'')
+      +' — selisih '+fRp(h-min)+'/'+esc(satuan||'unit')+'</span>';
+  }else if(hist.length>1){
+    html+='<br><span style="color:#059669">✅ Ini harga terendah dari '+hist.length+'× pembelian</span>';
+  }
+  return html;
 }
 function addBeliRow(){S.formItems.push({namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''});go('beli');}
 function delBeliRow(i){S.formItems.splice(i,1);if(!S.formItems.length)S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];go('beli');}
@@ -1785,7 +1802,7 @@ function parsePasteText(text){
     if((isNaN(harga)||harga<=0)&&mb&&Number(mb.hargaTerakhir)>0){harga=Number(mb.hargaTerakhir);auto=true;}
     if(isNaN(harga)||harga<=0){errors.push(`Baris ${i+1}: harga kosong & "${nama}" belum ada di katalog`);return;}
     items.push({namaBarang:nama,kategori:mb?.kategori||'Material',satuan:mb?.satuan||'pcs',qty,harga,diskon:0,status:'HABIS',toko,
-      hargaAuto:auto,hargaInfo:auto?'✨ Harga terakhir '+fRp(harga):''});
+      hargaAuto:auto,hargaInfo:auto?_beliHargaInfo(nama.toLowerCase(),harga,mb?.satuan):''});
   });
   return{items,errors};
 }
