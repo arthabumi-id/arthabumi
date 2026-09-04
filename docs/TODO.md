@@ -1,90 +1,97 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: 2026-06-17
-Versi kode saat ini: v1.20
+Terakhir diupdate: **2026-09-04**
+Versi kode saat ini: **v1.36**
+> ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 
 ---
 
-## 🧹 CLEANUP — ✅ SELESAI 2026-06-09
+## 🔴 WAJIB DIKERJAKAN SETELAH DEPLOY v1.36
 
-- ✅ **Dihapus** monolit lama `arthabumi-webapi.gs` (root & backend/). Backend live = file terpisah dgn `config.gs` router. (Masih bisa dipulihkan dari git history bila perlu.)
-- ✅ **Dihapus** 4 file `index.html.bak-*` (ada git history + backup Drive).
-- ⏳ **Tinggal**: commit + push penghapusan ini & file backend yg ter-update lewat **GitHub Desktop**.
+Frontend (index.html) sudah cukup di-push ke GitHub. Backend perlu langkah manual:
 
-## 🟡 FOLLOW-UP — REKAP sheet belum ikut Kerja Tambah/Kurang (variasi)
-
-Fitur Kerja Tambah/Kurang (2026-06-09) disimpan sebagai JSON di **kolom Q** MASTER PROJECT.
-APP sudah hitung Nilai Final (awal ± variasi) di Dashboard, Piutang, Rekap proyek.
-TAPI: formula sheet (Piutang/Laba kolom M/N) & tombol "📊 Update Rekap ke GSheet" (action `updateRekap` / `rekap.gs`)
-masih pakai **nilai awal** (kolom F), belum tambah variasi dari kolom Q.
-→ Kalau mau angka di Google Sheet / tab REKAP ikut final: ubah `rekap.gs` (+ mungkin formula MASTER PROJECT)
-  untuk parse JSON kolom Q dan tambahkan Σtambah − Σkurang ke nilai kontrak. (Backend, perlu redeploy.)
+1. **Backup Google Sheet** — File → Buat salinan. (`fixAllProjectFormulas()` menimpa formula G–N.)
+2. Paste ke Apps Script: **`write.gs`**, **`setup.gs`**, **`rekap.gs`** → Deploy → New version.
+3. Jalankan **`backfillNilaiFinal()`** sekali → isi kolom R (Nilai Final) semua proyek lama.
+4. Jalankan **`fixAllProjectFormulas()`** sekali → arahkan formula J/K/N ke kolom R.
+5. Buka app → tekan **📊 Update Rekap ke GSheet**.
+6. Verifikasi: ambil 1 proyek yang punya kerja tambah/kurang, bandingkan **Laba & Piutang**
+   di tiga tempat — app, MASTER PROJECT, tab REKAP. Harus sama persis.
 
 ---
 
-## ✅ TODO #1 — Filter Nama Project di Log Pembelian & Log Absensi (Mobile) — SELESAI
+## ✅ SELESAI
 
-**Permintaan:** Di halaman Log Pembelian dan Log Absensi pada tampilan HP,
-tambahkan filter dropdown berdasarkan nama proyek.
-
-**Detail teknis:**
-- Filter berupa `<select>` dropdown, opsi diambil dari `state.projects`
-- Default: "Semua Proyek"
-- Saat dipilih, tabel/list di bawahnya hanya tampilkan baris yang
-  `kodeProj` cocok dengan kode proyek yang dipilih
-- Filter bersifat client-side (tidak perlu hit API ulang)
-- Di mobile: letakkan filter di atas tabel, full-width
-- Nama yang ditampilkan di dropdown: **Nama Proyek** (bukan kode)
-  contoh: "Pak Wishnu - Atap Rumah" bukan "SPL-01"
-- Tetap tampilkan kode proyek kecil di sebelah nama untuk identifikasi
-
-**File yang perlu diubah:** `index.html`
-
-**Fungsi JS yang terdampak:**
-- `renderLogPembelian()` — tambah filter state + render ulang
-- `renderLogAbsensi()` — tambah filter state + render ulang
-- Tambah `filterPembelianProyek` dan `filterAbsensiProyek` ke app state
+- **v1.36** Nilai Final (kolom R) — sheet & app sudah satu angka. *(dulu 🟡 FOLLOW-UP terbesar)*
+- **v1.36** Rekap Tenaga Kerja per proyek (hari, lembur, upah, sudah/belum bayar, rincian tanggal)
+- **v1.36** Indikator proses: progress bar + kunci tombol + skeleton muat pertama
+- **v1.36** Fix `_apiDeleteProject` (A..R), fix `fixAllProjectFormulas()` (`getLastRow`),
+  formula `_apiAddProject` diselaraskan, `setupRekapSheet()` dipensiunkan
+- **v1.35** Hint harga terendah di input pembelian
+- **v1.34** Auto-isi harga dari Master Barang
+- **v1.33** Detail Closing per proyek
+- **v1.32** Edit absensi
+- **v1.31** Bottom nav sheet + Atur Menu
+- **v1.30** ID unik + idempotent di semua log; upload bukti bayar subkon
+- **v1.29** Log Pembelian: toggle Per Tanggal / Per Toko
+- **v1.20** Filter nama proyek di Log Pembelian & Absensi *(TODO #1 lama)*
+- **v1.19** Dropdown proyek tampil "Nama (KODE)" *(TODO #2 lama)*
+- **v1.15** Cleanup monolit `arthabumi-webapi.gs` — backend live = file terpisah, router `config.gs`
 
 ---
 
-## ✅ TODO #2 — Input Pembelian: Tampilkan Nama Project, Bukan Kode — SELESAI (v1.19: format "Nama (KODE)")
+## 🟠 UTANG TEKNIS YANG DITEMUKAN, BELUM DIKERJAKAN
 
-**Permintaan:** Di form input pembelian, field "Proyek" saat ini menampilkan
-kode proyek (SPL-01, BSI-02 dst). Ubah agar menampilkan nama proyek.
+**U1 — `setup.gs` masih banyak memakai `ROWS.*.end` yang sudah dihapus di `constants.gs` v2.0.**
+`fixAllProjectFormulas()` sudah diperbaiki di v1.36, tapi `_setupSheetMasterProject()` dan
+teman-temannya (dipanggil `setupAllSheets()`) masih pakai `R.end` → kemungkinan besar **error
+kalau dijalankan**. Selama sheet sudah terbentuk, `setupAllSheets()` tidak perlu dipanggil lagi,
+jadi ini belum menggigit. Perlu dirapikan sebelum ada yang menjalankannya tanpa sadar.
 
-**Detail teknis:**
-- Dropdown proyek di form input pembelian: tampilkan **Nama Proyek**
-- Value yang disimpan tetap **Kode Proyek** (tidak berubah di GSheet)
-- Format opsi dropdown: `"Nama Proyek (KODE)"` 
-  contoh: `"Pak Wishnu - Atap Rumah (SPL-01)"`
-- Saat submit form, yang dikirim ke API tetap `kodeProj` (value)
-- Cek juga: form input absensi, form log subkon — kemungkinan sama
+**U2 — Polling 60 detik tidak me-render ulang halaman.**
+Data di `S` diperbarui, tapi tampilan baru ikut setelah pindah halaman. Sengaja dibiarkan di v1.36
+supaya form yang sedang diisi tidak terhapus. Perbaikan yang benar: render ulang hanya kalau tidak
+ada modal terbuka dan tidak ada input yang sedang difokus.
 
-**File yang perlu diubah:** `index.html`
+**U3 — `confirm()` bawaan browser dipakai di 13 titik hapus.**
+Berfungsi, tapi tampilannya di luar gaya app dan bisa diblokir di sebagian PWA.
+Kandidat diganti modal in-app. Prioritas rendah.
 
-**Fungsi JS yang terdampak:**
-- `renderFormPembelian()` atau fungsi yang build `<select>` proyek
-- Pola: `<option value="SPL-01">Pak Wishnu - Atap Rumah (SPL-01)</option>`
+**U5 — Cara hitung "hari kerja" belum seragam di seluruh app.**
+Di modal **Rekap Proyek** (section Tenaga Kerja + Upah Belum Dibayar) sudah pakai
+`Setengah Hari = 0,5` lewat `fHari()` sejak v1.36. Tapi **Dashboard Hutang Upah** (`pgHutang`,
+sekitar baris 1076) dan **Detail Closing** (`buildClsRekap`/`openClosingDetail`, sekitar baris
+2575 & 2578) masih menghitung `hari++` per baris absensi — jadi setengah hari terhitung 1 hari.
+Angka upah tetap benar di semua tempat; yang beda hanya angka "hari".
+Sengaja belum diubah di v1.36 karena Detail Closing menyangkut dokumen pembayaran yang sudah
+biasa dibaca Eddy. Perlu keputusan: seragamkan ke 0,5 atau tetap "jumlah kehadiran".
+
+**U4 — Kolom R basi kalau kolom Q diedit manual di sheet.**
+R ditulis oleh app. Kalau seseorang mengubah JSON kolom Q langsung di Google Sheet, R tidak ikut
+berubah sampai proyek itu disimpan lagi dari app. Kolom Q memang tidak untuk diedit manual —
+kalau perlu, jalankan ulang `backfillNilaiFinal()`.
 
 ---
 
-## ⚪ TODO #3 — (Backlog) Pertimbangkan untuk session berikutnya
+## 📋 BACKLOG FITUR (urut prioritas)
 
-- Validasi form: field wajib tidak boleh kosong sebelum submit
-- Konfirmasi hapus: dialog "Yakin hapus?" sebelum delete data
-- Loading state per section (bukan loading global)
-- Toast notification setelah berhasil simpan/hapus
+| # | Fitur | Prioritas | Catatan |
+|---|---|---|---|
+| B1 | **Stok Material SISA** | 🔴 Tinggi | Barang dibeli vs terpakai per proyek; butuh field "terpakai" atau opname |
+| B2 | **Print / Export Rekap Tenaga per Proyek** | 🟡 Sedang | Section v1.36 sudah ada di layar; tinggal masuk ke `printRekapProyek` & `exportDetailProyek` |
+| B3 | **Rekap Cash Flow Bulanan** | 🟡 Sedang | Uang masuk (pembayaran klien) vs keluar (material, upah, subkon) per bulan |
+| B4 | **Hutang ke Toko — pelaporan** | 🟡 Sedang | Tandai lunas sudah ada sejak v1.28; yang kurang laporan umur hutang |
+| B5 | **Duplikasi RAB** | 🟢 Rendah | Salin RAB proyek lama jadi titik mulai proyek baru |
+| B6 | **Validasi inline (field merah)** | 🟢 Rendah | Validasi via toast sudah jalan di 49 titik; ini kosmetik |
 
 ---
 
 ## 📋 Cara Gunakan TODO ini di Session Claude Baru
 
 ```
-Buka Claude baru
-→ Upload SYSTEM.md (wajib)
-→ Upload index.html
-→ Upload TODO.md ini
-→ Tulis: "Baca SYSTEM.md dan TODO.md, kerjakan TODO #1"
+Buka Claude baru (folder E:\Mirror\Claude Cowork\Apps Arthabumi sudah tersambung)
+→ "Baca SYSTEM.md dan docs/TODO.md, kerjakan B1"
 ```
 
-Claude akan langsung tahu konteks tanpa perlu dijelaskan ulang.
+Wajib dibaca dulu: `SYSTEM.md` (arsitektur + skema kolom), `docs/TODO.md` (file ini).
+Cek `APP_VERSION` di `index.html` sebelum percaya angka versi mana pun.

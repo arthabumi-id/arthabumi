@@ -13,6 +13,63 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 21 (v1.36) — 2026-09-04
+
+## [2026-09-04] v1.36 — Nilai Final di GSheet + Rekap Tenaga Kerja + Indikator Proses
+
+### 🧮 Nilai Final masuk Google Sheet (kolom R) — index.html tidak berubah, backend 3 file
+- **Masalah:** kerja tambah/kurang disimpan sbg JSON di kolom Q. App sudah pakai nilai final
+  (`vSum(p).final`), tapi Google Sheet (J/K/N) & tab REKAP masih pakai kolom F (nilai awal).
+  Satu file, dua angka berbeda.
+- **Solusi:** kolom **R MASTER PROJECT = "Nilai Final"**, ditulis app sebagai **angka**
+  lewat `_apiNilaiFinal(nilaiKontrak, variasi)` di `write.gs`, setiap `addProject`/`updateProject`.
+- Formula diarahkan ke R dgn pengaman baris lama: `NF = IF($R{r}="",$F{r},$R{r})`
+  → `J = NF − I`, `K = J / NF`, `N = NF − M`. Diterapkan di `fixAllProjectFormulas()` (setup.gs)
+  **dan** di `_apiAddProject()` (write.gs) supaya proyek baru langsung benar.
+- `rekap.gs` (`_apiUpdateRekap`) menghitung `nilaiFinal` dari `p.variasi`; header kolom 6 jadi
+  "Nilai Kontrak (Final)", subtitle menyebut berapa proyek yang punya kerja tambah/kurang.
+- Fungsi baru **`backfillNilaiFinal()`** (setup.gs) — jalankan SEKALI setelah deploy untuk mengisi
+  kolom R semua proyek lama. Aman diulang.
+- ⚠️ Kolom **F tetap nilai kontrak AWAL** dan tetap jadi field yang diedit di app. Jangan ditimpa.
+
+### 👷 Rekap Tenaga Kerja per Proyek (index.html, frontend-only)
+- Section baru **👷 TENAGA KERJA PROYEK INI** di `openRekapProyek()`.
+- Per tukang (urut upah terbesar): **jumlah hari** — `Hadir = 1`, **`Setengah Hari = 0,5`**
+  (helper `fHari()`, tampil desimal spt `12,5 hari`) — **jam lembur**, **total upah**,
+  dipecah `✅ sudah dibayar` / `⏳ belum`.
+- Ketuk nama → rincian tanggal kerjanya di proyek itu (`toggleTk()`), lengkap dgn status,
+  jam lembur, keterangan, upah, dan tanda sudah/belum dibayar.
+- Baris total: jumlah orang + total hari + total upah. Ada penjaga: kalau total upah section ini
+  tidak sama dgn "Upah Tenaga (gross)" di Breakdown Biaya → muncul peringatan merah.
+- Peringatan kuning kalau ada **absensi tanpa proyek** di Log Absensi (tidak masuk biaya proyek mana pun).
+
+### ⏳ Indikator Proses (index.html, frontend-only)
+- `setBusy(on,lock)` berbasis penghitung: garis progres hijau `#busybar` di paling atas layar
+  selama menulis/membaca GSheet, dan `body.is-busy` **mengunci tombol `.btn-p` / `.btn-d`**
+  selama proses tulis (`doSync`, `gsPost`) — cegah tekan dua kali.
+- `skel()` — placeholder abu-abu berkedip saat data pertama kali dimuat dari GSheet,
+  supaya tidak terbaca sebagai "data hilang". Dipicu flag `S._firstLoad`.
+- `doFetch` render ulang halaman **hanya pada muat pertama**. Polling 60 detik sengaja TIDAK
+  render ulang, supaya form yang sedang diisi tidak terhapus di tengah jalan.
+
+### 🐛 Bug fix
+- `_apiDeleteProject`: `clearContent` diperluas **A..N → A..R**. Sebelumnya kolom O (catatan),
+  P (progress), Q (variasi) tertinggal di baris bekas dan bisa nempel ke proyek baru.
+- `fixAllProjectFormulas()`: dulu **error** karena memakai `ROWS.PROJECT.end` yang sudah dihapus
+  di `constants.gs` v2.0 (`"B4:Bundefined"`). Kini pakai `ws.getLastRow()`.
+- `_apiAddProject()`: formula G & I diselaraskan dgn `fixAllProjectFormulas()` — G exclude ASET,
+  I termasuk kasbon BONUS. Sebelumnya proyek baru dapat formula versi lama yang beda hasilnya.
+- `setupRekapSheet()` (setup.gs) **dipensiunkan** lewat flag `ALLOW_LEGACY_SETUP_REKAP=false` —
+  bentrok menulis sheet REKAP yang sama dengan `rekap.gs`. Sheet REKAP kini hanya dari tombol 📊 di app.
+
+### Deploy
+- Frontend: push `index.html` ke GitHub (GitHub Pages).
+- Backend: paste **`write.gs`, `setup.gs`, `rekap.gs`** ke Apps Script → Deploy → New version.
+- Lalu jalankan **`backfillNilaiFinal()`**, kemudian **`fixAllProjectFormulas()`**, sekali saja.
+- Backup Google Sheet dulu — `fixAllProjectFormulas()` menimpa formula kolom G–N.
+
+---
+
 # 🔧 SESSION 20 (v1.35) — 2026-07-16
 
 ## [2026-07-16] v1.35 — Keterangan Harga Terendah (index.html, frontend-only)

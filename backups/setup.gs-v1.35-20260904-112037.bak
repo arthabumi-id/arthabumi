@@ -446,18 +446,7 @@ function _setupSheetLogSubkon(ss) {
 // v2: Kasbon POTONG sekarang langsung pakai SUMIFS kolom I LOG KASBON
 //    (kodeProj ditulis saat closing — tidak lagi butuh linkage noClosing)
 // ════════════════════════════════════════════════════════════════════════
-// ⛔ v1.36 — DIPENSIUNKAN. Sheet REKAP kini HANYA dibuat lewat tombol
-// "📊 Update Rekap ke GSheet" di app (action updateRekap → rekap.gs/_apiUpdateRekap).
-// Fungsi ini berbasis formula dan menulis ke sheet yang SAMA → saling timpa.
-// Selain itu ia masih memakai ROWS.PROJECT.end yang sudah dihapus di constants v2.0.
-// Dibiarkan sebagai arsip; untuk menjalankannya harus sengaja diaktifkan di bawah.
-var ALLOW_LEGACY_SETUP_REKAP = false;
-
 function setupRekapSheet() {
-  if (!ALLOW_LEGACY_SETUP_REKAP) {
-    Logger.log("⛔ setupRekapSheet() dipensiunkan sejak v1.36 — pakai tombol 📊 Update Rekap di app.");
-    return;
-  }
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   var wsRekap = ss.getSheetByName(SHEET.REKAP);
@@ -634,10 +623,7 @@ function fixAllProjectFormulas() {
   var ws  = ss.getSheetByName(SHEET.PROJECT);
   if (!ws) { Logger.log("MASTER PROJECT tidak ditemukan"); return; }
   var R    = ROWS.PROJECT;
-  // v1.36 FIX: ROWS.PROJECT.end sudah DIHAPUS di constants v2.0 → "B4:Bundefined" bikin error.
-  var endRow = ws.getLastRow();
-  if (endRow < R.start) { Logger.log("MASTER PROJECT masih kosong"); return; }
-  var colB = ws.getRange("B" + R.start + ":B" + endRow).getValues();
+  var colB = ws.getRange("B" + R.start + ":B" + R.end).getValues();
   var count = 0;
   for (var i = 0; i < colB.length; i++) {
     if (String(colB[i][0]).trim() === "") continue;
@@ -661,17 +647,14 @@ function fixAllProjectFormulas() {
       "+IFERROR(SUMIFS('LOG KASBON'!$E:$E,'LOG KASBON'!$I:$I,B" + r + ",'LOG KASBON'!$D:$D,\"BONUS\"),0)"
     ).setNumberFormat("#,##0");
 
-    // v1.36 — NF = Nilai Final (kolom R, ditulis app). Baris lama tanpa R → jatuh ke F.
-    var NF = 'IF($R' + r + '="",$F' + r + ',$R' + r + ')';
-
-    // J = Laba Estimasi = NilaiFinal - TotalBiaya
+    // J = Laba Estimasi = NilaiKontrak - TotalBiaya
     ws.getRange(r, 10).setFormula(
-      '=IF($F' + r + '="","",' + NF + '-I' + r + ')'
+      '=IF(F' + r + '="","",F' + r + '-I' + r + ')'
     ).setNumberFormat('#,##0;[Red](#,##0);"-"');
 
     // K = Margin %
     ws.getRange(r, 11).setFormula(
-      '=IF(OR(' + NF + '=0,$F' + r + '=""),"",J' + r + '/' + NF + ')'
+      '=IF(OR(F' + r + '=0,F' + r + '=""),"",J' + r + '/F' + r + ')'
     ).setNumberFormat("0.0%");
 
     // M = Total Pembayaran dari Klien
@@ -679,70 +662,15 @@ function fixAllProjectFormulas() {
       "=IFERROR(SUMIF('LOG PEMBAYARAN'!$C:$C,B" + r + ",'LOG PEMBAYARAN'!$E:$E),0)"
     ).setNumberFormat("#,##0");
 
-    // N = Piutang = NilaiFinal - Pembayaran
+    // N = Piutang = NilaiKontrak - Pembayaran
     ws.getRange(r, 14).setFormula(
-      '=IF($F' + r + '="","",' + NF + '-IF(M' + r + '="",0,M' + r + '))'
+      '=IF(F' + r + '="","",F' + r + '-IF(M' + r + '="",0,M' + r + '))'
     ).setNumberFormat('#,##0;[Red](#,##0);"-"');
 
     count++;
   }
-  // Header kolom R (sekali saja, kalau masih kosong)
-  var hdrR = ws.getRange(3, 18);
-  if (String(hdrR.getValue()).trim() === "") {
-    hdrR.setValue("Nilai Final (Rp)")
-        .setFontWeight("bold").setFontColor("#ffffff").setBackground("#1e3a5f")
-        .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
-    ws.setColumnWidth(18, 150);
-  }
-  ws.getRange(R.start, 18, Math.max(1, endRow - R.start + 1), 1).setNumberFormat("#,##0");
-
   SpreadsheetApp.flush();
-  Logger.log("fixAllProjectFormulas (v1.36): " + count + " proyek diupdate");
+  Logger.log("fixAllProjectFormulas (v1.13): " + count + " proyek diupdate");
   Logger.log("  ✅ G=Material  H=Upah  I=Mat+Upah+Subkon+BONUS  J=Laba  K=Margin  M=Bayar  N=Piutang");
-  Logger.log("  ✅ J/K/N kini pakai NILAI FINAL kolom R (kontrak awal ± kerja tambah/kurang)");
   Logger.log("  ℹ️  Kolom O (Catatan) & P (Progress) diisi manual oleh app — tidak ada formula");
-}
-
-// ════════════════════════════════════════════════════════════════════════
-// backfillNilaiFinal — v1.36  (JALANKAN SEKALI setelah deploy)
-// Mengisi kolom R MASTER PROJECT = nilai kontrak awal (F) ± kerja tambah/kurang (Q).
-// Setelah ini, app akan menjaga kolom R tetap terbarui setiap kali proyek disimpan.
-//
-// Aman diulang: menulis ulang nilai yang sama. Tidak menyentuh kolom lain.
-// ════════════════════════════════════════════════════════════════════════
-function backfillNilaiFinal() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var ws = ss.getSheetByName(SHEET.PROJECT);
-  if (!ws) { Logger.log("MASTER PROJECT tidak ditemukan"); return; }
-  var s = ROWS.PROJECT.start;
-  var e = ws.getLastRow();
-  if (e < s) { Logger.log("MASTER PROJECT masih kosong"); return; }
-
-  var n = e - s + 1;
-  var kode  = ws.getRange(s, 2,  n, 1).getValues();  // B
-  var base  = ws.getRange(s, 6,  n, 1).getValues();  // F
-  var varQ  = ws.getRange(s, 17, n, 1).getValues();  // Q
-  var out   = [];
-  var count = 0, adjusted = 0;
-
-  for (var i = 0; i < n; i++) {
-    if (String(kode[i][0]).trim() === "") { out.push([""]); continue; }
-    var f = Number(base[i][0]) || 0;
-    var final = _apiNilaiFinal(f, varQ[i][0]);   // helper ada di write.gs
-    out.push([final]);
-    count++;
-    if (final !== f) adjusted++;
-  }
-
-  ws.getRange(s, 18, n, 1).setValues(out).setNumberFormat("#,##0");
-
-  var hdrR = ws.getRange(3, 18);
-  if (String(hdrR.getValue()).trim() === "") {
-    hdrR.setValue("Nilai Final (Rp)")
-        .setFontWeight("bold").setFontColor("#ffffff").setBackground("#1e3a5f")
-        .setHorizontalAlignment("center").setVerticalAlignment("middle").setWrap(true);
-    ws.setColumnWidth(18, 150);
-  }
-  SpreadsheetApp.flush();
-  Logger.log("backfillNilaiFinal: " + count + " proyek diisi, " + adjusted + " di antaranya punya kerja tambah/kurang");
 }

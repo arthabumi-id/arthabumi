@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.35 (Latest) — 2026-07-16
+- **Versi aktif:** v1.36 (Latest) — 2026-09-04
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -16,7 +16,7 @@
 ## FILE STRUKTUR
 ```
 arthabumi/
-├── index.html                    ← App utama (v1.15)
+├── index.html                    ← App utama (cek `APP_VERSION` di dalamnya, jangan percaya angka di dok)
 ├── SYSTEM.md                     ← File ini (briefing Claude)
 ├── backend/                      ← Backend LIVE = kumpulan file terpisah (paste SEMUA ke Apps Script)
 │   ├── config.gs                 ← ROUTER (doGet + _apiHandleAction switch) — entry point API
@@ -195,12 +195,35 @@ Tab:     tabs, tab tab-on/tab-off
 | Tanggal shift 1 hari di app | `toISOString()` pakai UTC | `today()` dengan local time ✅ |
 | Dashboard/Piutang tidak ikut kerja tambah/kurang | `pgDashboard`/`pgPiutang` hitung di app dari `p.nilaiKontrak` (awal), BUKAN bug rumus GSheet | Pakai `vSum(p).final` di semua tampilan ✅ v1.15 |
 
-> 🟡 **Belum diperbaiki (lihat docs/TODO.md):** Sheet/tab REKAP & formula M/N (piutang/laba) masih pakai nilai AWAL — belum baca variasi kolom Q. App sudah final; sheet-side perlu ubah `rekap.gs`.
+> ✅ **SELESAI v1.36:** Sheet & tab REKAP kini ikut kerja tambah/kurang lewat **kolom R = Nilai Final**
+> (ditulis app sebagai angka setiap proyek disimpan). Formula J/K/N pakai `IF($R="",$F,$R)`, `rekap.gs` hitung
+> nilai final dari kolom Q. Kolom F tetap **nilai kontrak awal** — jangan pernah ditimpa, nanti dobel hitung.
 
 ---
 
-## VERSI AKTIF: v1.35 — 2026-07-16
-Perubahan terakhir (v1.29 → v1.35, satu paket deploy):
+## SKEMA MASTER PROJECT (live)
+```
+A=No  B=Kode  C=Nama  D=Jenis  E=Status  F=Nilai Kontrak AWAL
+G=Material(f)  H=Upah(f)  I=Total Biaya(f)  J=Laba(f)  K=Margin(f)
+L=Tgl Mulai  M=Pembayaran(f)  N=Piutang(f)  O=Catatan  P=Progress
+Q=Variasi kerja tambah/kurang (JSON, ditulis app)
+R=NILAI FINAL (angka, ditulis app) = F + Σtambah − Σkurang     ← v1.36
+```
+(f) = formula. J/K/N memakai R dengan fallback ke F untuk baris lama.
+
+---
+
+## VERSI AKTIF: v1.36 — 2026-09-04
+Perubahan v1.36:
+- 🧮 **Nilai Final masuk Google Sheet (kolom R)** — `_apiNilaiFinal()` di write.gs; ditulis di `_apiAddProject` & `_apiUpdateProject`. Formula J/K/N di `fixAllProjectFormulas()` + `_apiAddProject` diarahkan ke R. `rekap.gs` hitung nilai final dari `p.variasi`. Fungsi sekali-jalan: **`backfillNilaiFinal()`**.
+- 👷 **Rekap Tenaga Kerja per proyek** — section baru di `openRekapProyek()`: per tukang → jumlah hari (Setengah Hari = 0,5 lewat `fHari()`), jam lembur, total upah, dipecah Sudah/Belum Dibayar; ketuk nama → rincian tanggal (`toggleTk()`). Peringatan kalau ada absensi tanpa proyek.
+- ⏳ **Indikator proses** — `setBusy(on,lock)`: garis progres `#busybar` di atas layar + `body.is-busy` mengunci tombol `.btn-p`/`.btn-d` saat menulis ke GSheet. Skeleton `skel()` saat muat pertama. `doFetch` render ulang **hanya** saat muat pertama (polling tidak render ulang, supaya form yang sedang diisi tidak hilang).
+- 🐛 **Fix `_apiDeleteProject`** — `clearContent` A..R (dulu A..N: kolom O/P/Q tertinggal jadi sampah di baris bekas).
+- 🐛 **Fix `fixAllProjectFormulas()`** — dulu error karena `ROWS.PROJECT.end` sudah dihapus di constants v2.0; kini pakai `getLastRow()`.
+- 🐛 **Formula `_apiAddProject` diselaraskan** dgn `fixAllProjectFormulas()` — G exclude ASET, I termasuk kasbon BONUS (sebelumnya proyek baru dapat formula lama yang beda).
+- ⛔ **`setupRekapSheet()` dipensiunkan** (flag `ALLOW_LEGACY_SETUP_REKAP=false`) — bentrok dgn `rekap.gs`; sheet REKAP hanya dari tombol 📊 di app.
+
+### Perubahan v1.29 → v1.35 (satu paket deploy)
 - 📉 **Harga terendah (v1.35)** — hint input pembelian juga menampilkan harga terendah sepanjang riwayat + toko + selisih vs harga sekarang (`_beliHargaInfo()`).
 - 💰 **Auto-isi harga (v1.34)** — `beliAutoHarga()`: nama barang cocok dgn MASTER BARANG → harga terakhir + satuan + kategori terisi otomatis, hint tgl & toko terakhir. Flag `hargaAuto` jaga agar harga manual tidak ditimpa. Paste Daftar: kolom harga opsional.
 - 🏗️ **Detail Closing per Proyek (v1.33)** — toggle 👷 Per Karyawan / 🏗️ Per Proyek di modal detail closing; biaya tenaga kerja per lokasi proyek (upah + bonus, potongan sbg info), absensi tanpa proyek muncul sbg `(Tanpa Proyek)`.

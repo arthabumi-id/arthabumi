@@ -76,15 +76,6 @@ button{-webkit-appearance:none;font-family:inherit}
 .btn-o{background:#fff;color:#10b981;border:1.5px solid #10b981}
 .btn-sm{padding:7px 13px;font-size:12.5px;border-radius:9px}
 .btn-w{width:100%}
-/* [v1.36] Indikator proses */
-#busybar{position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;background:transparent;display:none;overflow:hidden}
-#busybar.on{display:block}
-#busybar i{display:block;height:100%;width:40%;background:linear-gradient(90deg,#10b981,#34d399,#10b981);border-radius:0 3px 3px 0;animation:bbslide 1.1s ease-in-out infinite}
-@keyframes bbslide{0%{margin-left:-40%}100%{margin-left:100%}}
-body.is-busy .btn-p,body.is-busy .btn-d{opacity:.5;pointer-events:none;filter:grayscale(.25)}
-.sk{background:linear-gradient(90deg,#eef2f7 25%,#f8fafc 50%,#eef2f7 75%);background-size:200% 100%;animation:skm 1.2s linear infinite;border-radius:9px}
-@keyframes skm{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.sk-row{height:58px;margin-bottom:8px}
 .bdg{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:600;white-space:nowrap}
 .bdg-blue{background:#dbeafe;color:#1d4ed8}
 .bdg-green{background:#dcfce7;color:#15803d}
@@ -140,13 +131,12 @@ body.is-busy .btn-p,body.is-busy .btn-d{opacity:.5;pointer-events:none;filter:gr
   <div class="spin"></div>
   <div class="spl-sub">Memuat aplikasi…</div>
 </div>
-<div id="busybar"><i></i></div>
 <div id="app">
   <div id="hdr">
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.36</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.35</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -190,9 +180,8 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.36';
+const APP_VERSION='v1.35';
 const APP_CHANGELOG=[
-  {v:'v1.36',date:'4 Sep 2026',desc:'👷 Rekap Tenaga Kerja per proyek di Rekap Proyek — per tukang: jumlah hari (setengah hari = 0,5), jam lembur, total upah, dipecah sudah/belum dibayar, ketuk nama untuk lihat rincian tanggal. Nilai kerja tambah/kurang kini ikut terhitung di Google Sheet (kolom R Nilai Final). Indikator proses: garis hijau di atas layar + tombol aksi terkunci saat data sedang disimpan'},
   {v:'v1.35',date:'16 Jul 2026',desc:'Input Pembelian: keterangan harga TERENDAH sepanjang riwayat (toko + tanggal + selisih vs harga sekarang), atau tanda ✅ kalau harga terakhir memang yang termurah'},
   {v:'v1.34',date:'16 Jul 2026',desc:'Input Pembelian: pilih barang yang pernah dibeli → harga terakhir terisi otomatis (+ info tanggal & toko terakhir); datalist tampilkan harga; Paste Daftar boleh tanpa kolom harga'},
   {v:'v1.33',date:'16 Jul 2026',desc:'Detail Closing: toggle 👷 Per Karyawan / 🏗️ Per Proyek — lihat biaya tenaga kerja per lokasi proyek (upah + bonus + potongan, urut dari terbesar)'},
@@ -247,18 +236,6 @@ const numInp=(id,val=0,ph='0',extra='')=>{
   return `<input class="fc" id="${id}" type="text" inputmode="numeric" value="${fv}" placeholder="${ph}" data-raw="${val||0}" ${oi} ${extra}>`;
 };
 // ── GSheet API
-// [v1.36] Indikator proses: progress bar atas + kunci tombol aksi saat menulis.
-// Penghitung, supaya beberapa proses bersamaan tidak saling mematikan.
-function setBusy(on,lock){
-  if(on){S._busy=(S._busy||0)+1;if(lock)S._busyLock=(S._busyLock||0)+1;}
-  else{S._busy=Math.max(0,(S._busy||0)-1);if(lock)S._busyLock=Math.max(0,(S._busyLock||0)-1);}
-  const bb=document.getElementById('busybar');
-  if(bb)bb.className=S._busy>0?'on':'';
-  document.body.classList.toggle('is-busy',(S._busyLock||0)>0);
-}
-// Placeholder saat data pertama kali masih dimuat dari GSheet
-function skel(n){return `<div>${Array.from({length:n||3},()=>'<div class="sk sk-row"></div>').join('')}</div>
-  <div style="text-align:center;font-size:12px;color:#94a3b8;padding:4px 0 10px">⏳ Memuat data dari GSheet…</div>`;}
 async function gsFetch(url){
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),30000); // 30 detik — GAS cold start bisa 20-25 detik
@@ -285,7 +262,6 @@ async function gsWrite(url,action,data){
 // Content-Type text/plain = "simple request", tidak kena preflight CORS.
 async function gsPost(action,data){
   if(!S.webAppUrl)throw new Error('URL GSheet belum diatur');
-  setBusy(true,true);
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),90000); // foto + Drive bisa lama
   try{
@@ -295,7 +271,7 @@ async function gsPost(action,data){
     if(!r.ok)throw new Error('HTTP '+r.status);
     let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
     if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
-  }finally{clearTimeout(tid);setBusy(false,true);}
+  }finally{clearTimeout(tid);}
 }
 // Kompres gambar di browser (canvas → JPEG) sebelum upload. Return base64 tanpa prefix.
 function compressImage(file,maxW=1280,quality=0.72){
@@ -350,29 +326,23 @@ function applyGS(d){
   S.lastSync=new Date();S.syncError=null;updateSyncBadge();
 }
 async function doFetch(url){
-  const u=url||S.webAppUrl;if(!u)return;S.syncing=true;updateSyncBadge();setBusy(true,false);
+  const u=url||S.webAppUrl;if(!u)return;S.syncing=true;updateSyncBadge();
   try{const d=await gsFetch(u);applyGS(d);}
   catch(e){
     const msg=e.name==='AbortError'?'GSheet lambat/timeout — data lokal dipakai':('GSheet: '+e.message);
     S.syncError=msg;showToast('⚠️ '+msg,'err');
   }
-  finally{
-    const wasFirst=S._firstLoad;S.syncing=false;S._firstLoad=false;
-    updateSyncBadge();setBusy(false,false);
-    // Hanya render ulang saat muat pertama (skeleton → data). Polling TIDAK render ulang,
-    // supaya form yang sedang diisi tidak terhapus di tengah jalan.
-    if(wasFirst&&S.page)go(S.page);
-  }
+  finally{S.syncing=false;updateSyncBadge();}
 }
 async function doSync(action,payload){
-  if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();setBusy(true,true);
+  if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();
   showToast('🔄 Menyimpan ke GSheet…','info');
   try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('✅ GSheet berhasil diupdate!');go(S.page);}
   catch(e){
     const msg=e.name==='AbortError'?'GSheet timeout — data disimpan lokal, retry otomatis':e.message;
     S.syncError=msg;S.retryQ.push({action,payload,retries:0});showToast('⚠️ '+msg,'err');
   }
-  finally{S.syncing=false;updateSyncBadge();setBusy(false,true);}
+  finally{S.syncing=false;updateSyncBadge();}
 }
 function updateSyncBadge(){
   const el=document.getElementById('sync-badge');if(!el)return;
@@ -402,10 +372,10 @@ setInterval(async()=>{
   if(!S.webAppUrl||S.retryQ.length===0||S.syncing)return;
   const item=S.retryQ[0];if(!item)return;
   if(item.retries>=3){S.retryQ.shift();showToast('❌ Retry gagal 3x','err');return;}
-  S.syncing=true;setBusy(true,false);
+  S.syncing=true;
   try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('✅ Retry OK');}
   catch{item.retries++;}
-  finally{S.syncing=false;updateSyncBadge();setBusy(false,false);}
+  finally{S.syncing=false;updateSyncBadge();}
 },30000);
 // ── Navigation
 const NAV_MAIN=[
@@ -660,9 +630,6 @@ async function installPWA(){
 }
 // ── Page Builder
 function buildPage(p){
-  // [v1.36] Muat pertama dari GSheet & belum ada data lokal → tampilkan skeleton,
-  // supaya tidak terbaca sebagai "datanya hilang".
-  if(S._firstLoad&&!S.projects.length&&['dashboard','project','beli','absensi','kasbon','closing','bayar','subkon'].indexOf(p)>=0)return skel(4);
   const fn={dashboard:pgDashboard,project:pgProject,beli:pgBeli,karyawan:pgKaryawan,absensi:pgAbsensi,kasbon:pgKasbon,closing:pgClosing,bayar:pgBayar,rab:pgRAB,subkon:pgSubkon,catatan:pgCatatan};
   return (fn[p]||pgDashboard)();
 }
@@ -1153,13 +1120,6 @@ function pgHutang(){
   return kpi+upahSection+subkonSection;
 }
 // ── REKAP PROYEK ──────────────────────────────────────────────────────
-// [v1.36] Format jumlah hari kerja — Setengah Hari dihitung 0,5
-function fHari(n){const v=Math.round((Number(n)||0)*10)/10;return String(v).replace('.',',')+' hari';}
-function toggleTk(i){
-  const d=document.getElementById('tk-d-'+i),ar=document.getElementById('tk-ar-'+i);
-  if(!d)return;const on=d.style.display==='none';
-  d.style.display=on?'block':'none';if(ar)ar.textContent=on?'▼':'▶';
-}
 function openRekapProyek(kode){
   const p=S.projects.find(x=>x.kode===kode);
   if(!p)return;
@@ -1190,27 +1150,9 @@ function openRekapProyek(kode){
   S.logAbsensi.filter(a=>a.kodeProj===kode&&a.statusBayar==='Belum Dibayar').forEach(a=>{
     if(!upahMap[a.idKaryawan])upahMap[a.idKaryawan]={nama:a.nama||a.idKaryawan,total:0,hari:0};
     upahMap[a.idKaryawan].total+=(Number(a.upahHariIni)||0);
-    upahMap[a.idKaryawan].hari+=(a.status==='Setengah Hari'?0.5:(a.status==='Hadir'?1:0)); // [v1.36] samakan dgn fHari()
+    upahMap[a.idKaryawan].hari++;
   });
   const upahBelumList=Object.values(upahMap).sort((a,b)=>b.total-a.total);
-  // [v1.36] Rekap tenaga kerja proyek ini — semua absensi, dipecah status bayar
-  const absProj=S.logAbsensi.filter(a=>a.kodeProj===kode);
-  const tkMap={};
-  absProj.forEach(a=>{
-    const key=a.idKaryawan||a.nama||'-';
-    if(!tkMap[key])tkMap[key]={id:key,nama:a.nama||key,hari:0,upah:0,lembur:0,hSudah:0,uSudah:0,hBelum:0,uBelum:0,rows:[]};
-    const t=tkMap[key];
-    const d=a.status==='Setengah Hari'?0.5:(a.status==='Hadir'?1:0);
-    const u=Number(a.upahHariIni)||0;
-    t.hari+=d;t.upah+=u;t.lembur+=(Number(a.jamLembur)||0);
-    if(a.statusBayar==='Sudah Dibayar'){t.hSudah+=d;t.uSudah+=u;}else{t.hBelum+=d;t.uBelum+=u;}
-    t.rows.push(a);
-  });
-  const tkList=Object.values(tkMap).sort((a,b)=>b.upah-a.upah);
-  const tkHari=tkList.reduce((s,x)=>s+x.hari,0);
-  const tkUpah=tkList.reduce((s,x)=>s+x.upah,0);
-  const tkLembur=tkList.reduce((s,x)=>s+x.lembur,0);
-  const absNoProj=S.logAbsensi.filter(a=>!String(a.kodeProj||'').trim()).length;
 
   const row2=(lbl,val,style='')=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:13px"><span style="color:#475569">${lbl}</span><span style="font-weight:700;${style}">${fRp(val)}</span></div>`;
 
@@ -1265,43 +1207,6 @@ function openRekapProyek(kode){
     </div>
 
     <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">
-      👷 TENAGA KERJA PROYEK INI&nbsp;
-      ${tkList.length?`<span style="color:#475569;font-size:12px">${fHari(tkHari)} · ${fRp(tkUpah)}</span>`:''}
-    </div>
-    ${tkList.length===0
-      ?`<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;padding:8px 0">Belum ada absensi tercatat di proyek ini.</div>`
-      :`<div style="background:#f8fafc;border-radius:10px;padding:6px 10px;margin-bottom:12px">
-        ${tkList.map((t,ti)=>`<div style="border-bottom:1px solid #eef2f7;padding:6px 0">
-          <div onclick="toggleTk(${ti})" style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12.5px;font-weight:700;color:#1e293b">
-                <span id="tk-ar-${ti}" style="color:#94a3b8;font-size:10px">▶</span> ${esc(t.nama)}
-              </div>
-              <div style="font-size:11px;color:#64748b;margin-top:1px">
-                ${fHari(t.hari)}${t.lembur>0?` · ${t.lembur} jam lembur`:''}
-                ${t.uBelum>0?` · <span style="color:#c2410c;font-weight:600">⏳ ${fRp(t.uBelum)} belum</span>`:' · <span style="color:#16a34a">✅ lunas</span>'}
-              </div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-size:13px;font-weight:800;color:#1e293b">${fRp(t.upah)}</div>
-              ${t.uSudah>0&&t.uBelum>0?`<div style="font-size:10px;color:#94a3b8">✅ ${fRp(t.uSudah)}</div>`:''}
-            </div>
-          </div>
-          <div id="tk-d-${ti}" style="display:none;margin:6px 0 2px;padding:6px 8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px">
-            ${t.rows.slice().sort((a,b)=>String(b.tgl).localeCompare(String(a.tgl))).map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #f8fafc;font-size:11.5px">
-              <span style="color:#475569">${fDate(a.tgl)} · ${esc(a.status||'')}${(Number(a.jamLembur)||0)>0?` · +${a.jamLembur}j`:''}${a.ket?' · '+esc(a.ket):''}</span>
-              <span style="flex-shrink:0"><span style="font-weight:700;color:#334155">${fRp(Number(a.upahHariIni)||0)}</span> <span style="color:${a.statusBayar==='Sudah Dibayar'?'#16a34a':'#c2410c'};font-size:10px">${a.statusBayar==='Sudah Dibayar'?'✅':'⏳'}</span></span>
-            </div>`).join('')}
-          </div>
-        </div>`).join('')}
-        <div style="display:flex;justify-content:space-between;padding:7px 0 3px;font-size:13px;font-weight:800">
-          <span style="color:#1e293b">Total ${tkList.length} orang · ${fHari(tkHari)}${tkLembur>0?` · ${tkLembur} jam lembur`:''}</span>
-          <span style="color:#1e293b">${fRp(tkUpah)}</span></div>
-        ${Math.abs(tkUpah-upahTotal)>1?`<div style="font-size:11px;color:#b91c1c;padding:2px 0 4px">⚠️ Selisih ${fRp(Math.abs(tkUpah-upahTotal))} dgn Upah Tenaga di Breakdown Biaya — ada data absensi tidak wajar.</div>`:''}
-      </div>`}
-    ${absNoProj>0?`<div style="background:#fef9c3;border:1px solid #fef08a;border-radius:11px;padding:9px 11px;margin-bottom:12px;font-size:11.5px;color:#854d0e">⚠️ Ada <strong>${absNoProj} baris absensi tanpa proyek</strong> di Log Absensi. Baris itu tidak masuk ke biaya proyek mana pun — perbaiki lewat tombol ✏️ di Log Absensi.</div>`:''}
-
-    <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.5px;margin-bottom:5px">
       💰 UPAH BELUM DIBAYAR&nbsp;
       ${upahBelum>0?`<span style="color:#dc2626;font-size:12px">${fRp(upahBelum)}</span>`:'<span style="color:#16a34a;font-size:12px">Semua lunas ✓</span>'}
     </div>
@@ -1309,7 +1214,7 @@ function openRekapProyek(kode){
       ?`<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;padding:8px 0">Tidak ada upah tertunggak di proyek ini.</div>`
       :`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;margin-bottom:12px">
         ${upahBelumList.map(kr=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #fed7aa;font-size:12.5px">
-          <span style="color:#92400e">${esc(kr.nama)} <span style="color:#b45309;font-size:11px">${fHari(kr.hari)}</span></span>
+          <span style="color:#92400e">${esc(kr.nama)} <span style="color:#b45309;font-size:11px">${kr.hari} hari</span></span>
           <span style="font-weight:700;color:#c2410c">${fRp(kr.total)}</span></div>`).join('')}
         <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
           <span style="color:#92400e">Dana yang perlu disiapkan</span><span style="color:#dc2626">${fRp(upahBelum)}</span></div>
@@ -4583,7 +4488,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
   const sn=document.getElementById('spl-name');if(sn)sn.textContent=S.companyName;
   document.title=S.companyName;
-  S._firstLoad=!!S.webAppUrl;   // [v1.36] penanda muat pertama utk skeleton
   go('dashboard');
   document.getElementById('nav').innerHTML=buildNav();
   setTimeout(()=>{const spl=document.getElementById('spl');if(spl){spl.classList.add('out');setTimeout(()=>spl.remove(),350);}},300);

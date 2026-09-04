@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — rekap.gs  v1.36 (kasbon model v2 + Nilai Final)
+// ARTHABUMI — rekap.gs  v1.14 (kasbon model v2)
 // Membuat / memperbarui sheet REKAP di GSheet
 //
 // Dipanggil via: action=updateRekap (dari config.gs)
@@ -9,7 +9,6 @@
 //   - KPI summary (total kontrak, biaya, laba, bayar) di atas
 //   - Tabel per-proyek dengan breakdown biaya lengkap
 //   - Kalkulasi sama persis dengan logic app (calcKasbonForProj)
-//   - v1.36: Nilai Kontrak = FINAL (awal ± kerja tambah/kurang kolom Q) — sama dgn vSum(p).final di app
 // ════════════════════════════════════════════════════════════════════════
 
 function _apiUpdateRekap(ss) {
@@ -62,20 +61,13 @@ function _apiUpdateRekap(ss) {
     // upahNet hanya untuk tampilan breakdown, bukan untuk totalBiaya
     var upahNet = upahGross - potong;
     var totalBiaya = mat + upahGross + subkon + bonus;
-
-    // v1.36 — pakai NILAI FINAL (kontrak awal ± kerja tambah/kurang di kolom Q),
-    // supaya angka di REKAP sama dengan yang ditampilkan app (vSum(p).final).
-    var nilaiAwal  = Number(p.nilaiKontrak) || 0;
-    var nilaiFinal = _apiNilaiFinal(nilaiAwal, p.variasi);   // helper di write.gs
-    var laba       = nilaiFinal - totalBiaya;
-    var margin     = nilaiFinal > 0 ? laba / nilaiFinal : 0;
-    var piutang    = nilaiFinal - bayar;
+    var laba       = (Number(p.nilaiKontrak)||0) - totalBiaya;
+    var margin     = p.nilaiKontrak > 0 ? laba / p.nilaiKontrak : 0;
+    var piutang    = (Number(p.nilaiKontrak)||0) - bayar;
 
     return {
       kode: kode, nama: p.nama, jenis: p.jenis, status: p.status,
-      nilaiKontrak: nilaiFinal,
-      nilaiAwal: nilaiAwal,
-      adjust: nilaiFinal - nilaiAwal,
+      nilaiKontrak: Number(p.nilaiKontrak)||0,
       mat: mat, upahGross: upahGross, potong: potong, upahNet: upahNet,
       subkon: subkon, bonus: bonus,
       totalBiaya: totalBiaya, laba: laba, margin: margin,
@@ -107,7 +99,6 @@ function _apiUpdateRekap(ss) {
   wsRekap.clearFormats();
 
   var now = Utilities.formatDate(new Date(), TZ, "dd/MM/yyyy HH:mm");
-  var nAdj = rows.filter(function(r){ return (Number(r.adjust) || 0) !== 0; }).length;
 
   // ── 5. Row 1-2: Judul ──────────────────────────────────────────────────
   wsRekap.getRange("A1:R1").merge()
@@ -117,9 +108,7 @@ function _apiUpdateRekap(ss) {
   wsRekap.setRowHeight(1, 36);
 
   wsRekap.getRange("A2:R2").merge()
-    .setValue("Terakhir diperbarui: " + now + "   |   Total " + rows.length + " proyek"
-              + "   |   Nilai Kontrak = nilai FINAL (kontrak awal ± kerja tambah/kurang)"
-              + (nAdj > 0 ? "   |   " + nAdj + " proyek punya kerja tambah/kurang" : ""))
+    .setValue("Terakhir diperbarui: " + now + "   |   Total " + rows.length + " proyek")
     .setFontSize(9).setFontColor("#94a3b8").setBackground("#f8fafc");
 
   // ── 6. Row 3: Spacer ──────────────────────────────────────────────────
@@ -151,7 +140,7 @@ function _apiUpdateRekap(ss) {
   // ── 8. Row 8: Header Tabel ────────────────────────────────────────────
   var HDR = [
     "No","Kode","Nama Proyek","Jenis","Status",
-    "Nilai Kontrak (Final)","Material","Upah Gross","(−) Kasbon Potong","Net Upah",
+    "Nilai Kontrak","Material","Upah Gross","(−) Kasbon Potong","Net Upah",
     "Subkon","Kasbon Bonus","Total Biaya",
     "Est. Laba","Margin%","Sudah Bayar","Piutang","Progress%","Tgl Mulai"
   ];
