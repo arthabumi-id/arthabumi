@@ -64,6 +64,21 @@ ada modal terbuka dan tidak ada input yang sedang difokus.
 Berfungsi, tapi tampilannya di luar gaya app dan bisa diblokir di sebagian PWA.
 Kandidat diganti modal in-app. Prioritas rendah.
 
+**U6 — Struktur MASTER PROJECT berlubang — ⛔ EDDY MEMUTUSKAN TIDAK DIPERBAIKI (2026-09-05).**
+Tata letak sebenarnya: baris 4–52 slot proyek, **baris 54–60 blok RINGKASAN TOTAL buatan tangan**
+(`F55 =SUM(F4:F52)` dst), baris 61–78 proyek PRJ-010…PRJ-023.
+Sebabnya `_apiFindNext()` memakai `getLastRow()`, yang membaca blok ringkasan sebagai baris terakhir —
+jadi sejak PRJ-010 setiap proyek baru mendarat DI BAWAH blok itu.
+Konsekuensi yang diterima Eddy:
+- Blok RINGKASAN TOTAL & tab **DASHBOARD hanya menghitung 10 proyek** (1.344.026.200 dari 2.404.386.100).
+  Selisih 1.060.359.900 tidak terhitung di dua tempat itu.
+- Proyek baru berikutnya akan terus mendarat di baris 79 ke bawah.
+- **Tidak berpengaruh ke app maupun tab REKAP** — keduanya membaca sampai `getLastRow()`, jadi 24 proyek
+  tetap lengkap dan angkanya benar. Ini sebabnya keputusan "abaikan" masuk akal.
+Kalau suatu saat mau dikerjakan: pindahkan baris 61–78 ke slot kosong 14–27, kosongkan 61–78,
+nomori ulang kolom A, lalu ubah pencarian baris kosong khusus MASTER PROJECT (scan B4:B53) di `write.gs`.
+Jangan ditawarkan lagi kecuali Eddy yang menyinggung.
+
 **U5 — Cara hitung "hari kerja" belum seragam di seluruh app.**
 Di modal **Rekap Proyek** (section Tenaga Kerja + Upah Belum Dibayar) sudah pakai
 `Setengah Hari = 0,5` lewat `fHari()` sejak v1.36. Tapi **Dashboard Hutang Upah** (`pgHutang`,
