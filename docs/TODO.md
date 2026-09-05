@@ -6,17 +6,24 @@ Versi kode saat ini: **v1.36**
 
 ---
 
-## 🔴 WAJIB DIKERJAKAN SETELAH DEPLOY v1.36
+## ✅ DEPLOY v1.36 — SELESAI 2026-09-05
 
-Frontend (index.html) sudah cukup di-push ke GitHub. Backend perlu langkah manual:
+- Frontend: commit `77f8055` sudah di-push, live di GitHub Pages.
+- Backend: `write.gs`, `setup.gs`, `rekap.gs` sudah di-paste ke Apps Script "AKuntansi Kontraktor"
+  dan di-deploy sebagai **Version 46** (5 Sep 2026, 13:45). Deployment ID & URL web app TIDAK berubah,
+  jadi app tidak perlu setting ulang.
+- `backfillNilaiFinal()` dijalankan → **24 proyek diisi, 3 punya kerja tambah/kurang**.
+- `fixAllProjectFormulas()` dijalankan → **24 proyek diupdate**.
+- Verifikasi MASTER PROJECT (cocok dengan hitungan manual):
 
-1. **Backup Google Sheet** — File → Buat salinan. (`fixAllProjectFormulas()` menimpa formula G–N.)
-2. Paste ke Apps Script: **`write.gs`**, **`setup.gs`**, **`rekap.gs`** → Deploy → New version.
-3. Jalankan **`backfillNilaiFinal()`** sekali → isi kolom R (Nilai Final) semua proyek lama.
-4. Jalankan **`fixAllProjectFormulas()`** sekali → arahkan formula J/K/N ke kolom R.
-5. Buka app → tekan **📊 Update Rekap ke GSheet**.
-6. Verifikasi: ambil 1 proyek yang punya kerja tambah/kurang, bandingkan **Laba & Piutang**
-   di tiga tempat — app, MASTER PROJECT, tab REKAP. Harus sama persis.
+  | Kode | Kontrak awal (F) | Nilai Final (R) | Laba (J) | Piutang (N) |
+  |---|---|---|---|---|
+  | SPL-01 | 165.000.000 | 225.000.000 | 85.680.063 | 0 |
+  | PRJ-007 | 120.000.000 | 139.000.000 | 60.896.317 | 0 |
+  | PRJ-008 | 1.000.000.000 | 1.010.000.000 | 942.837.882 | 700.000.000 |
+
+- ⏳ **Sisa satu langkah manual Eddy:** buka app → tekan **📊 Update Rekap ke GSheet**
+  supaya tab REKAP ikut terbarui (isinya masih potret 13 Agustus, 19 proyek — sekarang ada 24).
 
 ---
 
