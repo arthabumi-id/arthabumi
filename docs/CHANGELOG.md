@@ -13,6 +13,30 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 22 (v1.37) — 2026-09-07
+
+## [2026-09-07] v1.37 — Log Pembelian: kelompok per toko di dalam tiap tanggal
+
+### 🏪 Perubahan (index.html saja — backend TIDAK berubah)
+- `_beliGroupTanggal()` dirombak: tiap tanggal kini dipecah lagi per **nama toko**, baru itemnya.
+  - Urutan toko: abjad (locale `id`), grup **(Tanpa Toko)** dipaksa ke paling bawah.
+  - Header tanggal: `jumlah item · jumlah toko` + total belanja hari itu.
+  - Header toko: jumlah item + **subtotal per toko**.
+- Sub-grup toko bisa dilipat, **default terbuka**. Fungsi baru `toggleBeliDT(key)`,
+  key = `"tgl|toko"`, state disimpan di `S.tab.beliClosedDT` (berisi key yang TERTUTUP,
+  jadi grup baru otomatis terbuka). Toggle memanggil `_renderBeliItems()` — bukan `go('beli')` —
+  supaya input pencarian tidak reset/kehilangan fokus.
+- `beliItemCard(b, showToko, hideTgl)` — argumen ketiga baru; di dalam sub-grup tanggal+toko,
+  baris item tidak lagi mengulang tanggal & nama toko, hanya nama proyek.
+- Tab 🏪 **Per Toko**, filter, pencarian, dan ringkasan total tidak diubah.
+
+### ✅ Verifikasi
+- `node --check` pada blok `<script>` — lolos.
+- Uji fungsi terisolasi di Node dengan 5 data contoh: subtotal per toko dan total per tanggal cocok
+  (Rp240.000 + Rp725.000 + Rp20.000 = Rp985.000), urutan (Tanpa Toko) di bawah, lipat/buka bekerja.
+
+---
+
 # 🔧 SESSION 21 (v1.36) — 2026-09-04
 
 ## [2026-09-04] v1.36 — Nilai Final di GSheet + Rekap Tenaga Kerja + Indikator Proses

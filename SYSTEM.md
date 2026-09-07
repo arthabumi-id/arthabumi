@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.36 (Latest) — 2026-09-04
+- **Versi aktif:** v1.37 (Latest) — 2026-09-07
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -99,7 +99,7 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 |---|---|---|
 | dashboard | `pgDashboard()` | `setDashFilter(v)`, `pgPiutang()`, `pgHutang()` — semua pakai `vSum(p).final` |
 | project | `pgProject()` | `openAddProject()`, `saveProject()`, `delProject()`, `openRekapProyek()`, `openVariasiForm()`, `saveVariasi()`, `delVariasi()` |
-| beli | `pgBeli()` (tab: Input/Log/Cek Harga/Hutang Toko) | `beliInput()`, `beliLog()` → `_beliFiltered()` (filter tunggal) + `_beliGroupTanggal()`/`_beliGroupToko()` (toggle `setBeliView()`), `beliHutang()`, `beliCekHarga()`, `submitBeli()`, `openEditBeli()`, `delPembelian()`, `openPasteBeli()` |
+| beli | `pgBeli()` (tab: Input/Log/Cek Harga/Hutang Toko) | `beliInput()`, `beliLog()` → `_beliFiltered()` (filter tunggal) + `_beliGroupTanggal()` (sub-grup per toko, lipat via `toggleBeliDT()`)/`_beliGroupToko()` (toggle `setBeliView()`), `beliHutang()`, `beliCekHarga()`, `submitBeli()`, `openEditBeli()`, `delPembelian()`, `openPasteBeli()` |
 | karyawan | `pgKaryawan()` | `saveKaryawan()`, `delKaryawan()` |
 | absensi | `pgAbsensi()` | `absInput()`, `absLog()`, `submitAbsensi()`, `delAbsensi()` |
 | kasbon | `pgKasbon()` | `kasbonInput()`, `kasbonRekap()`, `submitKasbon()` |
@@ -213,7 +213,19 @@ R=NILAI FINAL (angka, ditulis app) = F + Σtambah − Σkurang     ← v1.36
 
 ---
 
-## VERSI AKTIF: v1.36 — 2026-09-04
+## VERSI AKTIF: v1.37 — 2026-09-07
+Perubahan v1.37:
+- 🏪 **Log Pembelian "Per Tanggal" kini bertingkat: tanggal → toko → item.** `_beliGroupTanggal()`
+  mengelompokkan item tiap tanggal ke dalam sub-grup per nama toko, urut abjad, dan grup
+  **(Tanpa Toko)** selalu di paling bawah. Header tanggal menampilkan jumlah item, jumlah toko,
+  dan total hari itu; header toko menampilkan jumlah item + subtotal toko.
+  Sub-grup bisa dilipat (default terbuka) lewat `toggleBeliDT(key)` dengan key `tgl|toko`,
+  state di `S.tab.beliClosedDT` (daftar yang TERTUTUP). Toggle memanggil `_renderBeliItems()`
+  saja, bukan `go('beli')`, supaya kotak pencarian tidak kehilangan fokus.
+- `beliItemCard(b, showToko, hideTgl)` — parameter ketiga baru untuk menyembunyikan tanggal
+  pada item di dalam sub-grup (tanggal & toko sudah ada di header).
+- Tampilan tab 🏪 **Per Toko** tidak diubah.
+
 Perubahan v1.36:
 - 🧮 **Nilai Final masuk Google Sheet (kolom R)** — `_apiNilaiFinal()` di write.gs; ditulis di `_apiAddProject` & `_apiUpdateProject`. Formula J/K/N di `fixAllProjectFormulas()` + `_apiAddProject` diarahkan ke R. `rekap.gs` hitung nilai final dari `p.variasi`. Fungsi sekali-jalan: **`backfillNilaiFinal()`**.
 - 👷 **Rekap Tenaga Kerja per proyek** — section baru di `openRekapProyek()`: per tukang → jumlah hari (Setengah Hari = 0,5 lewat `fHari()`), jam lembur, total upah, dipecah Sudah/Belum Dibayar; ketuk nama → rincian tanggal (`toggleTk()`). Peringatan kalau ada absensi tanpa proyek.

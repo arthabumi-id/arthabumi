@@ -190,7 +190,7 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.37';
+const APP_VERSION='v1.36';
 const APP_CHANGELOG=[
   {v:'v1.36',date:'4 Sep 2026',desc:'👷 Rekap Tenaga Kerja per proyek di Rekap Proyek — per tukang: jumlah hari (setengah hari = 0,5), jam lembur, total upah, dipecah sudah/belum dibayar, ketuk nama untuk lihat rincian tanggal. Nilai kerja tambah/kurang kini ikut terhitung di Google Sheet (kolom R Nilai Final). Indikator proses: garis hijau di atas layar + tombol aksi terkunci saat data sedang disimpan'},
   {v:'v1.35',date:'16 Jul 2026',desc:'Input Pembelian: keterangan harga TERENDAH sepanjang riwayat (toko + tanggal + selisih vs harga sekarang), atau tanda ✅ kalau harga terakhir memang yang termurah'},
@@ -1493,17 +1493,10 @@ function toggleBeliToko(name){
   if(i>=0)o.splice(i,1); else o.push(name);
   go('beli');
 }
-function toggleBeliDT(k){
-  const c=S.tab.beliClosedDT||(S.tab.beliClosedDT=[]);
-  const i=c.indexOf(k);
-  if(i>=0)c.splice(i,1); else c.push(k);
-  _renderBeliItems();
-}
-function beliItemCard(b,showToko,hideTgl){
+function beliItemCard(b,showToko){
   const ri=S.pembelian.findIndex(x=>x.id===b.id);
   const namaP=S.projects.find(p=>p.kode===b.kodeProj)?.nama||b.kodeProj;
-  const pre=hideTgl?'':`${fDate(b.tgl)} · `;
-  const sub=showToko?`${pre}${esc(namaP)} · ${esc(b.toko||'')}`:`${pre}${esc(namaP)}`;
+  const sub=showToko?`${fDate(b.tgl)} · ${esc(namaP)} · ${esc(b.toko||'')}`:`${fDate(b.tgl)} · ${esc(namaP)}`;
   return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(b.namaBarang)}</div>
         <div class="item-sub">${sub}</div></div>
@@ -1581,51 +1574,24 @@ function _beliGroupTanggal(filtered){
   const MAX=250;
   const capped=filtered.slice(0,MAX);
   const note=filtered.length>MAX?`<div class="empty" style="padding:10px">Menampilkan ${MAX} item terbaru — persempit filter untuk melihat sisanya</div>`:'';
-  const closed=S.tab.beliClosedDT||[];
   const groups={};const order=[];
   capped.forEach(b=>{
     const k=String(b.tgl||'')||'(Tanpa Tanggal)';
-    if(!groups[k]){groups[k]={items:[],total:0,toko:{},tokoOrder:[]};order.push(k);}
-    const g=groups[k];
-    g.items.push(b);
-    g.total+=calcTotal(b);
-    const tk=(b.toko||'').trim()||'(Tanpa Toko)';
-    if(!g.toko[tk]){g.toko[tk]={items:[],total:0};g.tokoOrder.push(tk);}
-    g.toko[tk].items.push(b);
-    g.toko[tk].total+=calcTotal(b);
+    if(!groups[k]){groups[k]={items:[],total:0};order.push(k);}
+    groups[k].items.push(b);
+    groups[k].total+=calcTotal(b);
   });
   return order.map(tgl=>{
     const g=groups[tgl];
-    const tokos=g.tokoOrder.slice().sort((x,y)=>{
-      if(x==='(Tanpa Toko)')return 1;
-      if(y==='(Tanpa Toko)')return -1;
-      return x.localeCompare(y,'id');
-    });
-    const body=tokos.map(tk=>{
-      const t=g.toko[tk];
-      const key=tgl+'|'+tk;
-      const isClosed=closed.indexOf(key)>=0;
-      const detail=isClosed?'':`<div style="margin-top:5px">${t.items.map(b=>beliItemCard(b,false,true)).join('')}</div>`;
-      return `<div style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#fff;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer" data-k="${esc(key)}" onclick="toggleBeliDT(this.dataset.k)">
-          <div style="min-width:0;flex:1">
-            <span style="font-weight:700;font-size:12.5px">${isClosed?'▸':'▾'} 🏪 ${esc(tk)}</span>
-            <span style="font-size:11px;color:#64748b;margin-left:6px">${t.items.length} item</span>
-          </div>
-          <span style="font-weight:700;color:#0284c7;font-size:12.5px;flex-shrink:0">${fRp(t.total)}</span>
-        </div>
-        ${detail}
-      </div>`;
-    }).join('');
     return `<div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f1f5f9;border-radius:10px;margin-bottom:6px">
         <div>
           <span style="font-weight:700;font-size:13px">📅 ${tgl==='(Tanpa Tanggal)'?tgl:fDate(tgl)}</span>
-          <span style="font-size:11px;color:#64748b;margin-left:6px">${g.items.length} item · ${tokos.length} toko</span>
+          <span style="font-size:11px;color:#64748b;margin-left:6px">${g.items.length} item</span>
         </div>
         <span style="font-weight:700;color:#10b981;font-size:13px">${fRp(g.total)}</span>
       </div>
-      ${body}
+      ${g.items.map(b=>beliItemCard(b,true)).join('')}
     </div>`;
   }).join('')+note;
 }
