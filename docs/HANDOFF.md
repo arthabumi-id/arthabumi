@@ -1,7 +1,13 @@
 # ARTHABUMI — Handoff Document
 **Owner:** Eddy Santoso
-**Terakhir diupdate:** 2026-05-26
-**Status proyek:** Session 4 (v1.11) selesai ✅ | Apps Script tidak perlu update ✅
+**Terakhir diupdate isi teknisnya:** 2026-05-26 (v1.11)
+**Status proyek saat ini:** v1.37 (7 Sep 2026) — lihat `SYSTEM.md` & `docs/TODO.md`
+
+> ⚠️ **DOKUMEN INI SUDAH USANG.** Isinya berhenti di v1.11 (Mei 2026) dan sebagian sudah tidak berlaku
+> (mis. `arthabumi-webapi.gs` sudah dihapus, skema MASTER PROJECT kini sampai kolom R).
+> Untuk konteks terkini pakai: **`SYSTEM.md`** (arsitektur, peta fungsi, skema kolom),
+> **`docs/TODO.md`** (status deploy, utang teknis, backlog), **`docs/CHANGELOG.md`** (riwayat versi).
+> Dipertahankan hanya sebagai arsip.
 
 ---
 

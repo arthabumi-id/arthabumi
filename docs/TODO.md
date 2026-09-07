@@ -1,8 +1,19 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: **2026-09-04**
-Versi kode saat ini: **v1.36**
+Terakhir diupdate: **2026-09-07**
+Versi kode saat ini: **v1.37** — sudah di folder lokal, **BELUM di-push** ke GitHub Pages.
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
+
+---
+
+## ⏳ DEPLOY v1.37 — MENUNGGU PUSH
+
+- **index.html saja** — backend TIDAK berubah, **tidak perlu redeploy Apps Script**.
+- Sudah diverifikasi: `node --check` lolos; uji fungsi terisolasi di Node (5 data contoh) →
+  subtotal per toko Rp240.000 + Rp725.000 + Rp20.000 = total tanggal Rp985.000 ✔,
+  urutan toko abjad dengan `(Tanpa Toko)` di bawah ✔, lipat/buka sub-grup bekerja ✔.
+- Backup lama: `backups/index-v1.36-20260907-*.html`.
+- ⏳ **Langkah Eddy:** push lewat GitHub Desktop → hapus & tambah ulang shortcut PWA di HP (cache).
 
 ---
 
@@ -29,6 +40,9 @@ Versi kode saat ini: **v1.36**
 
 ## ✅ SELESAI
 
+- **v1.37** Log Pembelian view "Per Tanggal" bertingkat: tanggal → toko → item
+  (subtotal per toko + total per tanggal, `(Tanpa Toko)` paling bawah, sub-grup bisa dilipat
+  lewat `toggleBeliDT()`, default terbuka)
 - **v1.36** Nilai Final (kolom R) — sheet & app sudah satu angka. *(dulu 🟡 FOLLOW-UP terbesar)*
 - **v1.36** Rekap Tenaga Kerja per proyek (hari, lembur, upah, sudah/belum bayar, rincian tanggal)
 - **v1.36** Indikator proses: progress bar + kunci tombol + skeleton muat pertama
