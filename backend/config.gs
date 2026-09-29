@@ -1,11 +1,33 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — config.gs  v1.8
+// ARTHABUMI — config.gs  v1.9 (v1.38: token dari Script Properties)
 // Isi: Entry Points (doGet/doPost) + Router ONLY
 //
 // Helper date/find functions → helpers.gs
 // Sheet setup & format       → setup.gs
 // Sheet name constants       → constants.gs
 // ════════════════════════════════════════════════════════════════════════
+
+// ── Token keamanan (v1.38) ─────────────────────────────────────────────
+// Token disimpan di Project Settings → Script Properties → API_TOKEN (BUKAN di file,
+// karena repo GitHub publik). Kosong = backend terbuka seperti dulu.
+function _apiToken() {
+  var t = "";
+  try { t = PropertiesService.getScriptProperties().getProperty("API_TOKEN") || ""; } catch (e) {}
+  return String(t || API_TOKEN || "").trim();
+}
+function _apiTokenSalah(given) {
+  var tok = _apiToken();
+  return !!tok && String(given || "") !== tok;
+}
+var _ERR_TOKEN = "Token salah / belum diisi — cek Pengaturan → Token Keamanan";
+
+// Jalankan SEKALI dari editor (Run) untuk membuat token acak → lihat Execution log, salin.
+// Fungsi ini TIDAK memasang token; pasang sendiri di Script Properties setelah semua HP diisi.
+function buatToken() {
+  var t = Utilities.getUuid().replace(/-/g, "") + Utilities.getUuid().replace(/-/g, "").slice(0, 8);
+  Logger.log("Token baru (salin): " + t);
+  return t;
+}
 
 // ── Entry Point GET ────────────────────────────────────────────────────
 // Digunakan untuk READ dan WRITE (karena limitasi CORS Google Apps Script)
@@ -14,9 +36,9 @@ function doGet(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var p  = e && e.parameter ? e.parameter : {};
 
-    // ── Token check (aktifkan dengan isi API_TOKEN di constants.gs) ──
-    if (API_TOKEN && p.token !== API_TOKEN) {
-      return _apiError(new Error("Unauthorized: token tidak valid"));
+    // ── Token check (v1.38: Script Properties API_TOKEN) ──
+    if (_apiTokenSalah(p.token)) {
+      return _apiError(new Error(_ERR_TOKEN));
     }
 
     var action = p.action || "getAllData";
@@ -41,8 +63,8 @@ function doPost(e) {
     var body   = e.postData && e.postData.contents ? e.postData.contents : "{}";
     var parsed = JSON.parse(body);
 
-    if (API_TOKEN && parsed.token !== API_TOKEN) {
-      return _apiError(new Error("Unauthorized: token tidak valid"));
+    if (_apiTokenSalah(parsed.token)) {
+      return _apiError(new Error(_ERR_TOKEN));
     }
 
     _apiHandleAction(ss, parsed.action || "", parsed.data || {});

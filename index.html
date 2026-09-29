@@ -175,7 +175,7 @@ const S={
   logAbsensi:[],logKasbon:[],logPembayaran:[],
   masterBarang:[],masterToko:[],
   rab:[],masterSubkon:[],logSubkon:[],riwayatBayarSubkon:{},
-  webAppUrl:'',pollInterval:60,
+  webAppUrl:'',apiToken:'',pollInterval:60,
   syncing:false,lastSync:null,syncError:null,
   countdown:0,retryQ:[],
   formItems:[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}],
@@ -189,9 +189,10 @@ const S={
   formBayarToko:'Lunas',
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
-const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav'};
-const APP_VERSION='v1.37';
+const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
+const APP_VERSION='v1.38';
 const APP_CHANGELOG=[
+  {v:'v1.38',date:'29 Sep 2026',desc:'🔒 Token Keamanan — koneksi Google Sheet bisa dikunci. Isi token di Pengaturan (sama dengan yang di Apps Script); HP tanpa token yang benar tidak bisa membaca/menulis data'},
   {v:'v1.36',date:'4 Sep 2026',desc:'👷 Rekap Tenaga Kerja per proyek di Rekap Proyek — per tukang: jumlah hari (setengah hari = 0,5), jam lembur, total upah, dipecah sudah/belum dibayar, ketuk nama untuk lihat rincian tanggal. Nilai kerja tambah/kurang kini ikut terhitung di Google Sheet (kolom R Nilai Final). Indikator proses: garis hijau di atas layar + tombol aksi terkunci saat data sedang disimpan'},
   {v:'v1.35',date:'16 Jul 2026',desc:'Input Pembelian: keterangan harga TERENDAH sepanjang riwayat (toko + tanggal + selisih vs harga sekarang), atau tanda ✅ kalau harga terakhir memang yang termurah'},
   {v:'v1.34',date:'16 Jul 2026',desc:'Input Pembelian: pilih barang yang pernah dibeli → harga terakhir terisi otomatis (+ info tanggal & toko terakhir); datalist tampilkan harga; Paste Daftar boleh tanpa kolom harga'},
@@ -259,11 +260,13 @@ function setBusy(on,lock){
 // Placeholder saat data pertama kali masih dimuat dari GSheet
 function skel(n){return `<div>${Array.from({length:n||3},()=>'<div class="sk sk-row"></div>').join('')}</div>
   <div style="text-align:center;font-size:12px;color:#94a3b8;padding:4px 0 10px">⏳ Memuat data dari GSheet…</div>`;}
-async function gsFetch(url){
+// [v1.38] token keamanan — ikut di setiap request (kosong = backend belum dikunci)
+function _tokQ(tok){const t=(tok===undefined?S.apiToken:tok)||'';return t?'&token='+encodeURIComponent(t):'';}
+async function gsFetch(url,tok){
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),30000); // 30 detik — GAS cold start bisa 20-25 detik
   try{
-    const r=await fetch(url+'?action=getAllData&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
+    const r=await fetch(url+'?action=getAllData'+_tokQ(tok)+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json();if(!j.ok)throw new Error(j.error||'GSheet error');return j.data;
   }finally{clearTimeout(tid);}
@@ -274,7 +277,7 @@ async function gsWrite(url,action,data){
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),45000); // 45 detik — GAS bisa cold-start lama
   try{
-    const r=await fetch(url+'?action='+action+'&payload='+encodeURIComponent(ps)+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
+    const r=await fetch(url+'?action='+action+'&payload='+encodeURIComponent(ps)+_tokQ()+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
     if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
@@ -291,7 +294,7 @@ async function gsPost(action,data){
   try{
     const r=await fetch(S.webAppUrl,{method:'POST',redirect:'follow',cache:'no-cache',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({action,data}),signal:ctrl.signal});
+      body:JSON.stringify({action,data,token:S.apiToken||''}),signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
     if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
@@ -555,6 +558,9 @@ function openSettings(){
     </ol></div>
     <div class="fg"><label class="fl">Web App URL</label>
       <input class="fc" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.webAppUrl)}"></div>
+    <div class="fg"><label class="fl">🔒 Token Keamanan</label>
+      <input class="fc" id="cfg-tok" type="password" autocomplete="off" placeholder="kosong = belum dikunci" value="${esc(S.apiToken)}">
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px">Samakan dengan API_TOKEN di Apps Script (Project Settings → Script Properties). Tersimpan hanya di HP/PC ini.</div></div>
     <div class="fg"><label class="fl">Auto-Sync</label>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${[{v:30,l:'30 dtk'},{v:60,l:'1 mnt'},{v:120,l:'2 mnt'},{v:300,l:'5 mnt'},{v:0,l:'Manual'}].map(o=>`<button class="tab ${S.pollInterval===o.v?'tab-on':'tab-off'}" onclick="setPoll(${o.v})">${o.l}</button>`).join('')}
@@ -631,7 +637,8 @@ function setPoll(v){S.pollInterval=v;document.querySelectorAll('#overlay .tab').
 async function testConn(){
   const url=document.getElementById('cfg-url').value.trim();if(!url)return;
   const el=document.getElementById('cfg-res');el.textContent='🔄 Testing…';
-  try{const d=await gsFetch(url);el.textContent=`✅ OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='#15803d';}
+  const tok=(document.getElementById('cfg-tok')?.value||'').trim();
+  try{const d=await gsFetch(url,tok);el.textContent=`✅ OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='#15803d';}
   catch(e){el.textContent='❌ '+e.message;el.style.color='#b91c1c';}
 }
 async function saveSettings(){
@@ -641,12 +648,13 @@ async function saveSettings(){
   const hn=document.getElementById('hdr-name');if(hn)hn.textContent=coName;
   document.title=coName;
   const url=document.getElementById('cfg-url')?.value?.trim()||'';
-  S.webAppUrl=url;S.syncError=null;ss(KS.url,url);ss(KS.poll,S.pollInterval);
+  const tok=(document.getElementById('cfg-tok')?.value||'').trim();
+  S.webAppUrl=url;S.apiToken=tok;S.syncError=null;ss(KS.url,url);ss(KS.tok,tok);ss(KS.poll,S.pollInterval);
   closeModal();updateSyncBadge();
   if(url){showToast('🔗 Mengambil data GSheet…','info');await doFetch(url);startPoll();}
   else showToast('✅ Pengaturan disimpan','info');
 }
-function clearGS(){S.webAppUrl='';S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
+function clearGS(){S.webAppUrl='';S.apiToken='';ss(KS.tok,'');S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
 // ── PWA
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{
@@ -4613,7 +4621,7 @@ function printRekapProyek(kode){
 function setTab(page,tab){S.tab[page]=tab;go(page);}
 window.addEventListener('DOMContentLoaded',async()=>{
   loadLocal();
-  S.webAppUrl=sg(KS.url,'');S.pollInterval=Number(sg(KS.poll,60))||60;
+  S.webAppUrl=sg(KS.url,'');S.apiToken=sg(KS.tok,'');S.pollInterval=Number(sg(KS.poll,60))||60;
   const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
   const sn=document.getElementById('spl-name');if(sn)sn.textContent=S.companyName;
   document.title=S.companyName;

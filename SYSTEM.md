@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.37 (Latest) — 2026-09-07
+- **Versi aktif:** v1.38 (Latest) — 2026-09-29
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -213,7 +213,13 @@ R=NILAI FINAL (angka, ditulis app) = F + Σtambah − Σkurang     ← v1.36
 
 ---
 
-## VERSI AKTIF: v1.37 — 2026-09-07
+## VERSI AKTIF: v1.38 — 2026-09-29
+Perubahan v1.38 (Tahap 0 integrasi FCC — lihat PRD di repo FCC `docs/PRD-integrasi-kontraktor-v50.md`):
+- 🔒 **Token keamanan.** Backend membaca token dari **Script Properties `API_TOKEN`** (`_apiToken()` di config.gs) —
+  JANGAN tulis token di file .gs (repo publik). Kosong = terbuka. `buatToken()` = buat token acak (lihat log).
+- App: Pengaturan → **🔒 Token Keamanan** (`S.apiToken`, localStorage `ab3-tok`); `_tokQ()` menambah `&token=` di
+  `gsFetch`/`gsWrite`, `gsPost` mengirim field `token`. Setiap fungsi baru yang memanggil backend WAJIB lewat 3 fungsi ini.
+
 Perubahan v1.37:
 - 🏪 **Log Pembelian "Per Tanggal" kini bertingkat: tanggal → toko → item.** `_beliGroupTanggal()`
   mengelompokkan item tiap tanggal ke dalam sub-grup per nama toko, urut abjad, dan grup

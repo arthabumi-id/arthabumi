@@ -13,6 +13,33 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔒 SESSION 23 (v1.38) — 2026-09-29
+
+## [2026-09-29] v1.38 — Token keamanan (Tahap 0 integrasi dengan FCC)
+
+Latar: backend terbuka (`API_TOKEN = ""`) dan kode `.gs` ada di repo GitHub publik — siapa pun yang tahu URL
+Web App bisa membaca & mengubah data. Ini prasyarat integrasi FCC ⇄ app kontraktor
+(PRD di repo FCC: `docs/PRD-integrasi-kontraktor-v50.md`).
+
+### Backend — `config.gs` saja (v1.9)
+- Token dibaca dari **Project Settings → Script Properties → `API_TOKEN`** (`_apiToken()`), bukan dari file.
+  `API_TOKEN` di constants.gs tetap ada sebagai cadangan, biarkan kosong.
+- `doGet`/`doPost` menolak request tanpa token yang benar (`_apiTokenSalah()`), pesan:
+  "Token salah / belum diisi — cek Pengaturan → Token Keamanan". Property kosong = terbuka seperti dulu.
+- `buatToken()` — jalankan dari editor untuk membuat token acak (hanya ditampilkan di log, tidak dipasang).
+
+### Frontend — `index.html`
+- Pengaturan → Koneksi GSheet: kolom baru **🔒 Token Keamanan** (disimpan per HP di `ab3-tok`).
+- Token ikut di semua request: `gsFetch` / `gsWrite` (`&token=` lewat `_tokQ()`) dan `gsPost` (field `token`).
+  Tombol 🔍 Test memakai token yang sedang diketik. 🔌 Putus ikut menghapus token.
+
+### Urutan pasang (agar tidak terkunci)
+1. Paste `config.gs` → Deploy → Manage deployments → Edit → New version (URL tetap).
+2. Push `index.html` → isi token yang sama di Pengaturan **semua** HP/PC → Simpan (masih jalan, belum dikunci).
+3. Script Properties → tambah `API_TOKEN` = token → mulai saat ini backend terkunci.
+
+---
+
 # 🔧 SESSION 22 (v1.37) — 2026-09-07
 
 ## [2026-09-07] v1.37 — Log Pembelian: kelompok per toko di dalam tiap tanggal
