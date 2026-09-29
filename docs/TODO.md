@@ -125,7 +125,7 @@ kalau perlu, jalankan ulang `backfillNilaiFinal()`.
 ## 📋 Cara Gunakan TODO ini di Session Claude Baru
 
 ```
-Buka Claude baru (folder E:\Mirror\Claude Cowork\Apps Arthabumi sudah tersambung)
+Buka Claude baru (folder D:\Mirror\Claude Cowork\Apps Arthabumi sudah tersambung)
 → "Baca SYSTEM.md dan docs/TODO.md, kerjakan B1"
 ```
 
