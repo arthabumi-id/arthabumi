@@ -13,6 +13,18 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# ⚡ SESSION 23b (backend config.gs v1.10) — 2026-09-29
+
+## Jalur ringan untuk FCC (backend saja, index.html TIDAK berubah)
+Masalah: setiap kiriman FCC (server ke server) dijawab dengan `_apiResponse` = membaca SELURUH sheet
+(12 pembacaan, ±10–15 detik) padahal FCC hanya butuh "ok" → backend sibuk, Sync di HP bisa timeout.
+- `doPost`: body `ringan:true` → setelah aksi dijalankan, jawab `_apiOk()` `{ok,ts}` saja.
+- `doGet` `action=ringkas` → `_apiRingkas()`: hanya projects, karyawan, barang, toko (Tes sambungan & daftar barang FCC).
+- Token tetap wajib di kedua jalur. Pemanggilan app (HP) tidak berubah.
+- **Deploy:** paste `config.gs` → Deploy → Manage deployments → Edit → New version.
+
+---
+
 # 🔒 SESSION 23 (v1.38) — 2026-09-29
 
 ## [2026-09-29] v1.38 — Token keamanan (Tahap 0 integrasi dengan FCC)

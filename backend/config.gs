@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — config.gs  v1.9 (v1.38: token dari Script Properties)
+// ARTHABUMI — config.gs  v1.10 (v1.38: token dari Script Properties · v1.39: jalur ringan utk FCC)
 // Isi: Entry Points (doGet/doPost) + Router ONLY
 //
 // Helper date/find functions → helpers.gs
@@ -42,6 +42,8 @@ function doGet(e) {
     }
 
     var action = p.action || "getAllData";
+    // v1.39: baca ringan untuk FCC (Tes sambungan, daftar barang) — tanpa log pembelian/absensi/kasbon
+    if (action === "ringkas") return _apiRingkas(ss);
     if (action !== "getAllData") {
       var payload = {};
       try { payload = JSON.parse(p.payload || "{}"); } catch (pe) {
@@ -68,6 +70,8 @@ function doPost(e) {
     }
 
     _apiHandleAction(ss, parsed.action || "", parsed.data || {});
+    // v1.39: kiriman dari FCC (server ke server) cukup dijawab ok — tidak perlu membaca seluruh sheet
+    if (parsed.ringan) return _apiOk();
     return _apiResponse(ss);
   } catch (err) {
     return _apiError(err);
@@ -91,6 +95,28 @@ function _apiResponse(ss) {
       rab:           _apiReadRAB(ss),
       subkon:        _apiReadSubkon(ss),
       logSubkon:     _apiReadLogSubkon(ss)
+    }
+  };
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// v1.39: jawaban ringan untuk FCC
+function _apiOk() {
+  return ContentService
+    .createTextOutput(JSON.stringify({ ok: true, ts: new Date().getTime() }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+function _apiRingkas(ss) {
+  var result = {
+    ok: true,
+    ts: new Date().getTime(),
+    data: {
+      projects: _apiReadProjects(ss),
+      karyawan: _apiReadKaryawan(ss),
+      barang:   _apiReadBarang(ss),
+      toko:     _apiReadToko(ss)
     }
   };
   return ContentService

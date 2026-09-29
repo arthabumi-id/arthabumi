@@ -220,6 +220,9 @@ Perubahan v1.38 (Tahap 0 integrasi FCC — lihat PRD di repo FCC `docs/PRD-integ
 - App: Pengaturan → **🔒 Token Keamanan** (`S.apiToken`, localStorage `ab3-tok`); `_tokQ()` menambah `&token=` di
   `gsFetch`/`gsWrite`, `gsPost` mengirim field `token`. Setiap fungsi baru yang memanggil backend WAJIB lewat 3 fungsi ini.
 
+Backend config.gs v1.10 (29 Sep 2026): jalur ringan untuk FCC — POST `ringan:true` → `{ok}` saja; GET `action=ringkas` →
+projects/karyawan/barang/toko saja. Dipakai backend FCC (integrasi, lihat PRD di repo FCC).
+
 Perubahan v1.37:
 - 🏪 **Log Pembelian "Per Tanggal" kini bertingkat: tanggal → toko → item.** `_beliGroupTanggal()`
   mengelompokkan item tiap tanggal ke dalam sub-grup per nama toko, urut abjad, dan grup
