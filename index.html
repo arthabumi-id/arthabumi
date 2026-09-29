@@ -146,7 +146,7 @@ body.is-busy .btn-p,body.is-busy .btn-d{opacity:.5;pointer-events:none;filter:gr
     <div>
       <div class="hdr-logo" id="hdr-name">Arthabumi</div>
       <div class="hdr-sync" id="sync-badge">⚪ Lokal</div>
-      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.36</div>
+      <div id="hdr-ver" style="font-size:9px;color:#64748b;margin-top:1px;cursor:pointer" onclick="openSettings()" title="Lihat changelog">v1.38</div>
     </div>
     <div class="hdr-acts">
       <span id="retry-badge" style="display:none;font-size:11px;color:#fdba74;background:rgba(251,146,60,.15);padding:4px 8px;border-radius:7px"></span>
@@ -4625,6 +4625,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
   const sn=document.getElementById('spl-name');if(sn)sn.textContent=S.companyName;
   document.title=S.companyName;
+  const hv=document.getElementById("hdr-ver");if(hv)hv.textContent=APP_VERSION;   // [v1.38] header ikut APP_VERSION (dulu ditulis mati)
   S._firstLoad=!!S.webAppUrl;   // [v1.36] penanda muat pertama utk skeleton
   go('dashboard');
   document.getElementById('nav').innerHTML=buildNav();
