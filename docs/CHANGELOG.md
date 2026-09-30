@@ -13,6 +13,18 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔗 SESSION 24 (v1.40) — 2026-09-30 — Tahap 4 integrasi FCC
+
+### Backend (paste read.gs + write.gs + config.gs, lalu Deploy → Edit → New version)
+- `read.gs` `_apiClosingFCC(ss, sejak)` — closing dikelompokkan per No Closing: upah (upahHariIni, sudah termasuk lembur) per karyawan × proyek + hari, POTONG & BONUS ber-No Closing; hanya tanggal bayar ≥ sejak. `_apiSubkonFCC` — pekerjaan subkon ber-ID asli (bukan LSK-GS-). `_apiReadBayarSubkonFCC`.
+- `write.gs` sheet baru **LOG BAYAR SUBKON** (dibuat otomatis): `_apiBayarSubkonFCC(items)` (idempoten per ID BSK-FCC-…; menambah Sudah Dibayar LOG SUBKON kol J + status I Belum/DP/Lunas + tgl K; pekerjaan tak ada → error), `_apiHapusBayarSubkonFCC({id})` (mengurangi lagi, hapus baris).
+- `config.gs` v1.11: GET `action=closing&sejak=` ; `ringkas` + `subkon` ; `_apiResponse` + `bayarSubkonFCC` ; router `bayarSubkonFCC` / `hapusBayarSubkonFCC`.
+### Frontend `index.html` v1.40
+- `applyGS`: riwayat cicilan subkon (`S.riwayatBayarSubkon`) ikut memuat pembayaran dari FCC (`fcc:true`) → terlihat di semua HP.
+- ⚠️ Bayar subkon & closing tetap dari app ini untuk closing; bayar subkon mulai dicatat di FCC (jangan dobel dari tombol Bayar di sini).
+
+---
+
 # ⚡ SESSION 23b (backend config.gs v1.10) — 2026-09-29
 
 ## Jalur ringan untuk FCC (backend saja, index.html TIDAK berubah)

@@ -1014,3 +1014,61 @@ function _apiMarkBayarToko(ss, d) {
   if (rowNum < 0) return;
   ws.getRange(rowNum, 13).setValue("Lunas");
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// v1.40 — BAYAR SUBKON DARI FCC
+// Tiap pembayaran = 1 baris di sheet LOG BAYAR SUBKON (dibuat otomatis). ID pembayaran dari FCC
+// (BSK-FCC-…) menjaga agar kiriman ulang tidak menambah dua kali. LOG SUBKON kolom I/J/K
+// (status, sudah dibayar, tgl bayar) ikut diperbarui — status sama aturannya dengan saveBayarSubkon di app:
+// sisa <= 0 → Lunas, sudah bayar > 0 → DP, selain itu Belum Dibayar.
+// ════════════════════════════════════════════════════════════════════════
+var SHEET_BAYAR_SUBKON_FCC = "LOG BAYAR SUBKON";
+
+function _bskSheet(ss) {
+  var ws = ss.getSheetByName(SHEET_BAYAR_SUBKON_FCC);
+  if (!ws) {
+    ws = ss.insertSheet(SHEET_BAYAR_SUBKON_FCC);
+    ws.appendRow(["ID", "Tanggal", "ID Log Subkon", "Nominal", "Keterangan", "Dicatat"]);
+    ws.setFrozenRows(1);
+  }
+  return ws;
+}
+function _bskRow(ws, id) {
+  if (!id || ws.getLastRow() < 2) return -1;
+  var ids = ws.getRange(2, 1, ws.getLastRow() - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) if (String(ids[i][0]).trim() === String(id)) return i + 2;
+  return -1;
+}
+function _lskTambahBayar(ss, idLog, delta, tgl) {
+  var ws = ss.getSheetByName(SHEET.LOG_SUBKON);
+  var r = ws ? _findRowByIdColA(ws, ROWS.LOG_SUBKON, idLog, "LSK-") : -1;
+  if (r < 0) throw new Error("Pekerjaan subkon " + idLog + " tidak ditemukan di app kontraktor");
+  var nilai = _sanitizeNum(ws.getRange(r, 8).getValue());
+  var bayar = Math.max(0, _sanitizeNum(ws.getRange(r, 10).getValue()) + delta);
+  var sts = (nilai > 0 && nilai - bayar <= 0) ? "Lunas" : (bayar > 0 ? "DP" : "Belum Dibayar");
+  ws.getRange(r, 9).setValue(sts);
+  ws.getRange(r, 10).setValue(bayar).setNumberFormat("#,##0");
+  var t = _apiParseDate(tgl);
+  if (t && delta > 0) ws.getRange(r, 11).setValue(t).setNumberFormat("dd/MM/yyyy");
+}
+// items: [{id, idLog, tgl, nominal, ket}]
+function _apiBayarSubkonFCC(ss, items) {
+  var ws = _bskSheet(ss);
+  (items || []).forEach(function (it) {
+    var id = _sanitizeStr(it.id) || "";
+    if (!id || _bskRow(ws, id) > 0) return;                      // sudah pernah → jangan tambah dua kali
+    var nom = _sanitizeNum(it.nominal);
+    _lskTambahBayar(ss, _sanitizeStr(it.idLog), nom, it.tgl);    // lempar error bila pekerjaan tak ada (FCC menandai Gagal)
+    ws.appendRow([id, _apiParseDate(it.tgl) || "", _sanitizeStr(it.idLog), nom, _sanitizeStr(it.ket) || "", new Date()]);
+  });
+}
+// d: {id}
+function _apiHapusBayarSubkonFCC(ss, d) {
+  var ws = ss.getSheetByName(SHEET_BAYAR_SUBKON_FCC);
+  if (!ws) return;
+  var r = _bskRow(ws, d && d.id);
+  if (r < 0) return;                                             // tidak ada = sudah terhapus
+  var v = ws.getRange(r, 1, 1, 4).getValues()[0];
+  try { _lskTambahBayar(ss, String(v[2]), -_sanitizeNum(v[3]), ""); } catch (e) { /* pekerjaan sudah dihapus di app */ }
+  ws.deleteRow(r);
+}

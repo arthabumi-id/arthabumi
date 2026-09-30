@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.38 (Latest) — 2026-09-29
+- **Versi aktif:** v1.40 (Latest) — 2026-09-30
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
@@ -213,7 +213,12 @@ R=NILAI FINAL (angka, ditulis app) = F + Σtambah − Σkurang     ← v1.36
 
 ---
 
-## VERSI AKTIF: v1.38 — 2026-09-29
+## VERSI AKTIF: v1.40 — 2026-09-30
+Perubahan v1.40 (Tahap 4 integrasi FCC): FCC membaca closing (`action=closing`, read.gs `_apiClosingFCC`) dan mencatat
+bayar subkon lewat sheet **LOG BAYAR SUBKON** (`bayarSubkonFCC`/`hapusBayarSubkonFCC`, write.gs). `S.riwayatBayarSubkon`
+kini juga berisi pembayaran dari FCC (`fcc:true`, dari `_apiResponse.bayarSubkonFCC`).
+
+## (sebelumnya) v1.38 — 2026-09-29
 Perubahan v1.38 (Tahap 0 integrasi FCC — lihat PRD di repo FCC `docs/PRD-integrasi-kontraktor-v50.md`):
 - 🔒 **Token keamanan.** Backend membaca token dari **Script Properties `API_TOKEN`** (`_apiToken()` di config.gs) —
   JANGAN tulis token di file .gs (repo publik). Kosong = terbuka. `buatToken()` = buat token acak (lihat log).

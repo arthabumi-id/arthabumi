@@ -342,3 +342,60 @@ function _apiReadLogSubkon(ss) {
   }
   return out;
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// v1.40 — INTEGRASI FCC (dibaca backend FCC, server ke server)
+// ════════════════════════════════════════════════════════════════════════
+
+// Closing gaji untuk antrean FCC, dikelompokkan per No Closing. Hanya closing yang tanggal bayarnya >= sejak
+// (yyyy-MM-dd). Upah = upahHariIni (sudah termasuk lembur) dijumlah per karyawan × proyek. POTONG & BONUS
+// = entri LOG KASBON ber-No Closing (potong kasbon dari bayar subkon tidak punya No Closing → tidak ikut).
+function _apiClosingFCC(ss, sejak) {
+  var abs = _apiReadLogAbsensi(ss), ksb = _apiReadLogKasbon(ss), map = {};
+  function cl(no, tgl) {
+    if (!map[no]) map[no] = { noClosing: no, tglBayar: "", upah: {}, potong: [], bonus: [] };
+    if (tgl && !map[no].tglBayar) map[no].tglBayar = tgl;
+    return map[no];
+  }
+  for (var i = 0; i < abs.length; i++) {
+    var a = abs[i];
+    if (a.statusBayar !== "Sudah Dibayar" || !a.noClosing) continue;
+    var c = cl(a.noClosing, a.tglBayar), k = a.idKaryawan + "|" + a.kodeProj;
+    if (!c.upah[k]) c.upah[k] = { idKaryawan: a.idKaryawan, nama: a.nama, kodeProj: a.kodeProj, namaProj: a.namaProj, hari: 0, upah: 0 };
+    c.upah[k].upah += Number(a.upahHariIni) || 0;
+    c.upah[k].hari += (a.status === "Setengah Hari" ? 0.5 : (a.status === "Hadir" ? 1 : 0));
+  }
+  for (var j = 0; j < ksb.length; j++) {
+    var b = ksb[j];
+    if (!b.noClosing || (b.tipe !== "POTONG" && b.tipe !== "BONUS")) continue;
+    var c2 = cl(b.noClosing, b.tgl);
+    (b.tipe === "POTONG" ? c2.potong : c2.bonus).push({ idKaryawan: b.idKaryawan, nama: b.nama, kodeProj: b.kodeProj, nominal: Number(b.nominal) || 0 });
+  }
+  var out = [];
+  Object.keys(map).forEach(function (no) {
+    var c3 = map[no];
+    if (sejak && String(c3.tglBayar || "") < String(sejak)) return;
+    c3.upah = Object.keys(c3.upah).map(function (k2) { return c3.upah[k2]; });
+    out.push(c3);
+  });
+  return out;
+}
+
+// Pekerjaan subkon yang bisa dibayar dari FCC (hanya baris ber-ID asli di kolom A, bukan LSK-GS- legacy).
+function _apiSubkonFCC(ss) {
+  return _apiReadLogSubkon(ss).filter(function (x) { return x.id.indexOf("LSK-") === 0 && x.id.indexOf("LSK-GS-") !== 0; })
+    .map(function (x) { return { id: x.id, kodeProj: x.kodeProj, namaSubkon: x.namaSubkon, uraian: x.uraian, nilaiKontrak: x.nilaiKontrak, nominalBayar: x.nominalBayar, statusBayar: x.statusBayar }; });
+}
+
+// Riwayat pembayaran subkon yang dicatat dari FCC (sheet LOG BAYAR SUBKON) — untuk tampilan cicilan di app.
+function _apiReadBayarSubkonFCC(ss) {
+  var ws = ss.getSheetByName(SHEET_BAYAR_SUBKON_FCC);
+  if (!ws || ws.getLastRow() < 2) return [];
+  var data = ws.getRange(2, 1, ws.getLastRow() - 1, 5).getValues(), out = [];
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i];
+    if (!String(r[0]).trim()) continue;
+    out.push({ id: String(r[0]), tgl: _apiSerDate(r[1]), idLog: String(r[2]), nominal: Number(r[3]) || 0, ket: String(r[4] || "") });
+  }
+  return out;
+}

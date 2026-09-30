@@ -190,8 +190,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.38';
+const APP_VERSION='v1.40';
 const APP_CHANGELOG=[
+  {v:'v1.40',date:'30 Sep 2026',desc:'Terhubung ke FCC: pembayaran subkon yang dicatat di FCC otomatis menambah Sudah Dibayar pekerjaan subkon dan muncul di riwayat cicilan (semua HP). Closing gaji dibaca FCC untuk dicatat sebagai pengeluaran gaji per proyek'},
   {v:'v1.38',date:'29 Sep 2026',desc:'🔒 Token Keamanan — koneksi Google Sheet bisa dikunci. Isi token di Pengaturan (sama dengan yang di Apps Script); HP tanpa token yang benar tidak bisa membaca/menulis data'},
   {v:'v1.36',date:'4 Sep 2026',desc:'👷 Rekap Tenaga Kerja per proyek di Rekap Proyek — per tukang: jumlah hari (setengah hari = 0,5), jam lembur, total upah, dipecah sudah/belum dibayar, ketuk nama untuk lihat rincian tanggal. Nilai kerja tambah/kurang kini ikut terhitung di Google Sheet (kolom R Nilai Final). Indikator proses: garis hijau di atas layar + tombol aksi terkunci saat data sedang disimpan'},
   {v:'v1.35',date:'16 Jul 2026',desc:'Input Pembelian: keterangan harga TERENDAH sepanjang riwayat (toko + tanggal + selisih vs harga sekarang), atau tanda ✅ kalau harga terakhir memang yang termurah'},
@@ -350,6 +351,13 @@ function applyGS(d){
   if(d.logKasbon){const m=_mergeArr(S.logKasbon,d.logKasbon,'KSB-GS-',x=>`${x.tgl}|${x.idKaryawan}|${x.tipe}|${x.nominal}`,x=>x.pending===true);S.logKasbon=m;ss(KS.ksb,m);}
   if(d.logPembayaran){const m=_mergeArr(S.logPembayaran,d.logPembayaran,'PAY-GS-',x=>`${x.tgl}|${x.kodeProj}|${x.nominal}`,x=>x.pending===true);S.logPembayaran=m;ss(KS.bayar,m);}
   if(d.logSubkon){const m=_mergeArr(S.logSubkon,d.logSubkon,'LSK-GS-',x=>`${x.tgl}|${x.idSubkon}|${x.kodeProj}`,x=>x.pending===true);S.logSubkon=m;ss(KS.lsk,m);}
+  if(d.bayarSubkonFCC){ // [v1.40] riwayat bayar subkon yang dicatat dari FCC (sheet LOG BAYAR SUBKON) — ganti entri fcc lama
+    const r=S.riwayatBayarSubkon||{};
+    Object.keys(r).forEach(k=>{r[k]=(r[k]||[]).filter(x=>!x.fcc);if(!r[k].length)delete r[k];});
+    d.bayarSubkonFCC.forEach(b=>{(r[b.idLog]=r[b.idLog]||[]).push({tgl:b.tgl,nominal:b.nominal,fcc:true});});
+    Object.keys(r).forEach(k=>r[k].sort((a,b)=>String(a.tgl||'').localeCompare(String(b.tgl||''))));
+    S.riwayatBayarSubkon=r;ss(KS.rbsk,r);
+  }
   S.lastSync=new Date();S.syncError=null;updateSyncBadge();
 }
 async function doFetch(url){

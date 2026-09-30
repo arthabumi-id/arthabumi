@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — config.gs  v1.10 (v1.38: token dari Script Properties · v1.39: jalur ringan utk FCC)
+// ARTHABUMI — config.gs  v1.11 (v1.38: token · v1.39: jalur ringan utk FCC · v1.40: closing & bayar subkon FCC)
 // Isi: Entry Points (doGet/doPost) + Router ONLY
 //
 // Helper date/find functions → helpers.gs
@@ -44,6 +44,10 @@ function doGet(e) {
     var action = p.action || "getAllData";
     // v1.39: baca ringan untuk FCC (Tes sambungan, daftar barang) — tanpa log pembelian/absensi/kasbon
     if (action === "ringkas") return _apiRingkas(ss);
+    // v1.40: closing gaji untuk antrean FCC (tanggal bayar >= sejak)
+    if (action === "closing") return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, ts: new Date().getTime(), data: { closing: _apiClosingFCC(ss, p.sejak || "") } }))
+      .setMimeType(ContentService.MimeType.JSON);
     if (action !== "getAllData") {
       var payload = {};
       try { payload = JSON.parse(p.payload || "{}"); } catch (pe) {
@@ -94,7 +98,8 @@ function _apiResponse(ss) {
       toko:          _apiReadToko(ss),
       rab:           _apiReadRAB(ss),
       subkon:        _apiReadSubkon(ss),
-      logSubkon:     _apiReadLogSubkon(ss)
+      logSubkon:     _apiReadLogSubkon(ss),
+      bayarSubkonFCC: _apiReadBayarSubkonFCC(ss)   // v1.40: riwayat bayar subkon dari FCC
     }
   };
   return ContentService
@@ -116,7 +121,8 @@ function _apiRingkas(ss) {
       projects: _apiReadProjects(ss),
       karyawan: _apiReadKaryawan(ss),
       barang:   _apiReadBarang(ss),
-      toko:     _apiReadToko(ss)
+      toko:     _apiReadToko(ss),
+      subkon:   _apiSubkonFCC(ss)          // v1.40: pekerjaan subkon untuk form bayar di FCC
     }
   };
   return ContentService
@@ -173,6 +179,8 @@ function _apiHandleAction(ss, action, data) {
     case "editLogSubkon":     _apiEditLogSubkon(ss, data);     break;
     case "uploadBuktiSubkon": _apiUploadBuktiSubkon(ss, data); break;
     case "markBayarToko":    _apiMarkBayarToko(ss, data);    break;
+    case "bayarSubkonFCC":      _apiBayarSubkonFCC(ss, data);      break;   // v1.40 (dari FCC)
+    case "hapusBayarSubkonFCC": _apiHapusBayarSubkonFCC(ss, data); break;   // v1.40 (dari FCC)
     case "deleteLogSubkon":   _apiDeleteLogSubkon(ss, data);   break;
 
     // Rekap GSheet
