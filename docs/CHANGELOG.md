@@ -13,6 +13,16 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🎨 SESSION 27 (v1.43) — 2026-10-03 — Redesain gaya B, Fase 3 Dashboard & Proyek
+
+### Frontend saja — backend tidak berubah
+- Dashboard (tampilan Proyek): kotak ringkasan `.hero` (est. laba filter aktif, margin = tL/tK, jumlah proyek ber-peringatan, Kontrak/Total biaya/Diterima). Kartu `.pj`: kepala (nama, jenis · kode, status, Rekap), peringatan lengkap dengan penjelasan (upah belum dibayar & % kontrak; % biaya dari RAB + progres), Kontrak/Total biaya/Est. laba, bar Biaya vs RAB & Progres, tombol Buat RAB bila belum ada, kaki Diterima/Piutang/Cashflow. Proyek berperingatan diurutkan di atas (urutan lain tetap). Baris hitung disalin apa adanya (dicek patch).
+- Piutang & Hutang: ringkasan jadi hero; garis kiri kartu dibuang (piutang ≥ 50% kini ditulis). Master Proyek: kartu baru (kontrak, progres, catatan, Rekap/Edit/Hapus).
+- Perbaikan tampilan: tab Proyek di Dashboard kini tampak aktif (dulu tidak, karena `go()` mengisi S.tab.dashboard='input').
+- Uji: semua nominal Rp di Dashboard (Berjalan, Semua, skenario peringatan), Piutang, Hutang, Proyek sama dengan v1.42 (nominal baru hanya angka upah belum dibayar di teks peringatan); 46 layar 0 error; uji dialog/tema/toast lulus.
+
+---
+
 # 🎨 SESSION 26 (v1.42) — 2026-10-03 — Redesain gaya B, Fase 2 Ikon & halaman input
 
 ### Frontend saja — backend tidak berubah
