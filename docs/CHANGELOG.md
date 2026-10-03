@@ -13,6 +13,19 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🎨 SESSION 25 (v1.41) — 2026-10-03 — Redesain gaya B, Fase 1 Fondasi (PRD docs/PRD-redesain-b-v1.41.md)
+
+### Frontend saja (index.html + folder baru fonts/ & icons/) — backend TIDAK berubah, tidak perlu paste/deploy Apps Script
+- Palet gaya B sama dengan FCC sebagai token CSS: `:root` = terang (bawaan), `:root.dark` = gelap. Huruf Plus Jakarta Sans + Fraunces disimpan di `fonts/` (lisensi OFL).
+- 672 warna yang ditulis langsung di kode layar diganti token (peta per warna; `#fff` di `color:` → `--on`, selain itu → `--bg2`; pilihan aktif/aksen → `--accent`; kotak ringkasan closing gelap → `--hero`). Dokumen cetak, laporan HTML & Excel (baris _loadXlsx…printRekapProyek) **tidak disentuh**.
+- Header baru: logo, status sync, tombol Sync/Tema/Pengaturan (ikon garis). Tema disimpan per perangkat (`ab3-theme`), diterapkan sebelum halaman tampil.
+- 14 `confirm()` → `askConfirm()` (dialog di dalam app; fungsi pemanggil jadi async). Selama dialog terbuka hasil sync ditahan (`_cfmHold`) supaya index data tidak bergeser; Ya → dibuang, Batal → diterapkan.
+- Ikon app & manifest baru (`icons/`) → hapus & tambah ulang shortcut di HP.
+- Uji (Playwright, data contoh di localStorage, tanpa GSheet): 44 layar/tab/modal — teks semua layar **sama persis** dengan v1.40 (kecuali catatan versi); 0 error; dialog Batal/Esc/Ya + penahan sync; tema tersimpan; kontras pasangan warna utama ≥ 4,5:1 terang & gelap.
+- Backup: `backups/index-v1.40-20261003-124436.html`.
+
+---
+
 # 🔗 SESSION 24 (v1.40) — 2026-09-30 — Tahap 4 integrasi FCC
 
 ### Backend (paste read.gs + write.gs + config.gs, lalu Deploy → Edit → New version)

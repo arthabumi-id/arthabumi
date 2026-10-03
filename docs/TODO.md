@@ -1,7 +1,8 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: **2026-09-07**
-Versi kode saat ini: **v1.37** — sudah di folder lokal, **BELUM di-push** ke GitHub Pages.
+Terakhir diupdate: **2026-10-03**
+Versi kode saat ini: **v1.41** (redesain gaya B fase 1, menunggu push). Redesain lanjut: v1.42 ikon & halaman input → v1.43 Dashboard & Proyek → v1.44 tampilan PC (docs/PRD-redesain-b-v1.41.md).
+> 📌 Setelah redesain selesai: ingatkan Eddy — utang U2/U3/U5 dikerjakan lewat PRD terpisah (U3 confirm() sudah beres di v1.41).
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 
 ---
