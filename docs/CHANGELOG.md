@@ -13,6 +13,16 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🎨 SESSION 26 (v1.42) — 2026-10-03 — Redesain gaya B, Fase 2 Ikon & halaman input
+
+### Frontend saja — backend tidak berubah
+- `ic(nama)` + `ICONS` (ikon garis SVG inline, ukuran 1.15em, warna currentColor) di awal skrip. 218 emoji di teks template/string → ikon (lexer string/template; tombol tanpa teks → `ic(n,'b')` min 40px). 65 emoji di toast/askConfirm/textContent/option/placeholder dibuang (teks tetap teks biasa). Changelog app & bagian cetak/Excel tidak disentuh (dicek identik).
+- Menu bawah & sheet Lainnya: nama ikon di NAV, pil aktif; toast berikon sesuai jenis; status sync pakai titik warna; antrean retry "Antre n".
+- Tab halaman (.tabs) jadi segmen; chip filter tetap pil. Target sentuh: .btn ≥44px, .btn-sm ≥36px, input ≥46px.
+- Uji: 44 layar — teks identik dengan v1.41 setelah emoji dihilangkan (beda hanya ••• → ikon & catatan versi); 0 error; uji dialog/tema/toast lulus.
+
+---
+
 # 🎨 SESSION 25 (v1.41) — 2026-10-03 — Redesain gaya B, Fase 1 Fondasi (PRD docs/PRD-redesain-b-v1.41.md)
 
 ### Frontend saja (index.html + folder baru fonts/ & icons/) — backend TIDAK berubah, tidak perlu paste/deploy Apps Script

@@ -156,6 +156,32 @@ body.is-busy .btn-p,body.is-busy .btn-d{opacity:.5;pointer-events:none;filter:gr
 .prog-fill{height:100%;border-radius:99px;transition:width .3s}
 .num-hint{font-size:10px;color:var(--text3);margin-top:3px}
 details>summary{color:inherit}
+/* [v1.42] ikon garis, tab segmen, target sentuh */
+.ic{width:1.15em;height:1.15em;vertical-align:-.2em;flex-shrink:0;display:inline-block}
+button:has(> .ic-b){min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+.nav-ic{display:flex;align-items:center;justify-content:center;width:46px;height:28px;border-radius:14px;font-size:19px;transition:background .15s}
+.nav-btn.on .nav-ic{background:var(--accent-soft)}
+.nav-btn{gap:3px;min-height:56px}
+.nav-dot{display:none}
+.sheet-ic{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-size:20px}
+.sheet-item{color:var(--text)}
+.hdr-sync::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:5px;vertical-align:1px}
+#toast{align-items:center;justify-content:center;gap:8px}
+#toast .ic{font-size:17px}
+.row:has(> .sec-title + .tabs){flex-direction:column;align-items:stretch;gap:10px}
+.row:has(> .sec-title + .tabs) > .sec-title{margin:0!important}
+.tabs{gap:4px;padding:4px;background:var(--bg4);border-radius:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border-radius:17px;white-space:nowrap}
+.tabs .tab{flex:1 0 auto;min-height:38px;padding:6px 12px;border-radius:9px;font-size:12.5px}
+.tabs .tab-on{background:var(--bg2);color:var(--text);box-shadow:var(--shadow);font-weight:700}
+:root.dark .tabs .tab-on{color:var(--accent)}
+.tabs .tab-off{background:transparent;color:var(--text2)}
+.btn{min-height:44px;gap:6px}
+.btn-sm{min-height:36px}
+.fc{min-height:46px}
+textarea.fc{min-height:0}
+.sec-title .ic{color:var(--accent)}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
 #cfm.show{display:flex}
@@ -210,7 +236,7 @@ details>summary{color:inherit}
       <div class="hdr-mark" aria-hidden="true">A</div>
       <div style="min-width:0">
         <div class="hdr-logo" id="hdr-name">Arthabumi</div>
-        <div class="hdr-line"><span class="hdr-sync" id="sync-badge">⚪ Lokal</span><span id="hdr-ver" class="hdr-ver" onclick="openSettings()" title="Lihat changelog">v1.41</span></div>
+        <div class="hdr-line"><span class="hdr-sync" id="sync-badge">Lokal</span><span id="hdr-ver" class="hdr-ver" onclick="openSettings()" title="Lihat changelog">v1.41</span></div>
       </div>
     </div>
     <div class="hdr-acts">
@@ -234,6 +260,9 @@ details>summary{color:inherit}
 </div>
 <script>
 'use strict';
+// [v1.42] Ikon garis (pengganti emoji). ic(nama) → <svg>; ukuran mengikuti huruf (1.15em). ic(nama,'b') = ikon tombol tanpa teks.
+const ICONS={"check-circle":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8.5 12.5 2.5 2.5 4.5-5\"/>","x-circle":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m9 9 6 6M15 9l-6 6\"/>","trash":"<path d=\"M4 7h16\"/><path d=\"M9.5 7V4.5h5V7\"/><path d=\"M6 7l1 13h10l1-13\"/><path d=\"M10 11v5M14 11v5\"/>","save":"<path d=\"M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z\"/><path d=\"M8 4v5h7V4\"/><rect x=\"8\" y=\"13\" width=\"8\" height=\"5\" rx=\"1\"/>","alert":"<path d=\"M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z\"/><path d=\"M12 9.5v4\"/><path d=\"M12 17h.01\"/>","edit":"<path d=\"M4 20h4L19 9l-4-4L4 16z\"/><path d=\"m13.5 6.5 4 4\"/>","calendar":"<rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"2\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/>","user":"<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4.5 20a7.5 7.5 0 0 1 15 0\"/>","lock":"<rect x=\"4.5\" y=\"10.5\" width=\"15\" height=\"10\" rx=\"2\"/><path d=\"M8 10.5V7a4 4 0 0 1 8 0v3.5\"/>","clipboard":"<rect x=\"5\" y=\"4\" width=\"14\" height=\"17\" rx=\"2\"/><path d=\"M9 4V2.8h6V4\"/><path d=\"M9 11h6M9 15h4\"/>","cash":"<rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2.6\"/><path d=\"M6 9.5v5M18 9.5v5\"/>","briefcase":"<rect x=\"3\" y=\"7\" width=\"18\" height=\"13\" rx=\"2\"/><path d=\"M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2\"/><path d=\"M3 13h18\"/>","clock":"<circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/>","chart":"<path d=\"M3 20h18\"/><path d=\"M6.5 16v-5M11.5 16V6M16.5 16v-8\"/>","bulb":"<path d=\"M9 18h6M10 21h4\"/><path d=\"M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z\"/>","gift":"<rect x=\"3\" y=\"8\" width=\"18\" height=\"4\" rx=\"1\"/><path d=\"M5 12v8h14v-8M12 8v12\"/><path d=\"M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z\"/>","gear":"<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z\"/>","store":"<path d=\"M4 9.5V20h16V9.5\"/><path d=\"M3 9.5 5 4h14l2 5.5a2.5 2.5 0 0 1-4.5 1.5 2.5 2.5 0 0 1-4.5 0 2.5 2.5 0 0 1-4.5 0A2.5 2.5 0 0 1 3 9.5z\"/><path d=\"M10 20v-5h4v5\"/>","hammer":"<path d=\"m14 7 3 3\"/><path d=\"M5 21 15.5 10.5\"/><path d=\"M12.5 4.5 15 2l7 7-2.5 2.5-2-2-1 1-3.5-3.5 1-1z\"/>","building":"<path d=\"M3 21h18\"/><path d=\"M5 21V8l7-5 7 5v13\"/><path d=\"M9.5 21v-5h5v5\"/><path d=\"M9 11h.01M15 11h.01\"/>","building2":"<rect x=\"4\" y=\"3\" width=\"16\" height=\"18\" rx=\"1.5\"/><path d=\"M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3\"/>","hourglass":"<path d=\"M6 3h12M6 21h12\"/><path d=\"M7 3c0 4 4 5 5 9 1-4 5-5 5-9M7 21c0-4 4-5 5-9 1 4 5 5 5 9\"/>","note":"<path d=\"M5 3.5h10l4 4V20a.5.5 0 0 1-.5.5h-13A.5.5 0 0 1 5 20z\"/><path d=\"M8.5 11h7M8.5 15h7M8.5 7h3\"/>","download":"<path d=\"M12 4v11M7 10l5 5 5-5M5 20h14\"/>","upload":"<path d=\"M12 16V5M7 10l5-5 5 5M5 20h14\"/>","printer":"<path d=\"M7 9V3h10v6\"/><rect x=\"3\" y=\"9\" width=\"18\" height=\"8\" rx=\"2\"/><path d=\"M7 14h10v7H7z\"/>","scissors":"<circle cx=\"6\" cy=\"6\" r=\"2.5\"/><circle cx=\"6\" cy=\"18\" r=\"2.5\"/><path d=\"M8 7.5 20 18M8 16.5 20 6\"/>","sync":"<path d=\"M20 11a8 8 0 0 0-14.6-4.4L3.5 9\"/><path d=\"M3.5 4v5h5\"/><path d=\"M4 13a8 8 0 0 0 14.6 4.4l1.9-2.4\"/><path d=\"M20.5 20v-5h-5\"/>","link":"<path d=\"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1\"/><path d=\"M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1\"/>","search":"<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-4-4\"/>","sparkles":"<path d=\"M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z\"/><path d=\"M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7z\"/>","card":"<rect x=\"2.5\" y=\"5\" width=\"19\" height=\"14\" rx=\"2\"/><path d=\"M2.5 10h19M6 15h4\"/>","undo":"<path d=\"M9 14 4 9l5-5\"/><path d=\"M4 9h11a5 5 0 0 1 0 10h-3\"/>","camera":"<path d=\"M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z\"/><circle cx=\"12\" cy=\"13.5\" r=\"3.5\"/>","ruler":"<path d=\"M3 17 17 3l4 4L7 21z\"/><path d=\"m7.5 12.5 2 2M10.5 9.5l2 2M13.5 6.5l2 2\"/>","wrench":"<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z\"/>","brick":"<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"1\"/><path d=\"M3 12h18M9 5v7M15 12v7\"/>","zap":"<path d=\"M13 2 4 14h7l-1 8 9-12h-7z\"/>","cart":"<circle cx=\"9\" cy=\"20\" r=\"1.4\"/><circle cx=\"18\" cy=\"20\" r=\"1.4\"/><path d=\"M2.5 3.5h2.8l2.4 11.5h11.2l2-7.7H6.3\"/>","wallet":"<path d=\"M19 7V5.5A1.5 1.5 0 0 0 17.5 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1H5\"/><circle cx=\"16\" cy=\"13.5\" r=\"1.1\"/>","info":"<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v5M12 8h.01\"/>","plug":"<path d=\"M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0z\"/><path d=\"M12 16v5\"/>","phone":"<rect x=\"7\" y=\"2.5\" width=\"10\" height=\"19\" rx=\"2\"/><path d=\"M11 18h2\"/>","dot":"<circle cx=\"12\" cy=\"12\" r=\"5\" fill=\"currentColor\" stroke=\"none\"/>","trend-down":"<path d=\"m3 7 6 6 4-4 8 8\"/><path d=\"M21 11v6h-6\"/>","folder":"<path d=\"M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"/>","eye":"<path d=\"M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>","box":"<path d=\"M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z\"/><path d=\"m3 7.5 9 4.5 9-4.5M12 12v9\"/>","paperclip":"<path d=\"m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4L14.5 7\"/>","grid":"<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/>","clipboard-check":"<rect x=\"5\" y=\"4\" width=\"14\" height=\"17\" rx=\"2\"/><path d=\"M9 4V2.8h6V4\"/><path d=\"m9 13 2 2 4-4.2\"/>","users":"<circle cx=\"9\" cy=\"8\" r=\"3.5\"/><path d=\"M2.5 20a6.5 6.5 0 0 1 13 0\"/><path d=\"M16 4.7a3.5 3.5 0 0 1 0 6.6\"/><path d=\"M18.5 14.3A6.5 6.5 0 0 1 21.5 20\"/>","dots":"<circle cx=\"5\" cy=\"12\" r=\"1.3\" fill=\"currentColor\"/><circle cx=\"12\" cy=\"12\" r=\"1.3\" fill=\"currentColor\"/><circle cx=\"19\" cy=\"12\" r=\"1.3\" fill=\"currentColor\"/>"};
+function ic(n,k){return`<svg class="ic${k?' ic-'+k:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;}
 // ARTHABUMI v1.11 - Cashflow per Project + Single Shop Name + Confirmation Modal + Date Filter
 const S={
   page:'dashboard',tab:{},formBeliProj:'',formBeliTgl:'',
@@ -256,8 +285,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.41';
+const APP_VERSION='v1.42';
 const APP_CHANGELOG=[
+  {v:'v1.42',date:'3 Okt 2026',desc:'Emoji di menu, tombol & judul diganti ikon garis yang seragam; tab halaman berbentuk segmen; tombol lebih besar & mudah diketuk. Angka & cara kerja tidak berubah'},
   {v:'v1.41',date:'3 Okt 2026',desc:'Tampilan baru gaya Arthabumi (sama dengan FCC): warna terang hangat, huruf baru, tema gelap (tombol bulan di atas), konfirmasi hapus di dalam app, ikon app baru (hapus & tambah ulang shortcut di HP). Angka & cara kerja tidak berubah'},
   {v:'v1.40',date:'30 Sep 2026',desc:'Terhubung ke FCC: pembayaran subkon yang dicatat di FCC otomatis menambah Sudah Dibayar pekerjaan subkon dan muncul di riwayat cicilan (semua HP). Closing gaji dibaca FCC untuk dicatat sebagai pengeluaran gaji per proyek'},
   {v:'v1.38',date:'29 Sep 2026',desc:'🔒 Token Keamanan — koneksi Google Sheet bisa dikunci. Isi token di Pengaturan (sama dengan yang di Apps Script); HP tanpa token yang benar tidak bisa membaca/menulis data'},
@@ -297,7 +327,7 @@ const calcTotal=it=>{const b=(Number(it.qty)||0)*(Number(it.harga)||0),d=Number(
 const padId=(pfx,arr,key='id')=>pfx+'-'+String(Math.max(0,...arr.map(x=>parseInt((x[key]||'0').split('-').pop())||0))+1).padStart(3,'0');
 const bdgClass=s=>({Berjalan:'bdg-blue',Selesai:'bdg-green',Hold:'bdg-yellow',Batal:'bdg-red',Hadir:'bdg-green','Tidak Hadir':'bdg-red','Setengah Hari':'bdg-yellow',Libur:'bdg-gray',AMBIL:'bdg-orange',POTONG:'bdg-purple',BONUS:'bdg-yellow','Belum Dibayar':'bdg-red','Sudah Dibayar':'bdg-green',DP:'bdg-orange',Lunas:'bdg-green'}[s]||'bdg-gray');
 const bdg=(s,extra='')=>`<span class="bdg ${bdgClass(s)} ${extra}">${esc(s)}</span>`;
-function showToast(msg,type='ok'){const el=document.getElementById('toast');el.textContent=msg;el.className=`t-${type}`;el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',type==='err'?6000:type==='info'?2000:4000);}
+function showToast(msg,type='ok'){const el=document.getElementById('toast');el.textContent=String(msg).replace(/^(?:\p{Extended_Pictographic}\uFE0F?\s*)+/u,'');el.insertAdjacentHTML('afterbegin',ic(type==='err'?'alert':type==='info'?'info':'check-circle'));el.className=`t-${type}`;el.style.display='flex';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',type==='err'?6000:type==='info'?2000:4000);}
 // ── [v1.8] Format angka ribuan Indonesia (titik pemisah ribuan)
 function applyNiFmt(el){
   let r=el.value.replace(/[^0-9]/g,'');
@@ -327,7 +357,7 @@ function setBusy(on,lock){
 }
 // Placeholder saat data pertama kali masih dimuat dari GSheet
 function skel(n){return `<div>${Array.from({length:n||3},()=>'<div class="sk sk-row"></div>').join('')}</div>
-  <div style="text-align:center;font-size:12px;color:var(--text3);padding:4px 0 10px">⏳ Memuat data dari GSheet…</div>`;}
+  <div style="text-align:center;font-size:12px;color:var(--text3);padding:4px 0 10px">${ic('hourglass')} Memuat data dari GSheet…</div>`;}
 // [v1.38] token keamanan — ikut di setiap request (kosong = backend belum dikunci)
 function _tokQ(tok){const t=(tok===undefined?S.apiToken:tok)||'';return t?'&token='+encodeURIComponent(t):'';}
 async function gsFetch(url,tok){
@@ -433,7 +463,7 @@ async function doFetch(url){
   try{const d=await gsFetch(u);applyGS(d);}
   catch(e){
     const msg=e.name==='AbortError'?'GSheet lambat/timeout — data lokal dipakai':('GSheet: '+e.message);
-    S.syncError=msg;showToast('⚠️ '+msg,'err');
+    S.syncError=msg;showToast(''+msg,'err');
   }
   finally{
     const wasFirst=S._firstLoad;S.syncing=false;S._firstLoad=false;
@@ -445,22 +475,22 @@ async function doFetch(url){
 }
 async function doSync(action,payload){
   if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();setBusy(true,true);
-  showToast('🔄 Menyimpan ke GSheet…','info');
-  try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('✅ GSheet berhasil diupdate!');go(S.page);}
+  showToast('Menyimpan ke GSheet…','info');
+  try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('GSheet berhasil diupdate!');go(S.page);}
   catch(e){
     const msg=e.name==='AbortError'?'GSheet timeout — data disimpan lokal, retry otomatis':e.message;
-    S.syncError=msg;S.retryQ.push({action,payload,retries:0});showToast('⚠️ '+msg,'err');
+    S.syncError=msg;S.retryQ.push({action,payload,retries:0});showToast(''+msg,'err');
   }
   finally{S.syncing=false;updateSyncBadge();setBusy(false,true);}
 }
 function updateSyncBadge(){
   const el=document.getElementById('sync-badge');if(!el)return;
-  if(!S.webAppUrl){el.textContent='⚪ Lokal';el.style.color='var(--text2)';}
-  else if(S.syncing){el.textContent='🔄 Sync…';el.style.color='var(--blue)';}
-  else if(S.syncError){el.textContent='⚠️ Gagal';el.style.color='var(--red)';}
-  else if(S.lastSync){el.textContent='✅ '+S.lastSync.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+(S.countdown>0?' ·'+S.countdown+'d':'');el.style.color='var(--green)';}
-  else{el.textContent='⚡ GSheet';el.style.color='var(--amber)';}
-  const rb=document.getElementById('retry-badge');if(rb){rb.style.display=S.retryQ.length>0?'inline':'none';rb.textContent='⏳'+S.retryQ.length;}
+  if(!S.webAppUrl){el.textContent='Lokal';el.style.color='var(--text2)';}
+  else if(S.syncing){el.textContent='Sync…';el.style.color='var(--blue)';}
+  else if(S.syncError){el.textContent='Gagal';el.style.color='var(--red)';}
+  else if(S.lastSync){el.textContent=''+S.lastSync.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+(S.countdown>0?' ·'+S.countdown+'d':'');el.style.color='var(--green)';}
+  else{el.textContent='GSheet';el.style.color='var(--amber)';}
+  const rb=document.getElementById('retry-badge');if(rb){rb.style.display=S.retryQ.length>0?'inline':'none';rb.textContent='Antre '+S.retryQ.length;}
   const sb=document.getElementById('btn-sync');if(sb)sb.style.display=S.webAppUrl?'inline-flex':'none';
 }
 function manualSync(){S.countdown=S.pollInterval;doFetch();}
@@ -480,27 +510,27 @@ document.addEventListener('visibilitychange',()=>{
 setInterval(async()=>{
   if(!S.webAppUrl||S.retryQ.length===0||S.syncing)return;
   const item=S.retryQ[0];if(!item)return;
-  if(item.retries>=3){S.retryQ.shift();showToast('❌ Retry gagal 3x','err');return;}
+  if(item.retries>=3){S.retryQ.shift();showToast('Retry gagal 3x','err');return;}
   S.syncing=true;setBusy(true,false);
-  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('✅ Retry OK');}
+  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('Retry OK');}
   catch{item.retries++;}
   finally{S.syncing=false;updateSyncBadge();setBusy(false,false);}
 },30000);
 // ── Navigation
 const NAV_MAIN=[
-  {id:'dashboard',label:'Dashboard',icon:'📊'},
-  {id:'project',label:'Proyek',icon:'🏗️'},
-  {id:'beli',label:'Pembelian',icon:'🛒'},
-  {id:'absensi',label:'Absensi',icon:'📋'},
-  {id:'kasbon',label:'Kasbon',icon:'💸'},
+  {id:'dashboard',label:'Dashboard',icon:'grid'},
+  {id:'project',label:'Proyek',icon:'building'},
+  {id:'beli',label:'Pembelian',icon:'cart'},
+  {id:'absensi',label:'Absensi',icon:'clipboard-check'},
+  {id:'kasbon',label:'Kasbon',icon:'wallet'},
 ];
 const NAV_LAIN=[
-  {id:'closing',label:'Closing',icon:'🔒'},
-  {id:'karyawan',label:'Karyawan',icon:'👷'},
-  {id:'bayar',label:'Bayar',icon:'💰'},
-  {id:'rab',label:'RAB',icon:'📐'},
-  {id:'subkon',label:'Subkon',icon:'🔨'},
-  {id:'catatan',label:'Catatan',icon:'📝'},
+  {id:'closing',label:'Closing',icon:'lock'},
+  {id:'karyawan',label:'Karyawan',icon:'users'},
+  {id:'bayar',label:'Bayar',icon:'cash'},
+  {id:'rab',label:'RAB',icon:'ruler'},
+  {id:'subkon',label:'Subkon',icon:'hammer'},
+  {id:'catatan',label:'Catatan',icon:'note'},
 ];
 const NAV=[...NAV_MAIN,...NAV_LAIN];
 // Menu utama bisa diatur user (⚙️ Atur Menu di sheet Lainnya) — tersimpan di localStorage
@@ -515,13 +545,13 @@ function buildNav(){
   const mainBtns=mainIds.map(id=>{
     const n=NAV.find(x=>x.id===id);
     return `<button class="nav-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">
-    <span style="font-size:20px;line-height:1">${n.icon}</span>
+    <span class="nav-ic">${ic(n.icon)}</span>
     <span style="font-size:10px;font-weight:600;letter-spacing:-.2px">${n.label}</span>
     ${S.page===n.id?'<div class="nav-dot"></div>':''}
   </button>`;
   }).join('');
   const lainBtn=`<button class="nav-btn${lainActive?' on':''}" onclick="openLainnya()">
-    <span style="font-size:18px;line-height:1;letter-spacing:2px">•••</span>
+    <span class="nav-ic">${ic('dots')}</span>
     <span style="font-size:10px;font-weight:600">Lainnya</span>
     ${lainActive?'<div class="nav-dot"></div>':''}
   </button>`;
@@ -532,13 +562,13 @@ function buildNavSheet(){
   const mainIds=getNavMain();
   const rest=NAV.filter(n=>!mainIds.includes(n.id));
   const grid=rest.map(n=>`<button class="sheet-item${S.page===n.id?' on':''}" onclick="go('${n.id}')">
-    <span style="font-size:22px;line-height:1">${n.icon}</span>
+    <span class="sheet-ic">${ic(n.icon)}</span>
     <span style="font-size:10px;font-weight:600">${n.label}</span>
   </button>`).join('');
   return `<div class="sheet-grab"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
       <span style="font-size:13px;font-weight:700;color:var(--text)">Menu Lainnya</span>
-      <button onclick="openAturMenu()" style="background:var(--bg4);border:none;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer">⚙️ Atur Menu</button>
+      <button onclick="openAturMenu()" style="background:var(--bg4);border:none;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer">${ic('gear')} Atur Menu</button>
     </div>
     <div class="sheet-grid">${grid}</div>`;
 }
@@ -562,17 +592,17 @@ function buildAturMenu(){
     const idx=S.navEdit.indexOf(n.id);
     const on=idx>=0;
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--bg4);cursor:pointer;border-radius:8px${on?';background:var(--ic-green)':''}" onclick="toggleNavItem('${n.id}')">
-      <span style="font-size:18px">${n.icon}</span>
+      <span style="display:inline-flex;color:var(--accent)">${ic(n.icon)}</span>
       <span style="flex:1;font-size:13px;font-weight:600;color:var(--text)">${n.label}</span>
       ${on?`<span style="background:var(--accent);color:var(--on);font-size:11px;font-weight:700;border-radius:20px;padding:2px 10px">Slot ${idx+1}</span>`:'<span style="font-size:11px;color:var(--text3)">di ··· Lainnya</span>'}
     </div>`;
   }).join('');
-  return `<div class="modal-title">⚙️ Atur Menu Bawah</div>
+  return `<div class="modal-title">${ic('gear')} Atur Menu Bawah</div>
     <div class="info-box" style="font-size:11px">Ketuk untuk pilih maksimal <strong>5 menu utama</strong>. Urutan slot = urutan ketukan. Menu lainnya otomatis masuk ke <strong>···</strong></div>
     <div id="atur-menu-list">${rows}</div>
     <div class="act-row" style="margin-top:14px">
       <button class="btn btn-g btn-sm" onclick="resetNavDefault()">↺ Default</button>
-      <button class="btn btn-p btn-sm" style="flex:1" onclick="saveNavCustom()">💾 Simpan</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="saveNavCustom()">${ic('save')} Simpan</button>
     </div>`;
 }
 function toggleNavItem(id){
@@ -589,7 +619,7 @@ function saveNavCustom(){
   if(!S.navEdit.length){showToast('Pilih minimal 1 menu','err');return;}
   ss(KS.nav,S.navEdit);
   closeModal();
-  showToast('✅ Menu bawah tersimpan');
+  showToast('Menu bawah tersimpan');
   go(S.page);
 }
 function go(page){
@@ -604,10 +634,10 @@ function closeModal(){document.getElementById('overlay').classList.remove('show'
 // ── Settings + Backup + PWA
 function openSettings(){
   openModal(`
-    <div class="modal-title">⚙️ Pengaturan</div>
+    <div class="modal-title">${ic('gear')} Pengaturan</div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:11px;padding:10px 12px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-        <span style="font-weight:700;font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:.5px">🚀 Versi Aplikasi</span>
+        <span style="font-weight:700;font-size:12px;color:var(--text);text-transform:uppercase;letter-spacing:.5px">${ic('info')} Versi Aplikasi</span>
         <span style="background:var(--accent);color:var(--on);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px">${APP_VERSION}</span>
       </div>
       <div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:5px">5 Update Terakhir:</div>
@@ -619,13 +649,13 @@ function openSettings(){
         </div>
       </div>`).join('')}
     </div>
-    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🏢 Profil Perusahaan</div>
+    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">${ic('building2')} Profil Perusahaan</div>
     <div class="fg"><label class="fl">Nama Perusahaan</label>
       <input class="fc" id="cfg-co-name" value="${esc(S.companyName)}" placeholder="Arthabumi"></div>
     <div class="fg"><label class="fl">Tagline</label>
       <input class="fc" id="cfg-co-tag" value="${esc(S.companyTagline)}" placeholder="Jasa Kontraktor & Renovasi"></div>
     <div style="height:1px;background:var(--bg4);margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🔗 Koneksi GSheet</div>
+    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">${ic('link')} Koneksi GSheet</div>
     <div class="info-box" style="margin-bottom:10px"><strong>Cara deploy:</strong><ol>
       <li>Google Sheets → Extensions → Apps Script</li>
       <li>Buat 3 file: config.gs + read.gs + write.gs</li>
@@ -634,7 +664,7 @@ function openSettings(){
     </ol></div>
     <div class="fg"><label class="fl">Web App URL</label>
       <input class="fc" id="cfg-url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(S.webAppUrl)}"></div>
-    <div class="fg"><label class="fl">🔒 Token Keamanan</label>
+    <div class="fg"><label class="fl">${ic('lock')} Token Keamanan</label>
       <input class="fc" id="cfg-tok" type="password" autocomplete="off" placeholder="kosong = belum dikunci" value="${esc(S.apiToken)}">
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Samakan dengan API_TOKEN di Apps Script (Project Settings → Script Properties). Tersimpan hanya di HP/PC ini.</div></div>
     <div class="fg"><label class="fl">Auto-Sync</label>
@@ -643,28 +673,28 @@ function openSettings(){
       </div></div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap;margin-bottom:12px">
-      <button class="btn btn-o btn-sm" onclick="testConn()">🔍 Test</button>
-      <button class="btn btn-p btn-sm" onclick="saveSettings()">💾 Simpan</button>
-      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">🔌 Putus</button>':''}
+      <button class="btn btn-o btn-sm" onclick="testConn()">${ic('search')} Test</button>
+      <button class="btn btn-p btn-sm" onclick="saveSettings()">${ic('save')} Simpan</button>
+      ${S.webAppUrl?'<button class="btn btn-d btn-sm" onclick="clearGS()">'+ic('plug')+' Putus</button>':''}
     </div>
     <div style="height:1px;background:var(--bg4);margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">💾 Backup & Restore Data</div>
+    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">${ic('save')} Backup & Restore Data</div>
     <div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:11px;padding:12px;font-size:12px;color:var(--green);line-height:1.7">
       <strong>Data tersimpan aman di Google Sheets (Google Drive).</strong><br>
       Untuk backup & restore, gunakan fitur bawaan Google Sheets:<br><br>
-      <strong>🕐 Riwayat Versi (Version History)</strong><br>
+      <strong>${ic('clock')} Riwayat Versi (Version History)</strong><br>
       File → Version history → See version history<br>
       → Pilih tanggal/waktu yang mau di-restore → Restore this version<br><br>
-      <strong>📥 Download / Export</strong><br>
+      <strong>${ic('download')} Download / Export</strong><br>
       File → Download → Microsoft Excel (.xlsx)<br><br>
-      <a href="https://drive.google.com" target="_blank" style="color:var(--blue);font-weight:600">🔗 Buka Google Drive</a>
+      <a href="https://drive.google.com" target="_blank" style="color:var(--blue);font-weight:600">${ic('link')} Buka Google Drive</a>
     </div>
     <div style="height:1px;background:var(--bg4);margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📤 Export & Cetak</div>
-    <div style="font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">📊 Export Excel (.xlsx)</div>
+    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">${ic('upload')} Export & Cetak</div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">${ic('chart')} Export Excel (.xlsx)</div>
     <div style="margin-bottom:9px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Rekap semua proyek (2 sheet: data + ringkasan)</div>
-      <button class="btn btn-o btn-sm btn-w" onclick="exportRekapProyek()">⬇️ Download Excel — Rekap Semua Proyek</button>
+      <button class="btn btn-o btn-sm btn-w" onclick="exportRekapProyek()">${ic('download')} Download Excel — Rekap Semua Proyek</button>
     </div>
     <div style="margin-bottom:9px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Detail satu proyek (6 sheet: info, RAB, pembelian, upah, kasbon, variasi)</div>
@@ -673,22 +703,22 @@ function openSettings(){
           <option value="">-- Pilih Proyek --</option>
           ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}
         </select>
-        <button class="btn btn-o btn-sm" style="flex-shrink:0" onclick="exportDetailProyek(document.getElementById('exp-kode-excel').value)">⬇️ Download</button>
+        <button class="btn btn-o btn-sm" style="flex-shrink:0" onclick="exportDetailProyek(document.getElementById('exp-kode-excel').value)">${ic('download')} Download</button>
       </div>
     </div>
     <div style="margin-bottom:13px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Rekap cash flow bulanan (pendapatan vs pengeluaran per bulan)</div>
-      <button class="btn btn-o btn-sm btn-w" onclick="exportCashFlow()">⬇️ Download Excel — Cash Flow Bulanan</button>
+      <button class="btn btn-o btn-sm btn-w" onclick="exportCashFlow()">${ic('download')} Download Excel — Cash Flow Bulanan</button>
     </div>
     <div style="margin-bottom:9px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Master Barang & Toko — daftar nama barang, harga satuan, dan nama toko (untuk RAB)</div>
-      <button class="btn btn-o btn-sm btn-w" onclick="exportMasterData()">⬇️ Download Excel — Master Barang & Toko</button>
+      <button class="btn btn-o btn-sm btn-w" onclick="exportMasterData()">${ic('download')} Download Excel — Master Barang & Toko</button>
     </div>
     <div style="height:1px;background:var(--ic-blue);margin:10px 0"></div>
-    <div style="font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">🖨️ Cetak / Simpan PDF</div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">${ic('printer')} Cetak / Simpan PDF</div>
     <div style="margin-bottom:9px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Laporan semua proyek — tabel lengkap dengan KPI</div>
-      <button class="btn btn-p btn-sm btn-w" onclick="printAllProyek()">🖨️ Cetak Laporan Semua Proyek</button>
+      <button class="btn btn-p btn-sm btn-w" onclick="printAllProyek()">${ic('printer')} Cetak Laporan Semua Proyek</button>
     </div>
     <div style="margin-bottom:9px">
       <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Rekap detail satu proyek — RAB vs realisasi + pembayaran</div>
@@ -697,25 +727,25 @@ function openSettings(){
           <option value="">-- Pilih Proyek --</option>
           ${S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}
         </select>
-        <button class="btn btn-p btn-sm" style="flex-shrink:0" onclick="printRekapProyek(document.getElementById('exp-kode-pdf').value)">🖨️ Cetak</button>
+        <button class="btn btn-p btn-sm" style="flex-shrink:0" onclick="printRekapProyek(document.getElementById('exp-kode-pdf').value)">${ic('printer')} Cetak</button>
       </div>
     </div>
     <div style="background:var(--ic-blue);border:1px solid var(--bd-blue);border-radius:11px;padding:10px 12px;font-size:11px;color:var(--blue);margin-bottom:12px">
-      💡 <strong>Tips:</strong> Klik Lihat → laporan terbuka di tab baru. Scroll untuk review, lalu klik <strong>🖨️ Cetak / Simpan PDF</strong> di toolbar atas tab tersebut. Pilih <em>Tujuan: Simpan sebagai PDF</em> di dialog cetak.
+      ${ic('bulb')} <strong>Tips:</strong> Klik Lihat → laporan terbuka di tab baru. Scroll untuk review, lalu klik <strong>${ic('printer')} Cetak / Simpan PDF</strong> di toolbar atas tab tersebut. Pilih <em>Tujuan: Simpan sebagai PDF</em> di dialog cetak.
     </div>
     <div style="height:1px;background:var(--bg4);margin:12px 0"></div>
-    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📱 Pasang Sebagai App</div>
+    <div style="font-weight:700;font-size:12px;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">${ic('phone')} Pasang Sebagai App</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">App ini bisa dipasang di HP/Desktop tanpa install dari store (PWA).</div>
-    <button class="btn btn-p btn-sm" id="pwa-install-btn" style="display:none" onclick="installPWA()">📲 Pasang di HP</button>
+    <button class="btn btn-p btn-sm" id="pwa-install-btn" style="display:none" onclick="installPWA()">${ic('phone')} Pasang di HP</button>
     <div style="font-size:11px;color:var(--text3);margin-top:6px">Safari: Share → Add to Home Screen<br>Chrome: ⋮ → Add to Home Screen</div>`);
 }
 function setPoll(v){S.pollInterval=v;document.querySelectorAll('#overlay .tab').forEach((btn,i)=>{const vals=[30,60,120,300,0];btn.className='tab '+(vals[i]===v?'tab-on':'tab-off');});}
 async function testConn(){
   const url=document.getElementById('cfg-url').value.trim();if(!url)return;
-  const el=document.getElementById('cfg-res');el.textContent='🔄 Testing…';
+  const el=document.getElementById('cfg-res');el.textContent='Testing…';
   const tok=(document.getElementById('cfg-tok')?.value||'').trim();
-  try{const d=await gsFetch(url,tok);el.textContent=`✅ OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='var(--green)';}
-  catch(e){el.textContent='❌ '+e.message;el.style.color='var(--red)';}
+  try{const d=await gsFetch(url,tok);el.textContent=`OK! ${d.projects?.length||0} proyek, ${d.karyawan?.length||0} karyawan.`;el.style.color='var(--green)';}
+  catch(e){el.textContent=''+e.message;el.style.color='var(--red)';}
 }
 async function saveSettings(){
   const coName=(document.getElementById('cfg-co-name')?.value||'').trim()||'Arthabumi';
@@ -727,8 +757,8 @@ async function saveSettings(){
   const tok=(document.getElementById('cfg-tok')?.value||'').trim();
   S.webAppUrl=url;S.apiToken=tok;S.syncError=null;ss(KS.url,url);ss(KS.tok,tok);ss(KS.poll,S.pollInterval);
   closeModal();updateSyncBadge();
-  if(url){showToast('🔗 Mengambil data GSheet…','info');await doFetch(url);startPoll();}
-  else showToast('✅ Pengaturan disimpan','info');
+  if(url){showToast('Mengambil data GSheet…','info');await doFetch(url);startPoll();}
+  else showToast('Pengaturan disimpan','info');
 }
 function clearGS(){S.webAppUrl='';S.apiToken='';ss(KS.tok,'');S.lastSync=null;S.syncError=null;S.retryQ=[];ss(KS.url,'');closeModal();updateSyncBadge();}
 // ── PWA
@@ -740,7 +770,7 @@ window.addEventListener('beforeinstallprompt',e=>{
 async function installPWA(){
   if(!deferredPrompt){showToast('Ikuti petunjuk di bawah untuk pasang app','info');return;}
   deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;
-  if(outcome==='accepted')showToast('✅ App berhasil dipasang!');deferredPrompt=null;
+  if(outcome==='accepted')showToast('App berhasil dipasang!');deferredPrompt=null;
 }
 // ── Page Builder
 function buildPage(p){
@@ -758,7 +788,7 @@ function pgCatatan(){
   const currentTxt=existing?(existing.catatan||''):'';
   const hasCatatan=S.projects.filter(p=>p.catatan&&p.catatan.trim());
 
-  return `<div class="sec-title">📝 Catatan Proyek</div>
+  return `<div class="sec-title">${ic('note')} Catatan Proyek</div>
     <div class="card" style="margin-bottom:12px">
       <div class="fg">
         <label class="fl">Pilih Proyek</label>
@@ -772,7 +802,7 @@ function pgCatatan(){
           placeholder="Contoh:&#10;HP Klien: 0812-xxxx&#10;Alamat: Jl. Mawar No. 5&#10;DP belum lunas — kejar tgl 1&#10;Catatan teknis: finishing halus, warna cat Dulux Putih"
           style="resize:vertical;font-size:14px;line-height:1.6">${esc(currentTxt)}</textarea>
       </div>
-      <button class="btn btn-p btn-w" onclick="saveCatatan()">💾 Simpan Catatan</button>
+      <button class="btn btn-p btn-w" onclick="saveCatatan()">${ic('save')} Simpan Catatan</button>
     </div>
     ${hasCatatan.length===0?`<div class="empty">Belum ada catatan tersimpan</div>`
       :`<div class="sec-title" style="font-size:13px;color:var(--text2);margin-bottom:8px">Tersimpan (${hasCatatan.length})</div>`+
@@ -798,7 +828,7 @@ function saveCatatan(){
   S.projects[idx]={...S.projects[idx],catatan:txt};
   S.catatanKode=kode;
   ss(KS.p,S.projects);
-  showToast('✅ Catatan disimpan');
+  showToast('Catatan disimpan');
   go('catatan');
   doSync('updateProject',{...S.projects[idx]});
 }
@@ -806,8 +836,8 @@ function saveCatatan(){
 function setDashFilter(v){S.dashFilter=v;go('dashboard');}
 function setDashView(v){S.tab.dashboard=v;go('dashboard');}
 function updateGSheetRekap(){
-  if(!S.webAppUrl){showToast('⚠️ URL GSheet belum diisi di Pengaturan','err');return;}
-  showToast('📊 Memperbarui REKAP di GSheet…','info');
+  if(!S.webAppUrl){showToast('URL GSheet belum diisi di Pengaturan','err');return;}
+  showToast('Memperbarui REKAP di GSheet…','info');
   doSync('updateRekap',{});
 }
 // ── FEATURE 4: Date Filter [v1.11]
@@ -879,8 +909,8 @@ function pgDashboard(){
   const view=S.tab.dashboard||'rekap';
   const tabBar=`<div class="tabs" style="margin-bottom:12px">
     <button class="tab ${view==='rekap'?'tab-on':'tab-off'}" onclick="setDashView('rekap')">Proyek</button>
-    <button class="tab ${view==='piutang'?'tab-on':'tab-off'}" onclick="setDashView('piutang')">💰 Piutang</button>
-    <button class="tab ${view==='hutang'?'tab-on':'tab-off'}" onclick="setDashView('hutang')">🔴 Hutang</button>
+    <button class="tab ${view==='piutang'?'tab-on':'tab-off'}" onclick="setDashView('piutang')">${ic('cash')} Piutang</button>
+    <button class="tab ${view==='hutang'?'tab-on':'tab-off'}" onclick="setDashView('hutang')">${ic('dot')} Hutang</button>
   </div>`;
   if(view==='piutang')return `<div class="sec-title">${esc(S.companyName)}</div>${tabBar}${pgPiutang()}`;
   if(view==='hutang')return `<div class="sec-title">${esc(S.companyName)}</div>${tabBar}${pgHutang()}`;
@@ -911,8 +941,8 @@ function pgDashboard(){
     const pct=rabT>0?Math.min(100,Math.round(biaya/rabT*100)):0;
     const upahBelum=S.logAbsensi.filter(a=>a.kodeProj===p.kode&&a.statusBayar==='Belum Dibayar').reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
     const alerts=[];
-    if(upahBelum>0&&upahBelum>=nk*0.1)alerts.push('⚠️ Upah menumpuk');
-    if(rabT>0&&biaya>rabT*0.9)alerts.push('⚠️ Biaya mendekati RAB');
+    if(upahBelum>0&&upahBelum>=nk*0.1)alerts.push(''+ic('alert')+' Upah menumpuk');
+    if(rabT>0&&biaya>rabT*0.9)alerts.push(''+ic('alert')+' Biaya mendekati RAB');
     const cf=bayar-biaya;
     const marginPct=nk>0?(laba/nk*100):0;
     return `<div class="card" style="padding:14px">
@@ -920,11 +950,11 @@ function pgDashboard(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${alerts.length>0?'8':'10'}px">
         <div style="flex:1;min-width:0">
           <div class="item-name" style="font-size:14.5px">${esc(p.nama)}</div>
-          <div class="item-sub" style="margin-top:2px">${esc(p.jenis)}${p.catatan?' · 📝':''}</div>
+          <div class="item-sub" style="margin-top:2px">${esc(p.jenis)}${p.catatan?' · '+ic('note')+'':''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
           ${bdg(p.status)}
-          <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋 Rekap</button>
+          <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">${ic('clipboard')} Rekap</button>
         </div>
       </div>
       ${alerts.length>0?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">${alerts.map(a=>`<span style="background:var(--ic-amber);color:var(--amber);font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600">${a}</span>`).join('')}</div>`:''}
@@ -945,7 +975,7 @@ function pgDashboard(){
           <div style="font-size:14px;font-weight:800;color:${laba>=0?'var(--green)':'var(--red)'};margin-top:2px">${fRp(laba)}</div>
         </div>
         <div style="background:${cf>=0?'var(--ic-green)':'var(--ic-red)'};border-radius:10px;padding:10px 12px;border:1.5px solid ${cf>=0?'var(--bd-green)':'var(--bd-red)'}">
-          <div style="font-size:10px;color:var(--text2);font-weight:600;letter-spacing:.3px">💰 CASHFLOW</div>
+          <div style="font-size:10px;color:var(--text2);font-weight:600;letter-spacing:.3px">${ic('cash')} CASHFLOW</div>
           <div style="font-size:14px;font-weight:800;color:${cf>=0?'var(--green)':'var(--red)'};margin-top:2px">${fRp(cf)}</div>
         </div>
       </div>
@@ -996,7 +1026,7 @@ function pgDashboard(){
       <div class="kpi"><div class="kpi-lbl">Diterima</div><div class="kpi-val" style="color:var(--purple)">${fRp(tB)}</div></div>
     </div>
     <button onclick="updateGSheetRekap()" style="width:100%;margin-bottom:12px;background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px;padding:10px;font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600">
-      📊 Update Rekap ke Google Sheets
+      ${ic('chart')} Update Rekap ke Google Sheets
     </button>
     ${rows.length===0?'<div class="empty">Tidak ada proyek '+esc(S.dashFilter)+'</div>':rows.join('')}`;
 }
@@ -1014,7 +1044,7 @@ function pgPiutang(){
     .sort((a,b)=>b.piutang-a.piutang);
 
   if(!projs.length)return`<div style="text-align:center;padding:50px 20px">
-    <div style="font-size:36px;margin-bottom:8px">🎉</div>
+    <div style="font-size:36px;margin-bottom:8px">${ic('sparkles')}</div>
     <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Tidak ada piutang!</div>
     <div style="font-size:13px;color:var(--text3)">Semua proyek sudah lunas.</div></div>`;
 
@@ -1033,7 +1063,7 @@ function pgPiutang(){
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
           ${bdg(p.status)}
-          <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
+          <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">${ic('clipboard','b')}</button>
         </div>
       </div>
       <div class="g3">
@@ -1071,9 +1101,9 @@ function pgProject(){
       <div class="item-sub">${esc(p.jenis)} · ${fRp(vs.final)}${vs.n>0?` <span style="color:var(--text3)">(awal ${fRp(p.nilaiKontrak)})</span>`:''}</div></div>
     <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
       ${bdg(p.status)}
-      <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">📋</button>
-      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${gi})">✏️</button>
-      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">🗑</button>
+      <button class="btn btn-o btn-sm" style="font-size:11px;padding:5px 10px" onclick="openRekapProyek('${esc(p.kode)}')">${ic('clipboard','b')}</button>
+      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditProject(${gi})">${ic('edit','b')}</button>
+      <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delProject('${esc(p.kode)}')">${ic('trash','b')}</button>
     </div></div>
     ${p.catatan?`<div style="margin-top:7px;padding:7px 10px;background:var(--ic-amber);border-radius:8px;border-left:3px solid var(--amber);font-size:12px;color:var(--amber);white-space:pre-line;line-height:1.5">${esc(p.catatan)}</div>`:''}
     </div>`;
@@ -1097,7 +1127,7 @@ function openAddProject(){
       <div class="num-hint">Persentase penyelesaian pekerjaan (0-100%)</div></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveProject()">💾 Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveProject()">${ic('save')} Simpan</button></div>`);
 }
 function openEditProject(i){
   const p=S.projects[i];
@@ -1117,7 +1147,7 @@ function openEditProject(i){
       <div class="num-hint">Persentase penyelesaian pekerjaan (0-100%)</div></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveProject(true)">💾 Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveProject(true)">${ic('save')} Simpan</button></div>`);
 }
 // Hitung total kerja tambah/kurang & nilai final proyek
 function vSum(p){
@@ -1138,14 +1168,14 @@ function saveProject(isEdit){
   const d={kode,nama,jenis:document.getElementById('p-jenis').value,status:document.getElementById('p-sts').value,nilaiKontrak:kontrak,tglMulai:document.getElementById('p-tgl').value,catatan:existingCatatan,progress,variasi:existingVariasi};
   if(isEdit){const i=Number(document.getElementById('p-idx').value);S.projects[i]=d;}else S.projects.push(d);
   ss(KS.p,S.projects);closeModal();go('project');
-  showToast(isEdit?'✅ Proyek diperbarui':'✅ Proyek ditambahkan');
+  showToast(isEdit?'Proyek diperbarui':'Proyek ditambahkan');
   doSync(isEdit?'updateProject':'addProject',d);
 }
 async function delProject(kode){
   const nama=S.projects.find(p=>p.kode===kode)?.nama||kode;
   if(!(await askConfirm('Hapus proyek "'+nama+'"?',{ok:'Hapus',danger:1})))return;
   S.projects=S.projects.filter(p=>p.kode!==kode);ss(KS.p,S.projects);go('project');
-  showToast('🗑 Dihapus');doSync('deleteProject',{kode});
+  showToast('Dihapus');doSync('deleteProject',{kode});
 }
 
 // ── DASHBOARD HUTANG ──────────────────────────────────────────────────
@@ -1170,7 +1200,7 @@ function pgHutang(){
 
   if(grandTotal===0&&subkonBelum.length===0&&totalHutangUpah===0)
     return`<div style="text-align:center;padding:50px 20px">
-      <div style="font-size:36px;margin-bottom:8px">✅</div>
+      <div style="font-size:36px;margin-bottom:8px">${ic('check-circle')}</div>
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Tidak ada hutang!</div>
       <div style="font-size:13px;color:var(--text3)">Semua upah dan subkon sudah dibayar.</div></div>`;
 
@@ -1207,7 +1237,7 @@ function pgHutang(){
           </div>
         </div>`;
       }).join('');
-    upahSection=`<div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:8px">👷 HUTANG UPAH KARYAWAN</div>${projCards}`;
+    upahSection=`<div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:8px">${ic('user')} HUTANG UPAH KARYAWAN</div>${projCards}`;
   }
 
   // Bagian Subkon
@@ -1231,7 +1261,7 @@ function pgHutang(){
           </div>
         </div>`;
       }).join('');
-    subkonSection=`<div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:12px 0 8px">🔨 HUTANG SUBKONTRAKTOR</div>${subCards}`;
+    subkonSection=`<div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin:12px 0 8px">${ic('hammer')} HUTANG SUBKONTRAKTOR</div>${subCards}`;
   }
 
   return kpi+upahSection+subkonSection;
@@ -1298,15 +1328,15 @@ function openRekapProyek(kode){
 
   const row2=(lbl,val,style='')=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bg4);font-size:13px"><span style="color:var(--text2)">${lbl}</span><span style="font-weight:700;${style}">${fRp(val)}</span></div>`;
 
-  openModal(`<div class="modal-title">📋 ${esc(p.nama)}</div>
+  openModal(`<div class="modal-title">${ic('clipboard')} ${esc(p.nama)}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:${p.catatan?'8px':'14px'};display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <span>${esc(p.kode)}</span><span>·</span><span>${esc(p.jenis)}</span>${p.tglMulai?`<span>·</span><span>Mulai ${fDate(p.tglMulai)}</span>`:''}
       <span style="margin-left:2px">${bdg(p.status)}</span>
     </div>
-    ${p.catatan?`<div style="margin-bottom:14px;padding:10px 12px;background:var(--ic-amber);border-radius:10px;border-left:3px solid var(--amber);font-size:12.5px;color:var(--amber);white-space:pre-line;line-height:1.6">📝 ${esc(p.catatan)}</div>`:''}
+    ${p.catatan?`<div style="margin-bottom:14px;padding:10px 12px;background:var(--ic-amber);border-radius:10px;border-left:3px solid var(--amber);font-size:12.5px;color:var(--amber);white-space:pre-line;line-height:1.6">${ic('note')} ${esc(p.catatan)}</div>`:''}
 
     ${p.progress>0?`<div style="margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">📊 Progress Pekerjaan: ${p.progress}%</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">${ic('chart')} Progress Pekerjaan: ${p.progress}%</div>
       <div class="prog-bar"><div class="prog-fill" style="width:${p.progress}%;background:${p.progress>=75?'var(--green)':p.progress>=50?'var(--amber)':'var(--red)'}"></div></div>
     </div>`:''}
     <div class="g2" style="margin-bottom:12px">
@@ -1315,12 +1345,12 @@ function openRekapProyek(kode){
       <div class="chip" style="background:var(--ic-red)"><div class="chip-lbl">Total Biaya</div><div class="chip-val" style="color:var(--red)">${fRp(totalBiaya)}</div></div>
       <div class="chip" style="${laba>=0?'background:var(--ic-green)':'background:var(--ic-red)'}"><div class="chip-lbl">Est. Laba (${margin.toFixed(1)}%)</div><div class="chip-val" style="color:${laba>=0?'var(--green)':'var(--red)'}">${fRp(laba)}</div></div>
     </div>
-    ${upahBelum>0&&upahBelum>=(Number(p.nilaiKontrak)||0)*0.1?`<div style="background:var(--ic-amber);border:1px solid var(--ic-amber);border-radius:11px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--amber)">⚠️ <strong>Upah menumpuk</strong> – ${fRp(upahBelum)} belum dibayar. Segera lakukan pembayaran.</div>`:''}
-    ${rabT>0&&totalBiaya>rabT*0.9?`<div style="background:var(--ic-red);border:1px solid var(--bd-red);border-radius:11px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--red)">⚠️ <strong>Biaya mendekati RAB</strong> – Sudah ${Math.round(totalBiaya/rabT*100)}% dari RAB ${fRp(rabT)}. Perhatikan pengeluaran selanjutnya.</div>`:''}
+    ${upahBelum>0&&upahBelum>=(Number(p.nilaiKontrak)||0)*0.1?`<div style="background:var(--ic-amber);border:1px solid var(--ic-amber);border-radius:11px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--amber)">${ic('alert')} <strong>Upah menumpuk</strong> – ${fRp(upahBelum)} belum dibayar. Segera lakukan pembayaran.</div>`:''}
+    ${rabT>0&&totalBiaya>rabT*0.9?`<div style="background:var(--ic-red);border:1px solid var(--bd-red);border-radius:11px;padding:10px;margin-bottom:12px;font-size:12px;color:var(--red)">${ic('alert')} <strong>Biaya mendekati RAB</strong> – Sudah ${Math.round(totalBiaya/rabT*100)}% dari RAB ${fRp(rabT)}. Perhatikan pengeluaran selanjutnya.</div>`:''}
 
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px">🔧 KERJA TAMBAH / KURANG</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px">${ic('wrench')} KERJA TAMBAH / KURANG</div>
       <button class="btn btn-o btn-sm" style="font-size:11px;padding:4px 9px" onclick="openVariasiForm('${esc(p.kode)}')">+ Tambah</button>
     </div>
     ${(p.variasi&&p.variasi.length)?`<div style="background:var(--bg3);border-radius:10px;padding:8px 10px;margin-bottom:12px">
@@ -1329,7 +1359,7 @@ function openRekapProyek(kode){
           <div style="font-size:12.5px;font-weight:600">${v.jenis==='kurang'?'<span style="color:var(--red)">▼ Kurang</span>':'<span style="color:var(--green)">▲ Tambah</span>'} · ${fRp(v.nominal)}</div>
           <div style="font-size:11.5px;color:var(--text2);white-space:pre-line">${fDate(v.tgl)}${v.catatan?' · '+esc(v.catatan):''}</div>
         </div>
-        <button style="background:var(--ic-red);border:none;border-radius:6px;padding:3px 7px;font-size:12px;cursor:pointer;color:var(--red);flex-shrink:0" onclick="delVariasi('${esc(p.kode)}',${vi})">🗑</button>
+        <button style="background:var(--ic-red);border:none;border-radius:6px;padding:3px 7px;font-size:12px;cursor:pointer;color:var(--red);flex-shrink:0" onclick="delVariasi('${esc(p.kode)}',${vi})">${ic('trash','b')}</button>
       </div>`).join('')}
       <div style="display:flex;justify-content:space-between;padding:7px 0 2px;font-size:12.5px;font-weight:800">
         <span style="color:var(--text)">Penyesuaian Bersih</span><span style="color:${nilaiFinal>=(Number(p.nilaiKontrak)||0)?'var(--green)':'var(--red)'}">${nilaiFinal-(Number(p.nilaiKontrak)||0)>=0?'+':''}${fRp(nilaiFinal-(Number(p.nilaiKontrak)||0))}</span></div>
@@ -1337,19 +1367,19 @@ function openRekapProyek(kode){
 
     <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:5px">BREAKDOWN BIAYA</div>
     <div style="background:var(--bg3);border-radius:10px;padding:10px 12px;margin-bottom:12px">
-      ${row2('🧱 '+(rab&&rab.labelMat?esc(rab.labelMat):'Material'),matBiaya)}
-      ${row2('👷 Upah Tenaga (gross)',upahTotal)}
-      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 4px 10px;border-bottom:1px solid var(--bg4);font-size:12px"><span style="color:var(--purple)">💼 Dipotong kasbon (cash ke tukang)</span><span style="font-weight:700;color:var(--purple)">− ${fRp(kb.potong)}</span></div>`:''}
+      ${row2(''+ic('brick')+' '+(rab&&rab.labelMat?esc(rab.labelMat):'Material'),matBiaya)}
+      ${row2(''+ic('user')+' Upah Tenaga (gross)',upahTotal)}
+      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 4px 10px;border-bottom:1px solid var(--bg4);font-size:12px"><span style="color:var(--purple)">${ic('briefcase')} Dipotong kasbon (cash ke tukang)</span><span style="font-weight:700;color:var(--purple)">− ${fRp(kb.potong)}</span></div>`:''}
       ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 4px 10px;border-bottom:1px solid var(--bg4);font-size:12px"><span style="color:var(--text3)">  Net cash ke tukang</span><span style="font-weight:600;color:var(--text2)">${fRp(upahNet)}</span></div>`:''}
-      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bg4);font-size:13px"><span style="color:var(--orange);font-weight:600">💼 Kasbon → biaya proyek ini</span><span style="font-weight:700;color:var(--orange)">+ ${fRp(kb.potong)}</span></div>`:''}
-      ${row2('🔨 '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
-      ${kb.bonus>0?row2('🎁 Bonus Karyawan',kb.bonus,'color:var(--amber)'):''}
+      ${kb.potong>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bg4);font-size:13px"><span style="color:var(--orange);font-weight:600">${ic('briefcase')} Kasbon → biaya proyek ini</span><span style="font-weight:700;color:var(--orange)">+ ${fRp(kb.potong)}</span></div>`:''}
+      ${row2(''+ic('hammer')+' '+(rab&&rab.labelSubkon?esc(rab.labelSubkon):'Subkontraktor'),subkonBiaya)}
+      ${kb.bonus>0?row2(''+ic('gift')+' Bonus Karyawan',kb.bonus,'color:var(--amber)'):''}
       <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-size:13px;font-weight:800">
         <span style="color:var(--text)">Total</span><span style="color:var(--red)">${fRp(totalBiaya)}</span></div>
     </div>
 
     <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:5px">
-      👷 TENAGA KERJA PROYEK INI&nbsp;
+      ${ic('user')} TENAGA KERJA PROYEK INI&nbsp;
       ${tkList.length?`<span style="color:var(--text2);font-size:12px">${fHari(tkHari)} · ${fRp(tkUpah)}</span>`:''}
     </div>
     ${tkList.length===0
@@ -1363,30 +1393,30 @@ function openRekapProyek(kode){
               </div>
               <div style="font-size:11px;color:var(--text2);margin-top:1px">
                 ${fHari(t.hari)}${t.lembur>0?` · ${t.lembur} jam lembur`:''}
-                ${t.uBelum>0?` · <span style="color:var(--orange);font-weight:600">⏳ ${fRp(t.uBelum)} belum</span>`:' · <span style="color:var(--green)">✅ lunas</span>'}
+                ${t.uBelum>0?` · <span style="color:var(--orange);font-weight:600">${ic('hourglass')} ${fRp(t.uBelum)} belum</span>`:' · <span style="color:var(--green)">'+ic('check-circle')+' lunas</span>'}
               </div>
             </div>
             <div style="text-align:right;flex-shrink:0">
               <div style="font-size:13px;font-weight:800;color:var(--text)">${fRp(t.upah)}</div>
-              ${t.uSudah>0&&t.uBelum>0?`<div style="font-size:10px;color:var(--text3)">✅ ${fRp(t.uSudah)}</div>`:''}
+              ${t.uSudah>0&&t.uBelum>0?`<div style="font-size:10px;color:var(--text3)">${ic('check-circle')} ${fRp(t.uSudah)}</div>`:''}
             </div>
           </div>
           <div id="tk-d-${ti}" style="display:none;margin:6px 0 2px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
             ${t.rows.slice().sort((a,b)=>String(b.tgl).localeCompare(String(a.tgl))).map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--bg3);font-size:11.5px">
               <span style="color:var(--text2)">${fDate(a.tgl)} · ${esc(a.status||'')}${(Number(a.jamLembur)||0)>0?` · +${a.jamLembur}j`:''}${a.ket?' · '+esc(a.ket):''}</span>
-              <span style="flex-shrink:0"><span style="font-weight:700;color:var(--text)">${fRp(Number(a.upahHariIni)||0)}</span> <span style="color:${a.statusBayar==='Sudah Dibayar'?'var(--green)':'var(--orange)'};font-size:10px">${a.statusBayar==='Sudah Dibayar'?'✅':'⏳'}</span></span>
+              <span style="flex-shrink:0"><span style="font-weight:700;color:var(--text)">${fRp(Number(a.upahHariIni)||0)}</span> <span style="color:${a.statusBayar==='Sudah Dibayar'?'var(--green)':'var(--orange)'};font-size:10px">${a.statusBayar==='Sudah Dibayar'?''+ic('check-circle')+'':''+ic('hourglass')+''}</span></span>
             </div>`).join('')}
           </div>
         </div>`).join('')}
         <div style="display:flex;justify-content:space-between;padding:7px 0 3px;font-size:13px;font-weight:800">
           <span style="color:var(--text)">Total ${tkList.length} orang · ${fHari(tkHari)}${tkLembur>0?` · ${tkLembur} jam lembur`:''}</span>
           <span style="color:var(--text)">${fRp(tkUpah)}</span></div>
-        ${Math.abs(tkUpah-upahTotal)>1?`<div style="font-size:11px;color:var(--red);padding:2px 0 4px">⚠️ Selisih ${fRp(Math.abs(tkUpah-upahTotal))} dgn Upah Tenaga di Breakdown Biaya — ada data absensi tidak wajar.</div>`:''}
+        ${Math.abs(tkUpah-upahTotal)>1?`<div style="font-size:11px;color:var(--red);padding:2px 0 4px">${ic('alert')} Selisih ${fRp(Math.abs(tkUpah-upahTotal))} dgn Upah Tenaga di Breakdown Biaya — ada data absensi tidak wajar.</div>`:''}
       </div>`}
-    ${absNoProj>0?`<div style="background:var(--ic-amber);border:1px solid var(--ic-amber);border-radius:11px;padding:9px 11px;margin-bottom:12px;font-size:11.5px;color:var(--amber)">⚠️ Ada <strong>${absNoProj} baris absensi tanpa proyek</strong> di Log Absensi. Baris itu tidak masuk ke biaya proyek mana pun — perbaiki lewat tombol ✏️ di Log Absensi.</div>`:''}
+    ${absNoProj>0?`<div style="background:var(--ic-amber);border:1px solid var(--ic-amber);border-radius:11px;padding:9px 11px;margin-bottom:12px;font-size:11.5px;color:var(--amber)">${ic('alert')} Ada <strong>${absNoProj} baris absensi tanpa proyek</strong> di Log Absensi. Baris itu tidak masuk ke biaya proyek mana pun — perbaiki lewat tombol ${ic('edit')} di Log Absensi.</div>`:''}
 
     <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:5px">
-      💰 UPAH BELUM DIBAYAR&nbsp;
+      ${ic('cash')} UPAH BELUM DIBAYAR&nbsp;
       ${upahBelum>0?`<span style="color:var(--red);font-size:12px">${fRp(upahBelum)}</span>`:'<span style="color:var(--green);font-size:12px">Semua lunas ✓</span>'}
     </div>
     ${upahBelumList.length===0
@@ -1410,16 +1440,16 @@ function openRekapProyek(kode){
 
     ${rabT>0?`<div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:5px">RAB VS REALISASI · ${pctRAB}%</div>
     <div class="prog-bar" style="margin-bottom:4px"><div class="prog-fill" style="width:${pctRAB}%;background:${totalBiaya>rabT?'var(--red)':'var(--green)'}"></div></div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${totalBiaya>rabT?'⚠️ Biaya melebihi RAB':'✅ Masih dalam batas RAB'} (RAB ${fRp(rabT)})</div>`:''}
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">${totalBiaya>rabT?''+ic('alert')+' Biaya melebihi RAB':''+ic('check-circle')+' Masih dalam batas RAB'} (RAB ${fRp(rabT)})</div>`:''}
 
     <div class="act-row" style="gap:8px">
-      <button class="btn btn-o" style="flex:1" onclick="const i=S.projects.findIndex(x=>x.kode==='${esc(p.kode)}');closeModal();openEditProject(i)">✏️ Edit Nilai/Info</button>
+      <button class="btn btn-o" style="flex:1" onclick="const i=S.projects.findIndex(x=>x.kode==='${esc(p.kode)}');closeModal();openEditProject(i)">${ic('edit')} Edit Nilai/Info</button>
       <button class="btn btn-g" style="flex:1" onclick="closeModal()">Tutup</button>
     </div>`);
 }
 function openVariasiForm(kode){
   const p=S.projects.find(x=>x.kode===kode);if(!p)return;
-  openModal(`<div class="modal-title">🔧 Kerja Tambah / Kurang</div>
+  openModal(`<div class="modal-title">${ic('wrench')} Kerja Tambah / Kurang</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${esc(p.nama)} · ${esc(p.kode)}</div>
     <div class="fg"><label class="fl">Jenis</label>
       <select class="fc" id="v-jenis">
@@ -1433,7 +1463,7 @@ function openVariasiForm(kode){
       <textarea class="fc" id="v-catatan" rows="2" placeholder="mis. tambah kanopi belakang / kurang pasang keramik teras"></textarea></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="openRekapProyek('${esc(kode)}')">Batal</button>
-      <button class="btn btn-p" onclick="saveVariasi('${esc(kode)}')">💾 Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveVariasi('${esc(kode)}')">${ic('save')} Simpan</button></div>`);
 }
 function saveVariasi(kode){
   const p=S.projects.find(x=>x.kode===kode);if(!p)return;
@@ -1443,7 +1473,7 @@ function saveVariasi(kode){
   if(!Array.isArray(p.variasi))p.variasi=[];
   p.variasi.push(entry);
   ss(KS.p,S.projects);
-  showToast('✅ Tersimpan');
+  showToast('Tersimpan');
   openRekapProyek(kode);
   doSync('updateProject',_projPayload(p));
 }
@@ -1452,7 +1482,7 @@ async function delVariasi(kode,idx){
   if(!(await askConfirm('Hapus catatan kerja tambah/kurang ini?',{ok:'Hapus',danger:1})))return;
   p.variasi.splice(idx,1);
   ss(KS.p,S.projects);
-  showToast('🗑 Dihapus');
+  showToast('Dihapus');
   openRekapProyek(kode);
   doSync('updateProject',_projPayload(p));
 }
@@ -1486,7 +1516,7 @@ function beliInput(){
     </div>
     <div class="fg"><label class="fl">Nama Barang</label>
       <input class="fc" list="brg-dl" value="${esc(it.namaBarang)}" placeholder="Nama barang" oninput="beliAutoHarga(${i},this.value)" onchange="beliAutoHarga(${i},this.value)">
-      <div id="bi-hint-${i}" style="font-size:10.5px;color:var(--green);margin-top:3px;line-height:1.5;display:${it.hargaAuto?'':'none'}">${it.hargaAuto?(it.hargaInfo||'✨ Harga terisi otomatis'):''}</div></div>
+      <div id="bi-hint-${i}" style="font-size:10.5px;color:var(--green);margin-top:3px;line-height:1.5;display:${it.hargaAuto?'':'none'}">${it.hargaAuto?(it.hargaInfo||''+ic('sparkles')+' Harga terisi otomatis'):''}</div></div>
     <div class="g3">
       <div class="fg"><label class="fl">Qty</label><input class="fc" type="number" value="${it.qty}" oninput="S.formItems[${i}].qty=this.value"></div>
       <div class="fg"><label class="fl">Harga (Rp)</label>
@@ -1502,21 +1532,21 @@ function beliInput(){
   </div>`).join('');
   return `<datalist id="brg-dl">${brg}</datalist><datalist id="tk-dl">${tk}</datalist>
   <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
-    <button class="btn btn-o btn-sm" onclick="openPasteBeli()">📋 Paste Daftar</button></div>
+    <button class="btn btn-o btn-sm" onclick="openPasteBeli()">${ic('clipboard')} Paste Daftar</button></div>
   <div class="card">
     <div class="g2"><div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="beli-tgl" value="${S.formBeliTgl}" onchange="S.formBeliTgl=this.value"></div>
     <div class="fg"><label class="fl">Proyek</label><select class="fc" id="beli-prj" onchange="S.formBeliProj=this.value">${prjOpts}</select></div></div>
-    <div class="fg"><label class="fl">🏢 Nama Toko (untuk semua item)</label>
+    <div class="fg"><label class="fl">${ic('building2')} Nama Toko (untuk semua item)</label>
       <input class="fc" list="tk-dl" id="beli-toko" value="${esc(currentShop)}" placeholder="Pilih toko" oninput="S.formItems.forEach(x=>x.toko=this.value)"></div>
     ${items}
     <div class="fg"><label class="fl">Status Bayar ke Toko</label>
       <div style="display:flex;gap:8px">
-        <button class="tab ${S.formBayarToko!=='Hutang'?'tab-on':'tab-off'} btn-sm" onclick="S.formBayarToko='Lunas';go('beli')" style="flex:1">✅ Sudah Lunas</button>
-        <button class="tab ${S.formBayarToko==='Hutang'?'tab-on':'tab-off'} btn-sm" onclick="S.formBayarToko='Hutang';go('beli')" style="flex:1;${S.formBayarToko==='Hutang'?'color:var(--red);font-weight:700':''}">💳 Hutang</button>
+        <button class="tab ${S.formBayarToko!=='Hutang'?'tab-on':'tab-off'} btn-sm" onclick="S.formBayarToko='Lunas';go('beli')" style="flex:1">${ic('check-circle')} Sudah Lunas</button>
+        <button class="tab ${S.formBayarToko==='Hutang'?'tab-on':'tab-off'} btn-sm" onclick="S.formBayarToko='Hutang';go('beli')" style="flex:1;${S.formBayarToko==='Hutang'?'color:var(--red);font-weight:700':''}">${ic('card')} Hutang</button>
       </div></div>
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addBeliRow()">+ Baris</button>
-      <button class="btn btn-p" style="flex:1" onclick="submitBeli()">💾 Simpan</button>
+      <button class="btn btn-p" style="flex:1" onclick="submitBeli()">${ic('save')} Simpan</button>
     </div></div>`;
 }
 function setBeliFilter(v){S.beliFilter=v;go('beli');}
@@ -1524,7 +1554,7 @@ function setBeliDateFilter(v){S.tab.beliDateMode=v;go('beli');}
 function setBeliView(v){ S.tab.beliView=v; go('beli'); }
 function beliHutang(){
   const items=S.pembelian.filter(b=>b.bayarToko==='Hutang');
-  if(!items.length)return '<div class="empty">Tidak ada hutang ke toko 🎉</div>';
+  if(!items.length)return '<div class="empty">Tidak ada hutang ke toko '+ic('sparkles')+'</div>';
   const grouped={};
   items.forEach(b=>{const k=(b.toko||'').trim()||'(Tanpa Toko)';if(!grouped[k])grouped[k]={items:[],total:0,lastTgl:''};grouped[k].items.push(b);grouped[k].total+=(b.total||0);if(!grouped[k].lastTgl||b.tgl>grouped[k].lastTgl)grouped[k].lastTgl=b.tgl;});
   const sorted=Object.keys(grouped).sort((a,b)=>grouped[b].lastTgl.localeCompare(grouped[a].lastTgl));
@@ -1538,19 +1568,19 @@ function beliHutang(){
             <div class="item-sub">${fDate(b.tgl)} · ${esc(b.kodeProj||'—')} · ${b.qty}× ${fRp(b.harga)}</div></div>
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-weight:600;color:var(--red)">${fRp(b.total)}</span>
-            <button class="btn btn-g btn-sm" onclick="tandaiLunasBeli(${ri})" style="font-size:11px;padding:3px 8px">✅ Lunas</button>
-              <button style="background:var(--ic-red);border:none;border-radius:7px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--red)" onclick="delPembelian(${ri})">🗑</button>
+            <button class="btn btn-g btn-sm" onclick="tandaiLunasBeli(${ri})" style="font-size:11px;padding:3px 8px">${ic('check-circle')} Lunas</button>
+              <button style="background:var(--ic-red);border:none;border-radius:7px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--red)" onclick="delPembelian(${ri})">${ic('trash','b')}</button>
           </div></div></div>`;
     }).join('');
     return `<div class="card" style="margin-bottom:10px">
       <div class="row" style="margin-bottom:8px">
-        <div><div class="item-name">🏢 ${esc(toko)}</div>
+        <div><div class="item-name">${ic('building2')} ${esc(toko)}</div>
           <div class="item-sub">${g.items.length} item · Terakhir ${fDate(g.lastTgl)}</div></div>
         <div style="font-weight:700;color:var(--red);font-size:15px">${fRp(g.total)}</div>
       </div>
       ${rows}
       <div style="border-top:1px solid var(--bg4);padding-top:8px;margin-top:4px;text-align:right">
-        <button class="btn btn-g btn-sm" onclick="tandaiLunasTokoAll('${esc(toko)}')" style="font-size:11px">✅ Lunasi Semua ke ${esc(toko)}</button>
+        <button class="btn btn-g btn-sm" onclick="tandaiLunasTokoAll('${esc(toko)}')" style="font-size:11px">${ic('check-circle')} Lunasi Semua ke ${esc(toko)}</button>
       </div></div>`;
   }).join('');
 }
@@ -1558,7 +1588,7 @@ async function tandaiLunasBeli(idx){
   const b=S.pembelian[idx];if(!b)return;
   if(!(await askConfirm('Tandai "'+b.namaBarang+'" sudah lunas ke toko?',{ok:'Tandai lunas'})))return;
   S.pembelian[idx]={...b,bayarToko:'Lunas'};
-  ss(KS.beli,S.pembelian);showToast('✅ Ditandai Lunas');go('beli');
+  ss(KS.beli,S.pembelian);showToast('Ditandai Lunas');go('beli');
   doSync('markBayarToko',{id:b.id,tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
 }
 async function tandaiLunasTokoAll(toko){
@@ -1569,7 +1599,7 @@ async function tandaiLunasTokoAll(toko){
     const ri=S.pembelian.findIndex(x=>x.id===b.id);
     if(ri>=0){S.pembelian[ri]={...S.pembelian[ri],bayarToko:'Lunas'};doSync('markBayarToko',{id:b.id,tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});}
   });
-  ss(KS.beli,S.pembelian);showToast('✅ '+items.length+' item Lunas');go('beli');
+  ss(KS.beli,S.pembelian);showToast(''+items.length+' item Lunas');go('beli');
 }
 function toggleBeliToko(name){
   const o=S.tab.beliOpenToko||(S.tab.beliOpenToko=[]);
@@ -1593,8 +1623,8 @@ function beliItemCard(b,showToko,hideTgl){
         <div class="item-sub">${sub}</div></div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:var(--green)">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
-        <button style="background:var(--ic-blue);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--blue)" onclick="openEditBeli(${ri})">✏️</button>
-        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembelian(${ri})">🗑</button>
+        <button style="background:var(--ic-blue);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--blue)" onclick="openEditBeli(${ri})">${ic('edit','b')}</button>
+        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembelian(${ri})">${ic('trash','b')}</button>
       </div></div>
       <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
 }
@@ -1610,8 +1640,8 @@ function beliLog(){
   const tokoOpts=`<option value="">Semua Toko</option>`+tokoSorted.map(t=>`<option value="${esc(t)}"${(S.beliTokoFilter||'')===t?' selected':''}>${esc(t)}</option>`).join('');
   const viewBar=`
     <div style="display:flex;gap:6px;margin-bottom:8px">
-      <button class="tab ${view==='date'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setBeliView('date')">📅 Per Tanggal</button>
-      <button class="tab ${view==='toko'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setBeliView('toko')">🏪 Per Toko</button>
+      <button class="tab ${view==='date'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setBeliView('date')">${ic('calendar')} Per Tanggal</button>
+      <button class="tab ${view==='toko'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setBeliView('toko')">${ic('store')} Per Toko</button>
     </div>`;
   const filterBar=`
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
@@ -1630,7 +1660,7 @@ function beliLog(){
       <select class="fc" onchange="S.beliFilter=this.value;go('beli')">${prjOpts}</select>
       <select class="fc" onchange="S.beliTokoFilter=this.value;go('beli')">${tokoOpts}</select>
     </div>
-    <input class="fc" type="search" id="beli-log-q" placeholder="🔍 Cari nama barang..."
+    <input class="fc" type="search" id="beli-log-q" placeholder="Cari nama barang..."
       value="${esc(S.beliLogQ||'')}"
       oninput="S.beliLogQ=this.value;_renderBeliItems()"
       style="font-size:14px;margin-bottom:10px">`;
@@ -1693,7 +1723,7 @@ function _beliGroupTanggal(filtered){
       return `<div style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:9px;cursor:pointer" data-k="${esc(key)}" onclick="toggleBeliDT(this.dataset.k)">
           <div style="min-width:0;flex:1">
-            <span style="font-weight:700;font-size:12.5px">${isClosed?'▸':'▾'} 🏪 ${esc(tk)}</span>
+            <span style="font-weight:700;font-size:12.5px">${isClosed?'▸':'▾'} ${ic('store')} ${esc(tk)}</span>
             <span style="font-size:11px;color:var(--text2);margin-left:6px">${t.items.length} item</span>
           </div>
           <span style="font-weight:700;color:var(--blue);font-size:12.5px;flex-shrink:0">${fRp(t.total)}</span>
@@ -1704,7 +1734,7 @@ function _beliGroupTanggal(filtered){
     return `<div style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg4);border-radius:10px;margin-bottom:6px">
         <div>
-          <span style="font-weight:700;font-size:13px">📅 ${tgl==='(Tanpa Tanggal)'?tgl:fDate(tgl)}</span>
+          <span style="font-weight:700;font-size:13px">${ic('calendar')} ${tgl==='(Tanpa Tanggal)'?tgl:fDate(tgl)}</span>
           <span style="font-size:11px;color:var(--text2);margin-left:6px">${g.items.length} item · ${tokos.length} toko</span>
         </div>
         <span style="font-weight:700;color:var(--green);font-size:13px">${fRp(g.total)}</span>
@@ -1731,7 +1761,7 @@ function _beliGroupToko(filtered){
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg4);border-radius:10px;cursor:pointer" data-toko="${esc(toko)}" onclick="toggleBeliToko(this.dataset.toko)">
         <div>
-          <span style="font-weight:700;font-size:13px">${isOpen?'▾':'▸'} 🏪 ${esc(toko)}</span>
+          <span style="font-weight:700;font-size:13px">${isOpen?'▾':'▸'} ${ic('store')} ${esc(toko)}</span>
           <span style="font-size:11px;color:var(--text2);margin-left:6px">${g.items.length} item · ${fDate(g.last)}</span>
         </div>
         <span style="font-weight:700;color:var(--green);font-size:13px">${fRp(g.total)}</span>
@@ -1748,7 +1778,7 @@ function _renderBeliItems(){
 // ── CEK HARGA ─────────────────────────────────────────────────────────
 function beliCekHarga(){
   return `<div class="fg" style="margin-bottom:10px">
-    <input class="fc" type="search" id="cek-harga-q" placeholder="🔍 Ketik nama barang..."
+    <input class="fc" type="search" id="cek-harga-q" placeholder="Ketik nama barang..."
       value="${esc(S.beliSearchQ||'')}"
       oninput="S.beliSearchQ=this.value;_renderCekHarga()"
       style="font-size:15px">
@@ -1829,18 +1859,18 @@ function beliAutoHarga(i,val){
 function _beliHargaInfo(nm,h,satuan){
   const hist=S.pembelian.filter(p=>String(p.namaBarang||'').trim().toLowerCase()===nm&&Number(p.harga)>0);
   const last=[...hist].sort((a,c)=>String(c.tgl||'').localeCompare(String(a.tgl||'')))[0];
-  let html='✨ Harga terakhir <strong>'+fRp(h)+'</strong>'+(satuan?'/'+esc(satuan):'')
+  let html=''+ic('sparkles')+' Harga terakhir <strong>'+fRp(h)+'</strong>'+(satuan?'/'+esc(satuan):'')
     +(last?' · '+fDate(last.tgl)+(last.toko?' · '+esc(last.toko):''):'');
   if(!hist.length)return html;
   const min=Math.min(...hist.map(p=>Number(p.harga)));
   const minRec=hist.filter(p=>Number(p.harga)===min)
     .sort((a,c)=>String(c.tgl||'').localeCompare(String(a.tgl||'')))[0];
   if(min<h){
-    html+='<br><span style="color:var(--amber)">📉 Terendah <strong>'+fRp(min)+'</strong>'
+    html+='<br><span style="color:var(--amber)">'+ic('trend-down')+' Terendah <strong>'+fRp(min)+'</strong>'
       +(minRec&&minRec.toko?' · '+esc(minRec.toko):'')+(minRec?' · '+fDate(minRec.tgl):'')
       +' — selisih '+fRp(h-min)+'/'+esc(satuan||'unit')+'</span>';
   }else if(hist.length>1){
-    html+='<br><span style="color:var(--green)">✅ Ini harga terendah dari '+hist.length+'× pembelian</span>';
+    html+='<br><span style="color:var(--green)">'+ic('check-circle')+' Ini harga terendah dari '+hist.length+'× pembelian</span>';
   }
   return html;
 }
@@ -1863,12 +1893,12 @@ function showBeliConfirmation(items, total){
   const cProj=S.projects.find(x=>x.kode===S.formBeliProj);
   const cNamaProj=cProj?cProj.nama:(S.formBeliProj||'—');
   const cToko=(document.getElementById('beli-toko')?.value||items[0]?.toko||'').trim()||'(Tanpa Toko)';
-  const cBayar=S.formBayarToko==='Hutang'?'<span style="color:var(--red);font-weight:700">💳 Hutang</span>':'✅ Lunas';
-  openModal(`<div class="modal-title">✅ Konfirmasi Pembelian</div>
+  const cBayar=S.formBayarToko==='Hutang'?'<span style="color:var(--red);font-weight:700">'+ic('card')+' Hutang</span>':''+ic('check-circle')+' Lunas';
+  openModal(`<div class="modal-title">${ic('check-circle')} Konfirmasi Pembelian</div>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:11px;padding:10px 12px;margin-bottom:10px;font-size:12.5px">
-      <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text2)">📅 Tanggal</span><span style="font-weight:600">${fDate(cTgl)}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;gap:10px"><span style="color:var(--text2);flex-shrink:0">📁 Proyek</span><span style="font-weight:600;text-align:right">${esc(cNamaProj)}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0;gap:10px"><span style="color:var(--text2);flex-shrink:0">🏪 Toko</span><span style="font-weight:600;text-align:right">${esc(cToko)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text2)">${ic('calendar')} Tanggal</span><span style="font-weight:600">${fDate(cTgl)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;gap:10px"><span style="color:var(--text2);flex-shrink:0">${ic('folder')} Proyek</span><span style="font-weight:600;text-align:right">${esc(cNamaProj)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:3px 0;gap:10px"><span style="color:var(--text2);flex-shrink:0">${ic('store')} Toko</span><span style="font-weight:600;text-align:right">${esc(cToko)}</span></div>
       <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:var(--text2)">Status Bayar</span><span>${cBayar}</span></div>
     </div>
     <div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:11px;padding:11px;margin-bottom:12px;font-size:12px;color:var(--green)">
@@ -1883,8 +1913,8 @@ function showBeliConfirmation(items, total){
       </div>
     </div>
     <div class="act-row" style="margin-top:16px">
-      <button class="btn btn-g btn-sm" onclick="closeModal()">❌ Batal</button>
-      <button class="btn btn-p btn-sm" style="flex:1" onclick="executeBeli()">✅ Konfirmasi & Simpan</button>
+      <button class="btn btn-g btn-sm" onclick="closeModal()">${ic('x-circle')} Batal</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="executeBeli()">${ic('check-circle')} Konfirmasi & Simpan</button>
     </div>`);
 }
 
@@ -1899,7 +1929,7 @@ function executeBeli(){
   const brg=[...S.masterBarang],tk=[...S.masterToko];
   newItems.forEach(it=>{if(!brg.find(b=>b.nama.toLowerCase()===it.namaBarang.toLowerCase()))brg.push({id:padId('BRG',brg,'id'),nama:it.namaBarang,kategori:it.kategori,satuan:it.satuan,hargaTerakhir:it.harga});if(it.toko&&!tk.includes(it.toko))tk.push(it.toko);});
   S.masterBarang=brg;S.masterToko=tk;ss(KS.brg,brg);ss(KS.toko,tk);
-  showToast('✅ '+newItems.length+' item disimpan');
+  showToast(''+newItems.length+' item disimpan');
   S.formItems=[{namaBarang:'',kategori:'Material',satuan:'pcs',qty:1,harga:0,diskon:0,status:'HABIS',toko:''}];
   S.formBeliProj='';S.formBeliTgl=today();S.formBayarToko='Lunas';
   setTab('beli','log');
@@ -1920,7 +1950,7 @@ function submitBeli(){
 async function delPembelian(idx){
   const b=S.pembelian[idx];if(!b)return;
   if(!(await askConfirm('Hapus "'+b.namaBarang+'"?',{ok:'Hapus',danger:1})))return;
-  S.pembelian.splice(idx,1);ss(KS.beli,S.pembelian);showToast('🗑 Dihapus');go('beli');
+  S.pembelian.splice(idx,1);ss(KS.beli,S.pembelian);showToast('Dihapus');go('beli');
   doSync('deletePembelian',{id:b.id,tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
 }
 function openEditBeli(idx){
@@ -1928,7 +1958,7 @@ function openEditBeli(idx){
   S.editBeliIdx=idx;
   S.editBeliOrig={id:b.id,tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang};
   const projOpts=`<option value="">— Tanpa Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${p.kode===b.kodeProj?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
-  openModal(`<div class="modal-title">✏️ Edit Pembelian</div>
+  openModal(`<div class="modal-title">${ic('edit')} Edit Pembelian</div>
     <div class="fg" style="margin-bottom:9px"><label class="fl">Tanggal</label><input class="fc" type="date" id="eb-tgl" value="${esc(b.tgl)}"></div>
     <div class="fg" style="margin-bottom:9px"><label class="fl">Proyek</label><select class="fc" id="eb-proj"><option value="">— Tanpa Proyek —</option>${projOpts}</select></div>
     <div class="fg" style="margin-bottom:9px"><label class="fl">Nama Barang</label><input class="fc" list="brg-dl" id="eb-nama" value="${esc(b.namaBarang)}"></div>
@@ -1948,10 +1978,10 @@ function openEditBeli(idx){
     </div>
     <div class="fg" style="margin-bottom:9px"><label class="fl">Toko</label><input class="fc" list="tk-dl" id="eb-toko" value="${esc(b.toko||'')}"></div>
     <div class="fg" style="margin-bottom:12px"><label class="fl">Status Bayar ke Toko</label>
-      <select class="fc" id="eb-bayartoko"><option value="Lunas" ${(b.bayarToko||'Lunas')==='Lunas'?'selected':''}>✅ Sudah Lunas</option><option value="Hutang" ${b.bayarToko==='Hutang'?'selected':''}>💳 Hutang</option></select></div>
+      <select class="fc" id="eb-bayartoko"><option value="Lunas" ${(b.bayarToko||'Lunas')==='Lunas'?'selected':''}>Sudah Lunas</option><option value="Hutang" ${b.bayarToko==='Hutang'?'selected':''}>Hutang</option></select></div>
     <div class="act-row">
       <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p btn-sm" onclick="submitEditBeli()">💾 Simpan Perubahan</button>
+      <button class="btn btn-p btn-sm" onclick="submitEditBeli()">${ic('save')} Simpan Perubahan</button>
     </div>`);
 }
 function submitEditBeli(){
@@ -1979,23 +2009,23 @@ function submitEditBeli(){
   else{S.masterBarang.push({id:'BRG-EDIT-'+Date.now(),nama:namaBarang,kategori,satuan,hargaTerakhir:harga});}
   ss(KS.brg,S.masterBarang);
   closeModal();
-  showToast('✅ Pembelian diupdate');
+  showToast('Pembelian diupdate');
   go('beli');
   doSync('updatePembelian',{id:orig.id,oldTgl:orig.tgl,oldKodeProj:orig.kodeProj,oldNamaBarang:orig.namaBarang,tgl,kodeProj,namaBarang,kategori,satuan,qty,harga,diskon,status,toko,total,bayarToko});
 }
 function openPasteBeli(){
-  openModal(`<div class="modal-title">📋 Paste Daftar Pembelian</div>
+  openModal(`<div class="modal-title">${ic('clipboard')} Paste Daftar Pembelian</div>
     <div class="info-box"><strong>Format per baris:</strong><br>
       <code style="background:var(--ic-blue);padding:2px 6px;border-radius:4px">nama barang, jumlah, harga, toko</code><br>
-      💡 Harga boleh dikosongkan kalau barang sudah pernah dibeli — otomatis pakai harga terakhir.<br><br>
+      ${ic('bulb')} Harga boleh dikosongkan kalau barang sudah pernah dibeli — otomatis pakai harga terakhir.<br><br>
       Contoh:<br><code>Semen hitam, 5, 55000, Toko A<br>Besi hollow, 10, 45.000<br>Cat tembok, 2</code></div>
     <div class="fg"><label class="fl">Paste di sini</label>
       <textarea class="fc" id="paste-txt" rows="7" style="resize:vertical;font-family:monospace;font-size:13px"></textarea></div>
     <div id="paste-preview" style="margin-bottom:8px"></div>
     <div class="act-row" style="flex-wrap:wrap">
       <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
-      <button class="btn btn-o btn-sm" onclick="previewPasteBeli()">👁 Preview</button>
-      <button class="btn btn-p btn-sm" onclick="applyPasteBeli()">✅ Tambah ke Form</button>
+      <button class="btn btn-o btn-sm" onclick="previewPasteBeli()">${ic('eye')} Preview</button>
+      <button class="btn btn-p btn-sm" onclick="applyPasteBeli()">${ic('check-circle')} Tambah ke Form</button>
     </div>`);
 }
 function parseIdNum(s){return Number(String(s).trim().replace(/\./g,'').replace(',','.'));}
@@ -2022,8 +2052,8 @@ function parsePasteText(text){
 function previewPasteBeli(){
   const text=document.getElementById('paste-txt').value;if(!text.trim()){showToast('Textarea masih kosong','err');return;}
   const{items,errors}=parsePasteText(text);let html='';
-  if(errors.length)html+=`<div style="background:var(--ic-red);border:1px solid var(--bd-red);border-radius:9px;padding:9px;margin-bottom:8px;font-size:12px;color:var(--red)">⚠️ ${errors.join('<br>')}</div>`;
-  if(items.length){const total=items.reduce((s,it)=>s+(it.qty*it.harga),0);html+=`<div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:9px;padding:9px;font-size:12px;color:var(--green)">✅ <strong>${items.length} item valid</strong> — total ${fRp(total)}:<br><br>${items.map(it=>`• ${esc(it.namaBarang)} — ${it.qty}× ${fRp(it.harga)}${it.toko?' ('+esc(it.toko)+')':''}`).join('<br>')}</div>`;}
+  if(errors.length)html+=`<div style="background:var(--ic-red);border:1px solid var(--bd-red);border-radius:9px;padding:9px;margin-bottom:8px;font-size:12px;color:var(--red)">${ic('alert')} ${errors.join('<br>')}</div>`;
+  if(items.length){const total=items.reduce((s,it)=>s+(it.qty*it.harga),0);html+=`<div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:9px;padding:9px;font-size:12px;color:var(--green)">${ic('check-circle')} <strong>${items.length} item valid</strong> — total ${fRp(total)}:<br><br>${items.map(it=>`• ${esc(it.namaBarang)} — ${it.qty}× ${fRp(it.harga)}${it.toko?' ('+esc(it.toko)+')':''}`).join('<br>')}</div>`;}
   document.getElementById('paste-preview').innerHTML=html;
 }
 function applyPasteBeli(){
@@ -2031,7 +2061,7 @@ function applyPasteBeli(){
   const{items,errors}=parsePasteText(text);if(!items.length){showToast('Tidak ada item valid','err');return;}
   const defaultOnly=S.formItems.length===1&&!S.formItems[0].namaBarang&&!S.formItems[0].harga;
   S.formItems=defaultOnly?items:[...S.formItems,...items];
-  closeModal();showToast('✅ '+items.length+' item ditambahkan'+(errors.length?' ('+errors.length+' dilewati)':''));setTab('beli','input');
+  closeModal();showToast(''+items.length+' item ditambahkan'+(errors.length?' ('+errors.length+' dilewati)':''));setTab('beli','input');
 }
 // ── KARYAWAN
 function pgKaryawan(){
@@ -2048,8 +2078,8 @@ function pgKaryawan(){
     return `<div class="card"><div class="row" style="margin-bottom:8px">
       <div><div class="item-name">${esc(k.nama)}</div><div class="item-sub">${esc(k.jabatan)} · ${esc(k.id)}</div></div>
       <div style="display:flex;gap:8px">
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditKaryawan(${i})">✏️</button>
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delKaryawan('${esc(k.id)}')">🗑</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditKaryawan(${i})">${ic('edit','b')}</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delKaryawan('${esc(k.id)}')">${ic('trash','b')}</button>
       </div></div>
       <div class="g4">
         <div class="chip"><div class="chip-lbl">Upah/Hr</div><div class="chip-val">${fRp(k.upahHarian)}</div></div>
@@ -2074,7 +2104,7 @@ function krModal(k,i){
       <div class="fg"><label class="fl">No HP</label><input class="fc" id="k-hp" type="tel" value="${isEdit?esc(k.noHP||''):''}"></div></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveKaryawan(${isEdit})">💾 Simpan</button></div>`;
+      <button class="btn btn-p" onclick="saveKaryawan(${isEdit})">${ic('save')} Simpan</button></div>`;
 }
 function openAddKaryawan(){openModal(krModal(null,null));}
 function openEditKaryawan(i){openModal(krModal(S.karyawan[i],i));}
@@ -2086,10 +2116,10 @@ function saveKaryawan(isEdit){
   const d={id,nama,jabatan:document.getElementById('k-jab').value,upahHarian:upah,noHP:document.getElementById('k-hp').value};
   if(isEdit){const idx=Number(document.getElementById('k-idx').value);S.karyawan[idx]=d;}else S.karyawan.push(d);
   ss(KS.kr,S.karyawan);closeModal();go('karyawan');
-  showToast(isEdit?'✅ '+d.nama+' diperbarui':'✅ '+d.nama+' ditambahkan');
+  showToast(isEdit?''+d.nama+' diperbarui':''+d.nama+' ditambahkan');
   doSync(isEdit?'updateKaryawan':'addKaryawan',d);
 }
-async function delKaryawan(id){if(!(await askConfirm('Hapus '+id+'?',{ok:'Hapus',danger:1})))return;S.karyawan=S.karyawan.filter(k=>k.id!==id);ss(KS.kr,S.karyawan);go('karyawan');showToast('🗑 Dihapus');doSync('deleteKaryawan',{id});}
+async function delKaryawan(id){if(!(await askConfirm('Hapus '+id+'?',{ok:'Hapus',danger:1})))return;S.karyawan=S.karyawan.filter(k=>k.id!==id);ss(KS.kr,S.karyawan);go('karyawan');showToast('Dihapus');doSync('deleteKaryawan',{id});}
 // ── ABSENSI
 function pgAbsensi(){
   const tab=S.tab.absensi||'input';
@@ -2115,7 +2145,7 @@ function absInput(){
     const projSel=`<select class="fc" style="font-size:13px" onchange="setAbsRow(${i},'kodeProj',this.value)"><option value="">-- Default --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}" ${r.kodeProj===p.kode?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select>`;
     const lemburRow=(curFull==='Hadir'||curFull==='Setengah Hari')?`
       <div style="display:flex;align-items:center;gap:6px;margin-top:7px;padding:7px 10px;background:var(--ic-amber);border:1px solid var(--bd-amber);border-radius:9px">
-        <span style="font-size:11px;color:var(--amber);font-weight:600;flex-shrink:0">⏰ Lembur</span>
+        <span style="font-size:11px;color:var(--amber);font-weight:600;flex-shrink:0">${ic('clock')} Lembur</span>
         <input type="number" min="0" max="24" step="0.5" value="${jamLembur||''}" placeholder="0"
           style="width:62px;padding:4px 7px;border:1px solid var(--bd-amber);border-radius:7px;font-size:13px;font-weight:700;text-align:center;background:var(--bg2)"
           oninput="setLembur(${i},this.value)">
@@ -2136,15 +2166,15 @@ function absInput(){
     <div class="g2">
       <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${S.absTgl||today()}" onchange="S.absTgl=this.value"></div>
       <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj" onchange="S.absDefProj=this.value"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}"${S.absDefProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select></div></div>
-    <div style="font-size:11px;color:var(--text3);margin-top:-4px">💡 Proyek default untuk karyawan yang belum pilih</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:-4px">${ic('bulb')} Proyek default untuk karyawan yang belum pilih</div>
   </div>
   ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':rows}
   ${S.karyawan.length>0?`<div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:11px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--green)">
-    ✅ Hadir: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Hadir').length}</strong> &nbsp;
-    🟡 Setengah: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Setengah Hari').length}</strong> &nbsp;
-    ❌ Tidak: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Tidak Hadir').length}</strong>
+    ${ic('check-circle')} Hadir: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Hadir').length}</strong> &nbsp;
+    ${ic('dot')} Setengah: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Setengah Hari').length}</strong> &nbsp;
+    ${ic('x-circle')} Tidak: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Tidak Hadir').length}</strong>
   </div>
-  <button class="btn btn-p btn-w" onclick="submitAbsensi()">💾 Simpan Absensi</button>`:''}`;
+  <button class="btn btn-p btn-w" onclick="submitAbsensi()">${ic('save')} Simpan Absensi</button>`:''}`;
 }
 function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:'',jamLembur:0};if(key==='status'&&S.absRows[i].status===val){S.absRows[i].status='';S.absRows[i].jamLembur=0;go('absensi');return;}S.absRows[i][key]=val;if(key==='status')go('absensi');}
 function setLembur(i,val){
@@ -2169,7 +2199,7 @@ async function submitAbsensi(){
   if(!active.length){showToast('Pilih status minimal 1 karyawan','err');return;}
   // Guard duplikat: cegah absensi dobel utk karyawan yang sudah tercatat di tanggal ini
   const dups=active.filter(({k})=>S.logAbsensi.some(a=>a.tgl===tgl&&a.idKaryawan===k.id));
-  if(dups.length&&!(await askConfirm('⚠️ Sudah ada absensi tanggal '+fDate(tgl)+' untuk: '+dups.map(({k})=>k.nama).join(', ')+'.\n\nKalau lanjut, absensi akan DOBEL (hari kerja & lembur terhitung 2x di closing).\n\nTetap simpan?',{ok:'Tetap simpan'})))return;
+  if(dups.length&&!(await askConfirm('Sudah ada absensi tanggal '+fDate(tgl)+' untuk: '+dups.map(({k})=>k.nama).join(', ')+'.\n\nKalau lanjut, absensi akan DOBEL (hari kerja & lembur terhitung 2x di closing).\n\nTetap simpan?',{ok:'Tetap simpan'})))return;
   const newAbs=active.map(({k,r})=>{
     const baseUpah=r.status==='Hadir'?k.upahHarian:r.status==='Setengah Hari'?k.upahHarian*0.5:0;
     const jamLembur=Number(r.jamLembur)||0;
@@ -2193,7 +2223,7 @@ function showAbsensiConfirmation(newAbs,tgl){
         <div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap">
           <span style="font-size:10px;padding:1px 7px;border-radius:9px;font-weight:600;background:color-mix(in srgb,${col} 13%,transparent);color:${col};border:1px solid color-mix(in srgb,${col} 27%,transparent)">${a.status}</span>
           <span style="font-size:10px;color:var(--text3)">${esc(namaP)}</span>
-          ${Number(a.jamLembur)>0?`<span style="font-size:10px;color:var(--amber);font-weight:600">⏰ ${a.jamLembur}j lembur</span>`:''}
+          ${Number(a.jamLembur)>0?`<span style="font-size:10px;color:var(--amber);font-weight:600">${ic('clock')} ${a.jamLembur}j lembur</span>`:''}
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0;margin-left:8px">
@@ -2202,16 +2232,16 @@ function showAbsensiConfirmation(newAbs,tgl){
       </div>
     </div>`;
   }).join('');
-  openModal(`<div class="modal-title">📋 Konfirmasi Absensi</div>
+  openModal(`<div class="modal-title">${ic('clipboard')} Konfirmasi Absensi</div>
     <div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:11px;padding:11px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--green);margin-bottom:2px">📅 ${fDate(tgl)} &nbsp;·&nbsp; ${newAbs.length} karyawan</div>
+      <div style="font-size:11px;color:var(--green);margin-bottom:2px">${ic('calendar')} ${fDate(tgl)} &nbsp;·&nbsp; ${newAbs.length} karyawan</div>
       <div style="font-size:18px;font-weight:800;color:var(--green)">${fRp(totalUpah)}</div>
       <div style="font-size:10px;color:var(--green);margin-top:1px">Total upah hari ini${adaLembur?' (inkl. lembur)':''}</div>
     </div>
     <div style="max-height:45vh;overflow-y:auto;margin-bottom:4px">${rows}</div>
     <div class="act-row" style="margin-top:14px">
-      <button class="btn btn-g btn-sm" onclick="closeModal()">❌ Batal</button>
-      <button class="btn btn-p btn-sm" style="flex:1" onclick="executeAbsensi()">✅ Simpan Absensi</button>
+      <button class="btn btn-g btn-sm" onclick="closeModal()">${ic('x-circle')} Batal</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="executeAbsensi()">${ic('check-circle')} Simpan Absensi</button>
     </div>`);
 }
 function executeAbsensi(){
@@ -2220,7 +2250,7 @@ function executeAbsensi(){
   S._pendingAbsensi=null;
   S.logAbsensi.push(...newAbs);ss(KS.abs,S.logAbsensi);
   closeModal();
-  showToast('✅ Absensi '+newAbs.length+' karyawan tersimpan');S.absRows=[];S.absTgl='';S.absDefProj='';setTab('absensi','log');
+  showToast('Absensi '+newAbs.length+' karyawan tersimpan');S.absRows=[];S.absTgl='';S.absDefProj='';setTab('absensi','log');
   doSync('addAbsensi',newAbs.map(a=>({id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan,nama:a.nama,status:a.status,kodeProj:a.kodeProj,namaProj:S.projects.find(p=>p.kode===a.kodeProj)?.nama||'',upahHariIni:a.upahHariIni,jamLembur:a.jamLembur,upahLembur:a.upahLembur,ket:a.ket})));
 }
 function setAbsFilter(v){S.absFilter=v;go('absensi');}
@@ -2265,11 +2295,11 @@ function _absItemsList(){
     return `<div class="card"><div class="row" style="margin-bottom:6px">
       <div style="flex:1;min-width:0"><div class="item-name">${esc(a.nama)}</div>
         <div class="item-sub">${fDate(a.tgl)} · ${esc(namaP)} · ${fRp(a.upahHariIni)}</div>
-        ${(Number(a.jamLembur)>0)?`<div style="font-size:10px;color:var(--amber);margin-top:2px;font-weight:600">⏰ Lembur ${a.jamLembur} jam &nbsp;·&nbsp; +${fRp(Number(a.upahLembur)||0)}</div>`:''}</div>
+        ${(Number(a.jamLembur)>0)?`<div style="font-size:10px;color:var(--amber);margin-top:2px;font-weight:600">${ic('clock')} Lembur ${a.jamLembur} jam &nbsp;·&nbsp; +${fRp(Number(a.upahLembur)||0)}</div>`:''}</div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:8px;flex-shrink:0">
         ${bdg(a.status)}
-        <button style="background:var(--ic-blue);border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--blue)" onclick="openEditAbsensi(${ri})">✏️</button>
-        ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--red)" onclick="delAbsensi(${ri})">🗑</button>`:''}
+        <button style="background:var(--ic-blue);border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--blue)" onclick="openEditAbsensi(${ri})">${ic('edit','b')}</button>
+        ${a.statusBayar!=='Sudah Dibayar'?`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer;color:var(--red)" onclick="delAbsensi(${ri})">${ic('trash','b')}</button>`:''}
       </div></div>
       <div>${bdg(a.statusBayar)}</div></div>`;
   }).join('');
@@ -2282,7 +2312,7 @@ async function delAbsensi(idx){
   const a=S.logAbsensi[idx];if(!a)return;
   if(a.statusBayar==='Sudah Dibayar'){showToast('Tidak bisa hapus -- sudah di-closing','err');return;}
   if(!(await askConfirm('Hapus absensi '+esc(a.nama)+'?',{ok:'Hapus',danger:1})))return;
-  S.logAbsensi.splice(idx,1);ss(KS.abs,S.logAbsensi);showToast('🗑 Dihapus');go('absensi');
+  S.logAbsensi.splice(idx,1);ss(KS.abs,S.logAbsensi);showToast('Dihapus');go('absensi');
   doSync('deleteAbsensi',{id:a.id,tgl:a.tgl,idKaryawan:a.idKaryawan});
 }
 // ── EDIT ABSENSI [v1.32] — koreksi salah input proyek/tanggal/status/lembur
@@ -2294,12 +2324,12 @@ function openEditAbsensi(idx){
   const k=S.karyawan.find(x=>x.id===a.idKaryawan);
   const projOpts=`<option value="">— Tanpa Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${a.kodeProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const stsOpts=['Hadir','Setengah Hari'].map(s=>`<option${a.status===s?' selected':''}>${s}</option>`).join('');
-  openModal(`<div class="modal-title">✏️ Edit Absensi</div>
+  openModal(`<div class="modal-title">${ic('edit')} Edit Absensi</div>
     <div style="margin-bottom:10px">
       <div class="item-name">${esc(a.nama)}</div>
       <div class="item-sub">${fDate(a.tgl)} · upah tercatat ${fRp(a.upahHariIni)}</div>
     </div>
-    ${locked?`<div style="background:var(--ic-orange);border:1px solid var(--bd-orange);border-radius:9px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:12px">🔒 Sudah di-closing (${esc(a.noClosing||'-')}). Hanya <strong>proyek</strong> yang bisa dikoreksi — status & lembur dikunci agar total closing tetap cocok.</div>`:''}
+    ${locked?`<div style="background:var(--ic-orange);border:1px solid var(--bd-orange);border-radius:9px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:12px">${ic('lock')} Sudah di-closing (${esc(a.noClosing||'-')}). Hanya <strong>proyek</strong> yang bisa dikoreksi — status & lembur dikunci agar total closing tetap cocok.</div>`:''}
     <div class="fg"><label class="fl">Proyek${locked?'':' '}<span style="color:var(--text3);font-weight:400">(tempat karyawan bekerja)</span></label>
       <select class="fc" id="ea-proj">${projOpts}</select></div>
     <div class="fg"><label class="fl">Tanggal</label>
@@ -2315,7 +2345,7 @@ function openEditAbsensi(idx){
       <input class="fc" id="ea-ket" value="${esc(a.ket||'')}"></div>
     <div class="act-row" style="margin-top:12px">
       <button class="btn btn-g btn-sm" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p btn-sm" style="flex:1" onclick="submitEditAbsensi()">💾 Simpan Perubahan</button>
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="submitEditAbsensi()">${ic('save')} Simpan Perubahan</button>
     </div>`);
 }
 function submitEditAbsensi(){
@@ -2341,7 +2371,7 @@ function submitEditAbsensi(){
   S.logAbsensi[idx]={...a,tgl,kodeProj,namaProj,status,jamLembur,upahLembur,upahHariIni,ket};
   ss(KS.abs,S.logAbsensi);
   closeModal();
-  showToast('✅ Absensi diupdate');
+  showToast('Absensi diupdate');
   go('absensi');
   doSync('updateAbsensi',{id:orig.id,oldTgl:orig.tgl,oldIdKaryawan:orig.idKaryawan,
     tgl,idKaryawan:a.idKaryawan,nama:a.nama,status,kodeProj,namaProj,
@@ -2375,10 +2405,10 @@ function kasbonInput(){
       <div class="num-hint">Contoh: 500.000</div></div>
     <div class="fg"><label class="fl">Proyek <span style="color:var(--text3);font-weight:400">(opsional — jika AMBIL untuk keperluan proyek)</span></label>
       <select class="fc" id="ksb-proj" onchange="S.ksbF.proj=this.value">${projOpts}</select>
-      <div class="num-hint" style="color:var(--amber)">⚠️ Jika diisi, kasbon ini akan menjadi beban biaya proyek tersebut</div></div>
+      <div class="num-hint" style="color:var(--amber)">${ic('alert')} Jika diisi, kasbon ini akan menjadi beban biaya proyek tersebut</div></div>
     <div class="fg"><label class="fl">Keterangan <span style="color:var(--text3);font-weight:400">(keperluan kasbon)</span></label>
       <input class="fc" id="ksb-ket" value="${esc(f.ket||'')}" oninput="S.ksbF.ket=this.value" placeholder="Contoh: Beli material cat, Ongkos transport, Kebutuhan keluarga…"></div>
-    <button class="btn btn-p btn-w" onclick="submitKasbon()">💾 Simpan Kasbon</button></div>`;
+    <button class="btn btn-p btn-w" onclick="submitKasbon()">${ic('save')} Simpan Kasbon</button></div>`;
 }
 function submitKasbon(){
   const f=S.ksbF||{};
@@ -2387,7 +2417,7 @@ function submitKasbon(){
   if(!id||!nom){showToast('Lengkapi karyawan & nominal','err');return;}
   const kodeProj=(f.proj||'').trim();
   const nk={id:'KSB-'+Date.now(),tgl:f.tgl||today(),idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:f.tipe||'AMBIL',nominal:nom,kodeProj,ket:f.ket||'',noClosing:'',pending:true};
-  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('✅ Kasbon disimpan');
+  S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('Kasbon disimpan');
   S.ksbF=null;setTab('kasbon','log');
   doSync('addKasbon',[{id:nk.id,tgl:nk.tgl,idKaryawan:nk.idKaryawan,nama:nk.nama,tipe:nk.tipe,nominal:nk.nominal,kodeProj,ket:nk.ket}]);
 }
@@ -2396,7 +2426,7 @@ function kasbonRekap(){
     const kb=getWorkerKasbonDetail(k.id);
     const am=kb.totalAmbil,pt=kb.totalPotong,sisa=am-pt;
     const projBreakdown=am>0&&kb.byProj.length>0?`<div style="margin-top:8px;background:var(--ic-orange);border-radius:7px;padding:8px">
-      <div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">💼 AMBIL per Proyek</div>
+      <div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">${ic('briefcase')} AMBIL per Proyek</div>
       ${kb.byProj.map(p=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px dashed var(--bd-amber)"><span style="color:var(--amber)">${esc(p.projNama)}</span><span style="font-weight:600;color:var(--orange)">${fRp(p.ambil)}</span></div>`).join('')}
     </div>`:'';
     return `<div class="card"><div class="item-name" style="margin-bottom:8px">${esc(k.nama)}</div>
@@ -2417,7 +2447,7 @@ function _kasbonCard(k, kb, isLunas){
     return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--bd-purple)">
       <div style="min-width:0">
         <div style="font-size:11px;font-weight:600;color:var(--text)">${fDate(p.tgl)}</div>
-        <div style="font-size:10px;color:var(--purple);margin-top:2px">✂️ dari upah <span style="font-weight:600">${esc(pNama)}</span></div>
+        <div style="font-size:10px;color:var(--purple);margin-top:2px">${ic('scissors')} dari upah <span style="font-weight:600">${esc(pNama)}</span></div>
         ${p.noClosing?`<div style="font-size:9px;color:var(--text3);margin-top:1px">No.Closing: ${esc(p.noClosing)}</div>`:''}
       </div>
       <div style="font-size:12px;font-weight:800;color:var(--purple);flex-shrink:0;margin-left:10px">−${fRp(p.nominal)}</div>
@@ -2426,7 +2456,7 @@ function _kasbonCard(k, kb, isLunas){
   const riwayatSection=potongList.length>0
     ?`<details style="margin-top:9px">
         <summary style="cursor:pointer;font-size:11px;font-weight:700;color:var(--purple);padding:7px 10px;background:var(--ic-purple);border:1px solid var(--bd-purple);border-radius:8px;list-style:none;display:flex;justify-content:space-between;align-items:center">
-          <span>✂️ Riwayat Pelunasan (${potongList.length}×)</span>
+          <span>${ic('scissors')} Riwayat Pelunasan (${potongList.length}×)</span>
           <span>−${fRp(kb.totalPotong)} <span style="font-size:9px;opacity:.6">▾ ketuk untuk lihat</span></span>
         </summary>
         <div style="padding:4px 6px 2px;background:var(--ic-purple);border:1px solid var(--bd-purple);border-top:none;border-radius:0 0 8px 8px">${riwayatRows}
@@ -2438,18 +2468,18 @@ function _kasbonCard(k, kb, isLunas){
     :`<div style="margin-top:8px;font-size:11px;color:var(--text3);text-align:center;padding:6px;background:var(--bg3);border-radius:7px">Belum ada riwayat pelunasan</div>`;
   const footer=isLunas
     ?`<div style="margin-top:9px;padding:8px 11px;background:var(--ic-green);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;color:var(--green);font-weight:600">✅ Lunas</span>
+        <span style="font-size:11px;color:var(--green);font-weight:600">${ic('check-circle')} Lunas</span>
         <span style="font-size:12px;color:var(--green);font-weight:700">Total ambil ${fRp(kb.totalAmbil)} · Terlunasi semua</span>
       </div>`
     :`<div style="margin-top:9px;padding:8px 11px;background:var(--ic-red);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:11px;color:var(--red);font-weight:600">Sisa Belum Lunas</span>
         <span style="font-size:14px;font-weight:800;color:var(--red)">${fRp(kb.hutang)}</span>
       </div>
-      <div style="margin-top:7px;font-size:10px;color:var(--text3);text-align:center">💡 Masukkan sebagai "Potong kasbon" di Closing proyek berikutnya</div>`;
+      <div style="margin-top:7px;font-size:10px;color:var(--text3);text-align:center">${ic('bulb')} Masukkan sebagai "Potong kasbon" di Closing proyek berikutnya</div>`;
   return `<div class="card" style="${isLunas?'opacity:.85':''}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
       <div>
-        <div class="item-name">${esc(k.nama)}${isLunas?' <span style="font-size:10px;background:var(--ic-green);color:var(--green);border-radius:5px;padding:1px 6px;font-weight:600;vertical-align:middle">✅ LUNAS</span>':''}</div>
+        <div class="item-name">${esc(k.nama)}${isLunas?' <span style="font-size:10px;background:var(--ic-green);color:var(--green);border-radius:5px;padding:1px 6px;font-weight:600;vertical-align:middle">'+ic('check-circle')+' LUNAS</span>':''}</div>
         <div class="item-sub">Total ambil: ${fRp(kb.totalAmbil)} · Sudah dipotong: ${fRp(kb.totalPotong)}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;margin-left:10px">
@@ -2459,7 +2489,7 @@ function _kasbonCard(k, kb, isLunas){
       </div>
     </div>
     ${kb.byProj.length>0?`<div style="background:var(--ic-orange);border-radius:8px;padding:9px;margin-bottom:0">
-      <div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">💼 Sumber Kasbon (AMBIL per Proyek)</div>
+      <div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">${ic('briefcase')} Sumber Kasbon (AMBIL per Proyek)</div>
       ${kb.byProj.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--bd-amber)">
         <span style="font-size:11px;color:var(--amber)">${esc(p.projNama)}</span>
         <span style="font-size:12px;font-weight:600;color:var(--orange)">${fRp(p.ambil)}</span>
@@ -2485,7 +2515,7 @@ function kasbonHutang(){
         <div style="font-size:11px;color:var(--red);margin-top:3px">${aktif.length} karyawan · Bisa dilunasi saat closing proyek berikutnya</div>
       </div>${aktif.map(({k,kb})=>_kasbonCard(k,kb,false)).join('')}`
     :`<div class="card" style="text-align:center;padding:22px 16px;margin-bottom:14px">
-        <div style="font-size:24px;margin-bottom:6px">🎉</div>
+        <div style="font-size:24px;margin-bottom:6px">${ic('sparkles')}</div>
         <div style="font-weight:700;font-size:14px;color:var(--green)">Tidak Ada Hutang Aktif</div>
         <div style="font-size:12px;color:var(--text2);margin-top:4px">Semua kasbon sudah lunas</div>
       </div>`;
@@ -2493,7 +2523,7 @@ function kasbonHutang(){
   const lunasSection=lunas.length>0
     ?`<details style="margin-top:6px">
         <summary style="cursor:pointer;list-style:none;padding:10px 14px;background:var(--ic-green);border:1px solid var(--bd-green);border-radius:10px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--green)">
-          <span>✅ Riwayat Sudah Lunas (${lunas.length} karyawan)</span>
+          <span>${ic('check-circle')} Riwayat Sudah Lunas (${lunas.length} karyawan)</span>
           <span style="font-size:10px;font-weight:400;color:var(--green)">▾ ketuk untuk lihat</span>
         </summary>
         <div style="margin-top:8px">${lunas.map(({k,kb})=>_kasbonCard(k,kb,true)).join('')}</div>
@@ -2508,18 +2538,18 @@ function kasbonLog(){
     const ri=S.logKasbon.findIndex(x=>x.id===k.id);
     const canDel=!k.noClosing||k.noClosing.trim()==='';
     const projNama=k.kodeProj?S.projects.find(p=>p.kode===k.kodeProj)?.nama||k.kodeProj:'';
-    const projChip=projNama?(k.tipe==='BONUS'?` <span style="font-size:11px;color:var(--amber);font-weight:500">🎁 ${esc(projNama)}</span>`
-      :k.tipe==='AMBIL'?` <span style="font-size:11px;color:var(--purple);font-weight:500">💼 ${esc(projNama)}</span>`
-      :k.tipe==='POTONG'?` <span style="font-size:11px;color:var(--green);font-weight:500">✂️ dipotong dari upah ${esc(projNama)}</span>`:''):'';
+    const projChip=projNama?(k.tipe==='BONUS'?` <span style="font-size:11px;color:var(--amber);font-weight:500">${ic('gift')} ${esc(projNama)}</span>`
+      :k.tipe==='AMBIL'?` <span style="font-size:11px;color:var(--purple);font-weight:500">${ic('briefcase')} ${esc(projNama)}</span>`
+      :k.tipe==='POTONG'?` <span style="font-size:11px;color:var(--green);font-weight:500">${ic('scissors')} dipotong dari upah ${esc(projNama)}</span>`:''):'';
     return `<div class="card"><div class="row">
       <div style="flex:1;min-width:0">
         <div class="item-name">${esc(k.nama)}${projChip}</div>
-        <div class="item-sub">${fDate(k.tgl)}${k.ket?' · '+esc(k.ket):''}${k.noClosing?' · <span style="color:var(--purple);font-size:10px">🔒'+esc(k.noClosing)+'</span>':''}</div>
+        <div class="item-sub">${fDate(k.tgl)}${k.ket?' · '+esc(k.ket):''}${k.noClosing?' · <span style="color:var(--purple);font-size:10px">'+ic('lock')+''+esc(k.noClosing)+'</span>':''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px">${fRp(k.nominal)}</div>${bdg(k.tipe)}</div>
-        ${canDel?`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delKasbon(${ri})">🗑</button>`
-          :'<span title="Sudah closing" style="font-size:14px;opacity:.4">🔒</span>'}
+        ${canDel?`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delKasbon(${ri})">${ic('trash','b')}</button>`
+          :'<span title="Sudah closing" style="font-size:14px;opacity:.4">'+ic('lock')+'</span>'}
       </div></div></div>`;
   }).join('');
 }
@@ -2527,7 +2557,7 @@ async function delKasbon(idx){
   const k=S.logKasbon[idx];if(!k)return;
   if(k.noClosing&&k.noClosing.trim()!==''){showToast('Tidak bisa hapus -- terkait closing '+k.noClosing,'err');return;}
   if(!(await askConfirm('Hapus kasbon '+fRp(k.nominal)+' ('+k.tipe+') untuk '+k.nama+'?',{ok:'Hapus',danger:1})))return;
-  S.logKasbon.splice(idx,1);ss(KS.ksb,S.logKasbon);showToast('🗑 Kasbon dihapus');go('kasbon');
+  S.logKasbon.splice(idx,1);ss(KS.ksb,S.logKasbon);showToast('Kasbon dihapus');go('kasbon');
   doSync('deleteKasbon',{id:k.id,tgl:k.tgl,idKaryawan:k.idKaryawan,tipe:k.tipe,nominal:k.nominal});
 }
 // ── CLOSING
@@ -2579,7 +2609,7 @@ function closingBaru(){
     <div class="g2">
       <div class="fg"><label class="fl">Tgl Bayar</label><input class="fc" type="date" id="cls-bayar" value="${f.bayar||today()}" onchange="S.clsF.bayar=this.value"></div>
       <div class="fg"><label class="fl">No Closing</label><input class="fc" id="cls-noc" value="${esc(f.noc||autoNo)}" oninput="S.clsF.noc=this.value"></div></div>
-    <button class="btn btn-o btn-w" onclick="genClosing()">📊 Generate Rekap</button>
+    <button class="btn btn-o btn-w" onclick="genClosing()">${ic('chart')} Generate Rekap</button>
   </div>
   <div id="cls-rekap">${clsRekap.length>0?buildClsRekap():''}</div>`;
 }
@@ -2594,12 +2624,12 @@ function closingLog(){
     return `<div class="card" style="cursor:pointer" onclick="openClosingDetail('${esc(c.noClosing)}')">
       <div class="row" style="margin-bottom:10px">
         <div style="flex:1;min-width:0">
-          <div class="item-name" style="color:var(--blue)">🔒 ${esc(c.noClosing)}</div>
-          <div class="item-sub" style="margin-top:3px">📅 ${fDate(c.tglBayar)} &nbsp;·&nbsp; 👷 ${c.karyawan.length} karyawan &nbsp;·&nbsp; ${c.jmlRecord} hari kerja</div>
+          <div class="item-name" style="color:var(--blue)">${ic('lock')} ${esc(c.noClosing)}</div>
+          <div class="item-sub" style="margin-top:3px">${ic('calendar')} ${fDate(c.tglBayar)} &nbsp;·&nbsp; ${ic('user')} ${c.karyawan.length} karyawan &nbsp;·&nbsp; ${c.jmlRecord} hari kerja</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
           <span style="font-size:11px;color:var(--text2)">Lihat detail →</span>
-          <button style="background:var(--ic-red);border:none;border-radius:8px;padding:6px 9px;font-size:13px;cursor:pointer;color:var(--red)" onclick="event.stopPropagation();confirmDeleteClosing('${esc(c.noClosing)}')">🗑</button>
+          <button style="background:var(--ic-red);border:none;border-radius:8px;padding:6px 9px;font-size:13px;cursor:pointer;color:var(--red)" onclick="event.stopPropagation();confirmDeleteClosing('${esc(c.noClosing)}')">${ic('trash','b')}</button>
         </div>
       </div>
       <div class="g3">
@@ -2659,7 +2689,7 @@ function openClosingDetail(noClosing){
           <span style="font-size:11px;color:var(--text2)">${fDate(r.tgl)}</span>
           <span style="margin-left:6px;font-size:10px;padding:1px 6px;border-radius:9px;font-weight:600;background:${r.status==='Hadir'?'var(--ic-green)':r.status==='Setengah Hari'?'var(--ic-amber)':'var(--bg4)'};color:${r.status==='Hadir'?'var(--green)':r.status==='Setengah Hari'?'var(--amber)':'var(--text2)'}">${r.status}</span>
           ${r.kodeProj?`<span style="font-size:10px;color:var(--text3);margin-left:4px">${esc(S.projects.find(p=>p.kode===r.kodeProj)?.nama||r.kodeProj)}</span>`:''}
-          ${(Number(r.jamLembur)>0)?`<span style="font-size:10px;color:var(--amber);margin-left:4px;font-weight:700">⏰${r.jamLembur}j</span>`:''}
+          ${(Number(r.jamLembur)>0)?`<span style="font-size:10px;color:var(--amber);margin-left:4px;font-weight:700">${ic('clock')}${r.jamLembur}j</span>`:''}
         </div>
         <span style="font-size:12px;font-weight:600;color:var(--green)">${fRp(r.upahHariIni)}</span>
       </div>`).join('');
@@ -2672,7 +2702,7 @@ function openClosingDetail(noClosing){
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:var(--text2)">Upah: <strong style="color:var(--green)">${fRp(kr.totalUpah)}</strong></div>
-          ${bonus!==0?`<div style="font-size:11px;color:${bonus>0?'var(--amber)':'var(--red)'}">${bonus>0?'🎁 Bonus: + '+fRp(bonus):'↩️ Koreksi: - '+fRp(Math.abs(bonus))}</div>`:''}
+          ${bonus!==0?`<div style="font-size:11px;color:${bonus>0?'var(--amber)':'var(--red)'}">${bonus>0?''+ic('gift')+' Bonus: + '+fRp(bonus):''+ic('undo')+' Koreksi: - '+fRp(Math.abs(bonus))}</div>`:''}
           ${potong>0?`<div style="font-size:11px;color:var(--purple)">Potong: -${fRp(potong)}</div>`:''}
           <div style="font-size:13px;font-weight:800;color:${net>=0?'var(--blue)':'var(--red)'}">Net: ${fRp(net)}</div>
         </div>
@@ -2713,20 +2743,20 @@ function openClosingDetail(noClosing){
         <div>
           <span style="font-size:12px;font-weight:600;color:var(--text)">${esc(kk.nama)}</span>
           <span style="font-size:10px;color:var(--text3);margin-left:6px">${kk.hari} hari</span>
-          ${kk.lembur>0?`<span style="font-size:10px;color:var(--amber);margin-left:4px;font-weight:700">⏰${kk.lembur}j</span>`:''}
+          ${kk.lembur>0?`<span style="font-size:10px;color:var(--amber);margin-left:4px;font-weight:700">${ic('clock')}${kk.lembur}j</span>`:''}
         </div>
         <span style="font-size:12px;font-weight:600;color:var(--green)">${fRp(kk.upah)}</span>
       </div>`).join('');
     return `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:11px;padding:11px;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:13px;color:var(--text)">🏗️ ${esc(g.nama)}</div>
+          <div style="font-weight:700;font-size:13px;color:var(--text)">${ic('building')} ${esc(g.nama)}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">${karList.length} karyawan · ${g.hari} hari kerja</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:8px">
           <div style="font-size:12px;color:var(--text2)">Upah: <strong style="color:var(--green)">${fRp(g.upah)}</strong></div>
-          ${g.bonus?`<div style="font-size:11px;color:${g.bonus>0?'var(--amber)':'var(--red)'}">${g.bonus>0?'🎁 Bonus: + '+fRp(g.bonus):'↩️ Koreksi: - '+fRp(Math.abs(g.bonus))}</div>`:''}
-          ${g.potong?`<div style="font-size:11px;color:var(--purple)">✂️ Potong kasbon: -${fRp(g.potong)}</div>`:''}
+          ${g.bonus?`<div style="font-size:11px;color:${g.bonus>0?'var(--amber)':'var(--red)'}">${g.bonus>0?''+ic('gift')+' Bonus: + '+fRp(g.bonus):''+ic('undo')+' Koreksi: - '+fRp(Math.abs(g.bonus))}</div>`:''}
+          ${g.potong?`<div style="font-size:11px;color:var(--purple)">${ic('scissors')} Potong kasbon: -${fRp(g.potong)}</div>`:''}
           <div style="font-size:13px;font-weight:800;color:var(--blue)">Beban proyek: ${fRp(biaya)}</div>
         </div>
       </div>
@@ -2735,17 +2765,17 @@ function openClosingDetail(noClosing){
   }).join('');
 
   openModal(`
-    <div class="modal-title">🔒 ${esc(noClosing)}</div>
+    <div class="modal-title">${ic('lock')} ${esc(noClosing)}</div>
 
     <!-- Summary header -->
     <div style="background:var(--hero);border-radius:12px;padding:12px;margin-bottom:14px">
       <div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ringkasan Closing</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="color:var(--text2);font-size:12px">📅 Tgl Bayar</span>
+        <span style="color:var(--text2);font-size:12px">${ic('calendar')} Tgl Bayar</span>
         <span style="color:var(--text);font-weight:600;font-size:12px">${fDate(c.tglBayar)}</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="color:var(--text2);font-size:12px">👷 Karyawan</span>
+        <span style="color:var(--text2);font-size:12px">${ic('user')} Karyawan</span>
         <span style="color:var(--text);font-weight:600;font-size:12px">${c.karyawan.length} orang · ${c.jmlRecord} hari kerja</span>
       </div>
       <div style="height:1px;background:var(--text);margin:8px 0"></div>
@@ -2754,7 +2784,7 @@ function openClosingDetail(noClosing){
         <span style="color:var(--green);font-weight:700">${fRp(totalUpah)}</span>
       </div>
       ${totalBonus!==0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
-        <span style="color:var(--text3);font-size:11px">${totalBonus>0?'🎁 Total Bonus':'↩️ Koreksi Bonus'}</span>
+        <span style="color:var(--text3);font-size:11px">${totalBonus>0?''+ic('gift')+' Total Bonus':''+ic('undo')+' Koreksi Bonus'}</span>
         <span style="color:${totalBonus>0?'var(--amber)':'var(--red)'};font-weight:600">${totalBonus>0?'+ '+fRp(totalBonus):'- '+fRp(Math.abs(totalBonus))}</span>
       </div>`:''}
       ${totalPotong>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
@@ -2762,15 +2792,15 @@ function openClosingDetail(noClosing){
         <span style="color:var(--purple);font-weight:600">- ${fRp(totalPotong)}</span>
       </div>`:''}
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:6px;border-top:1px solid var(--text);margin-top:4px">
-        <span style="color:var(--text);font-size:13px;font-weight:700">💵 Net Dibayar</span>
+        <span style="color:var(--text);font-size:13px;font-weight:700">${ic('cash')} Net Dibayar</span>
         <span style="color:var(--blue);font-size:16px;font-weight:800">${fRp(netTotal)}</span>
       </div>
     </div>
 
     <!-- Toggle tampilan rincian -->
     <div style="display:flex;gap:6px;margin-bottom:9px">
-      <button class="tab ${view==='karyawan'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setClsDetailView('${esc(noClosing)}','karyawan')">👷 Per Karyawan</button>
-      <button class="tab ${view==='proyek'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setClsDetailView('${esc(noClosing)}','proyek')">🏗️ Per Proyek</button>
+      <button class="tab ${view==='karyawan'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setClsDetailView('${esc(noClosing)}','karyawan')">${ic('user')} Per Karyawan</button>
+      <button class="tab ${view==='proyek'?'tab-on':'tab-off'} btn-sm" style="flex:1" onclick="setClsDetailView('${esc(noClosing)}','proyek')">${ic('building')} Per Proyek</button>
     </div>
     <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Rincian ${view==='proyek'?'per Proyek':'per Karyawan'}</div>
     <div style="max-height:50vh;overflow-y:auto">
@@ -2779,7 +2809,7 @@ function openClosingDetail(noClosing){
 
     <div class="act-row" style="margin-top:12px">
       <button class="btn btn-g" style="flex:1" onclick="closeModal()">Tutup</button>
-      <button class="btn btn-d btn-sm" onclick="closeModal();confirmDeleteClosing('${esc(noClosing)}')">🗑 Batalkan Closing</button>
+      <button class="btn btn-d btn-sm" onclick="closeModal();confirmDeleteClosing('${esc(noClosing)}')">${ic('trash')} Batalkan Closing</button>
     </div>`);
 }
 
@@ -2813,7 +2843,7 @@ function genClosing(){
   }).filter(r=>r!==null);
   clsSel=Object.fromEntries(clsRekap.map(r=>[r.idKaryawan,true]));
   if(!clsRekap.length){showToast('Tidak ada absensi "Belum Dibayar" di periode ini','err');return;}
-  showToast('✅ '+clsRekap.length+' karyawan ditemukan');
+  showToast(''+clsRekap.length+' karyawan ditemukan');
   document.getElementById('cls-rekap').innerHTML=buildClsRekap();
 }
 
@@ -2859,7 +2889,7 @@ function buildClsRekap(){
     // Hutang breakdown per proyek untuk worker ini
     const kbD=getWorkerKasbonDetail(r.idKaryawan);
     const hutangInfo=kbD.hutang>0&&kbD.byProj.length>0?`<div style="background:var(--ic-orange);border-radius:7px;padding:7px;margin-bottom:8px;font-size:11px">
-      <div style="font-weight:700;color:var(--amber);margin-bottom:4px">💼 Sumber Hutang Kasbon</div>
+      <div style="font-weight:700;color:var(--amber);margin-bottom:4px">${ic('briefcase')} Sumber Hutang Kasbon</div>
       ${kbD.byProj.map(p=>`<div style="display:flex;justify-content:space-between;padding:2px 0;color:var(--amber)"><span>${esc(p.projNama)}</span><span style="font-weight:600">${fRp(p.ambil)}</span></div>`).join('')}
       ${kbD.totalPotong>0?`<div style="display:flex;justify-content:space-between;padding-top:4px;margin-top:2px;border-top:1px dashed var(--bd-amber);color:var(--purple)"><span>Sudah dipotong</span><span style="font-weight:600">- ${fRp(kbD.totalPotong)}</span></div>`:''}
     </div>`:'';
@@ -2870,7 +2900,7 @@ function buildClsRekap(){
           style="width:22px;height:22px;cursor:pointer;accent-color:var(--accent)">
         <div style="flex:1">
           <div class="item-name">${esc(r.nama)}</div>
-          <div class="item-sub">${r.hariHadir} Hadir${r.hariSetengah>0?' · '+r.hariSetengah+'× ½ Hari':''}${r.jamLembur>0?' · ⏰ '+r.jamLembur+'j lembur':''}</div>
+          <div class="item-sub">${r.hariHadir} Hadir${r.hariSetengah>0?' · '+r.hariSetengah+'× ½ Hari':''}${r.jamLembur>0?' · '+ic('clock')+' '+r.jamLembur+'j lembur':''}</div>
         </div>
         <span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:8px;background:${isSel?'var(--ic-green)':'var(--bg4)'};color:${isSel?'var(--green)':'var(--text3)'}">${isSel?'✓ Dibayar':'— Skip'}</span>
       </div>
@@ -2884,7 +2914,7 @@ function buildClsRekap(){
           <span style="font-weight:600;color:var(--green)">${fRp(r.upahPokok)}</span>
         </div>
         ${r.jamLembur>0?`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--bg4)">
-          <span style="color:var(--amber)">⏰ Lembur (${r.jamLembur} jam)</span>
+          <span style="color:var(--amber)">${ic('clock')} Lembur (${r.jamLembur} jam)</span>
           <span style="font-weight:600;color:var(--amber)">+ ${fRp(r.upahLembur)}</span>
         </div>`:''}
         <div style="display:flex;justify-content:space-between;padding:4px 0;margin-top:1px">
@@ -2894,7 +2924,7 @@ function buildClsRekap(){
       </div>
       <div class="chip" style="background:${r.sisaKasbon>0?'var(--ic-red)':'var(--ic-green)'};margin-bottom:8px"><div class="chip-lbl">Sisa Kasbon</div><div class="chip-val" style="color:${r.sisaKasbon>0?'var(--red)':'var(--green)'}">${fRp(r.sisaKasbon)}</div></div>
       ${hutangInfo}<div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:9px;padding:9px;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">💼 Potong Kasbon</div>
+        <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px">${ic('briefcase')} Potong Kasbon</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
           <label style="font-size:11px;color:var(--green);white-space:nowrap;flex-shrink:0">Nominal:</label>
           <input class="fc" type="text" inputmode="numeric" id="cls-ksb-${i}"
@@ -2911,7 +2941,7 @@ function buildClsRekap(){
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 9px;background:var(--ic-amber);border:1px solid var(--bd-amber);border-radius:9px">
-        <span style="font-size:11px;color:var(--amber);font-weight:700;white-space:nowrap;flex-shrink:0">🎁 Bonus:</span>
+        <span style="font-size:11px;color:var(--amber);font-weight:700;white-space:nowrap;flex-shrink:0">${ic('gift')} Bonus:</span>
         <input class="fc" type="text" inputmode="text" id="cls-bon-${i}"
           value="${r.bonusAmount?Number(r.bonusAmount).toLocaleString('id-ID'):''}"
           style="flex:1;border-color:var(--bd-amber)" placeholder="0 / -"
@@ -2933,14 +2963,14 @@ function buildClsRekap(){
           <button class="btn btn-g btn-sm" style="padding:5px 10px;font-size:11px" onclick="toggleAllCls(false)">Batal Semua</button>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text3)">💡 Klik kartu atau centang untuk pilih siapa yang dibayar sekarang. Yg tidak dipilih tetap &quot;Belum Dibayar&quot;.</div>
+      <div style="font-size:11px;color:var(--text3)">${ic('bulb')} Klik kartu atau centang untuk pilih siapa yang dibayar sekarang. Yg tidak dipilih tetap &quot;Belum Dibayar&quot;.</div>
     </div>
     ${rows}
     <div style="background:var(--hero);border-radius:12px;padding:12px;margin-bottom:10px">
       <div style="color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Total Net Dibayar (${selCount} karyawan)</div>
       <div id="cls-total" style="color:var(--green);font-size:20px;font-weight:800">${fRp(totalAll)}</div>
     </div>
-    <button class="btn btn-p btn-w" onclick="finalizeClosing()">🔒 Finalize & Simpan Closing</button>`;
+    <button class="btn btn-p btn-w" onclick="finalizeClosing()">${ic('lock')} Finalize & Simpan Closing</button>`;
 }
 
 function finalizeClosing(){
@@ -3003,7 +3033,7 @@ function finalizeClosing(){
   });
   ss(KS.ksb,S.logKasbon);
 
-  showToast('✅ Closing '+noC+' selesai — '+updated+' absensi diupdate');
+  showToast('Closing '+noC+' selesai — '+updated+' absensi diupdate');
   doSync('finalizeClosing',{
     dari,sampai,tglBayar,noClosing:noC,
     selectedIds:sIds,
@@ -3019,7 +3049,7 @@ async function confirmDeleteClosing(noClosing){
   const list=getClosingList();
   const c=list.find(x=>x.noClosing===noClosing);
   if(!c)return;
-  if(!(await askConfirm('⚠️ BATALKAN CLOSING "'+noClosing+'"?\n\nIni akan:\n• Reset '+c.jmlRecord+' absensi kembali ke "Belum Dibayar"\n• Hapus kasbon POTONG terkait closing ini\n\nLanjutkan?',{ok:'Batalkan closing',danger:1})))return;
+  if(!(await askConfirm('BATALKAN CLOSING "'+noClosing+'"?\n\nIni akan:\n• Reset '+c.jmlRecord+' absensi kembali ke "Belum Dibayar"\n• Hapus kasbon POTONG terkait closing ini\n\nLanjutkan?',{ok:'Batalkan closing',danger:1})))return;
   deleteClosing(noClosing);
 }
 
@@ -3039,7 +3069,7 @@ function deleteClosing(noClosing){
   ss(KS.ksb,S.logKasbon);
   const removedKsb=before-S.logKasbon.length;
 
-  showToast('✅ Closing "'+noClosing+'" dibatalkan — '+resetCount+' absensi direset, '+removedKsb+' kasbon dihapus');
+  showToast('Closing "'+noClosing+'" dibatalkan — '+resetCount+' absensi direset, '+removedKsb+' kasbon dihapus');
   doSync('deleteClosing',{noClosing});
   go('closing');
 }
@@ -3074,7 +3104,7 @@ function bayarInput(){
     ${items}
     <div class="act-row">
       <button class="btn btn-g" style="flex:1" onclick="addPayRow()">+ Baris</button>
-      <button class="btn btn-p" style="flex:1" onclick="submitPay()">💾 Simpan</button></div></div>`;
+      <button class="btn btn-p" style="flex:1" onclick="submitPay()">${ic('save')} Simpan</button></div></div>`;
 }
 function addPayRow(){S.payItems.push({kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''});go('bayar');}
 function delPayRow(i){S.payItems.splice(i,1);go('bayar');}
@@ -3082,7 +3112,7 @@ function submitPay(){
   if(S.payItems.some(it=>!it.kodeProj||!it.nominal)){showToast('Lengkapi proyek & nominal','err');return;}
   const tgl=S.payTgl||document.getElementById('pay-tgl')?.value||today();
   const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||'',pending:true}));
-  S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast('✅ '+ni.length+' pembayaran dicatat');
+  S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast(''+ni.length+' pembayaran dicatat');
   S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];S.payTgl='';setTab('bayar','log');
   doSync('addPembayaran',ni.map(it=>({id:it.id,tgl,kodeProj:it.kodeProj,namaProj:it.namaProj||'',nominal:it.nominal,metode:it.metode,bank:it.bank,ket:it.ket,ref:it.ref})));
 }
@@ -3097,7 +3127,7 @@ function bayarLog(){
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="font-weight:700;color:var(--green);font-size:14px">${fRp(p.nominal)}</div>
-        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembayaran(${ri})">🗑</button>
+        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembayaran(${ri})">${ic('trash','b')}</button>
       </div></div>
       ${p.ket?`<div class="item-sub" style="margin-top:4px">${esc(p.ket)}</div>`:''}</div>`;
   }).join('');
@@ -3105,14 +3135,14 @@ function bayarLog(){
 async function delPembayaran(idx){
   const p=S.logPembayaran[idx];if(!p)return;
   if(!(await askConfirm('Hapus pembayaran '+fRp(p.nominal)+' dari proyek '+p.kodeProj+'?',{ok:'Hapus',danger:1})))return;
-  S.logPembayaran.splice(idx,1);ss(KS.bayar,S.logPembayaran);showToast('🗑 Pembayaran dihapus');go('bayar');
+  S.logPembayaran.splice(idx,1);ss(KS.bayar,S.logPembayaran);showToast('Pembayaran dihapus');go('bayar');
   doSync('deletePembayaran',{id:p.id,tgl:p.tgl,kodeProj:p.kodeProj,nominal:p.nominal});
 }
 // ── RAB
 function pgRAB(){
   const tab=S.tab.rab||'input';
   return `<div class="row" style="margin-bottom:11px">
-    <div class="sec-title" style="margin:0">📐 RAB Proyek</div>
+    <div class="sec-title" style="margin:0">${ic('ruler')} RAB Proyek</div>
     <div class="tabs">
       <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('rab','input')">Input</button>
       <button class="tab ${tab==='perband'?'tab-on':'tab-off'}" onclick="setTab('rab','perband')">Vs Realisasi</button>
@@ -3130,8 +3160,8 @@ function rabInput(){
     <div class="fg"><label class="fl">Proyek<span class="req">*</span></label>
       <select class="fc" onchange="loadRabForProj(this.value)">${prjOpts}</select></div>
     ${existing?`<div class="row" style="margin-top:-4px">
-      <div style="font-size:11px;color:var(--green)">✅ RAB tersimpan · Update: ${fDate(existing.tglUpdate)}</div>
-      <button class="btn btn-d btn-sm" style="font-size:11px;padding:4px 10px" onclick="deleteRAB()">🗑 Hapus RAB</button>
+      <div style="font-size:11px;color:var(--green)">${ic('check-circle')} RAB tersimpan · Update: ${fDate(existing.tglUpdate)}</div>
+      <button class="btn btn-d btn-sm" style="font-size:11px;padding:4px 10px" onclick="deleteRAB()">${ic('trash')} Hapus RAB</button>
     </div>`:''}
   </div>
   ${S.rabKodeProj?`<div class="card">
@@ -3165,7 +3195,7 @@ function rabInput(){
         <span style="color:var(--text2)">Margin</span>
         <span style="font-weight:700;color:${laba>=0?'var(--green)':'var(--red)'}">${nilaiKontrak>0?Math.round(laba/nilaiKontrak*100):0}%</span></div>`:''}
     </div>`:''}
-    <button class="btn btn-p btn-w" onclick="saveRAB()">💾 Simpan RAB</button>
+    <button class="btn btn-p btn-w" onclick="saveRAB()">${ic('save')} Simpan RAB</button>
   </div>`:'<div class="empty">Pilih proyek dulu untuk input RAB</div>'}`;
 }
 function loadRabForProj(kodeProj){
@@ -3173,7 +3203,7 @@ function loadRabForProj(kodeProj){
   const ex=S.rab.find(r=>r.kodeProj===kodeProj);
   S.rabNominal=ex?{material:ex.material||0,upah:ex.upah||0,subkon:ex.subkon||0,overhead:ex.overhead||0}:{material:0,upah:0,subkon:0,overhead:0};
   S.rabLabels=ex?{mat:ex.labelMat||'',upah:ex.labelUpah||'',subkon:ex.labelSubkon||'',overhead:ex.labelOverhead||''}:{mat:'',upah:'',subkon:'',overhead:''};
-  if(ex)showToast('📂 RAB dimuat','info');
+  if(ex)showToast('RAB dimuat','info');
   go('rab');
 }
 function saveRAB(){
@@ -3190,7 +3220,7 @@ function saveRAB(){
   const rabData={kodeProj:S.rabKodeProj,tglUpdate:today(),material:Number(nom.material)||0,upah:Number(nom.upah)||0,subkon:Number(nom.subkon)||0,overhead:Number(nom.overhead)||0,labelMat:lm,labelUpah:lu,labelSubkon:ls,labelOverhead:lo};
   const idx=S.rab.findIndex(r=>r.kodeProj===S.rabKodeProj);
   if(idx>=0)S.rab[idx]=rabData;else S.rab.push(rabData);
-  ss(KS.rab,S.rab);showToast('✅ RAB disimpan');go('rab');
+  ss(KS.rab,S.rab);showToast('RAB disimpan');go('rab');
   doSync('saveRAB',rabData);
 }
 async function deleteRAB(){
@@ -3203,7 +3233,7 @@ async function deleteRAB(){
   S.rabNominal={material:0,upah:0,subkon:0,overhead:0};
   S.rabLabels={mat:'',upah:'',subkon:'',overhead:''};
   ss(KS.rab,S.rab);
-  showToast('🗑 RAB dihapus');go('rab');
+  showToast('RAB dihapus');go('rab');
   doSync('deleteRAB',{kodeProj});
 }
 function rabPerbandingan(){
@@ -3233,7 +3263,7 @@ function rabPerbandingan(){
           <div class="chip-val" style="color:${isOver?'var(--red)':'var(--green)'}">${fRp(realVal)}</div>
         </div></div>
       ${rabVal>0?`<div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,pct)}%;background:${pct>100?'var(--red)':pct>80?'var(--amber)':'var(--green)'}"></div></div>`:''}
-      ${sel!==0&&rabVal>0?`<div style="font-size:11px;margin-top:5px;color:${isOver?'var(--red)':'var(--green)'}">${isOver?'⚠️ Melebihi RAB':'✅ Hemat'}: ${fRp(Math.abs(sel))}</div>`:''}
+      ${sel!==0&&rabVal>0?`<div style="font-size:11px;margin-top:5px;color:${isOver?'var(--red)':'var(--green)'}">${isOver?''+ic('alert')+' Melebihi RAB':''+ic('check-circle')+' Hemat'}: ${fRp(Math.abs(sel))}</div>`:''}
     </div>`;
   };
   return `<div class="card" style="margin-bottom:10px">
@@ -3245,10 +3275,10 @@ function rabPerbandingan(){
       <div class="kpi"><div class="kpi-lbl">Total RAB</div><div class="kpi-val" style="color:var(--orange);font-size:11px">${fRp(rabT)}</div></div>
       <div class="kpi"><div class="kpi-lbl">Realisasi</div><div class="kpi-val" style="color:${realT>rabT?'var(--red)':'var(--green)'};font-size:11px">${fRp(realT)}</div></div>
     </div></div>
-  ${rowComp(rab.labelMat||'Material','🧱',rab.material||0,realMat)}
-  ${rowComp(rab.labelUpah||'Upah Tenaga','👷',rab.upah||0,realUpah)}
-  ${rowComp(rab.labelSubkon||'Subkontraktor','🔨',rab.subkon||0,realSub)}
-  ${rab.overhead>0?rowComp(rab.labelOverhead||'Overhead','📦',rab.overhead||0,0):''}
+  ${rowComp(rab.labelMat||'Material',''+ic('brick')+'',rab.material||0,realMat)}
+  ${rowComp(rab.labelUpah||'Upah Tenaga',''+ic('user')+'',rab.upah||0,realUpah)}
+  ${rowComp(rab.labelSubkon||'Subkontraktor',''+ic('hammer')+'',rab.subkon||0,realSub)}
+  ${rab.overhead>0?rowComp(rab.labelOverhead||'Overhead',''+ic('box')+'',rab.overhead||0,0):''}
   <div class="card" style="margin-top:4px">
     <div class="row" style="margin-bottom:10px"><span style="font-weight:700">Total Keseluruhan</span></div>
     <div class="g2">
@@ -3259,15 +3289,15 @@ function rabPerbandingan(){
       </div></div>
     ${rabT>0?`<div class="prog-bar" style="margin-top:10px"><div class="prog-fill" style="width:${Math.min(100,Math.round(realT/rabT*100))}%;background:${realT>rabT?'var(--red)':'var(--green)'}"></div></div>
     <div style="font-size:12px;margin-top:6px"><span style="color:var(--text2)">Selisih: </span>
-    <span style="font-weight:700;color:${realT>rabT?'var(--red)':'var(--green)'}">${realT>rabT?'⚠️ Over':'✅ Hemat'} ${fRp(Math.abs(realT-rabT))}</span></div>`:''}
-    <div style="text-align:center;margin-top:12px"><button class="btn btn-o btn-sm" onclick="loadRabForProj('${esc(S.rabKodeProj)}');setTab('rab','input')">✏️ Edit RAB</button></div>
+    <span style="font-weight:700;color:${realT>rabT?'var(--red)':'var(--green)'}">${realT>rabT?''+ic('alert')+' Over':''+ic('check-circle')+' Hemat'} ${fRp(Math.abs(realT-rabT))}</span></div>`:''}
+    <div style="text-align:center;margin-top:12px"><button class="btn btn-o btn-sm" onclick="loadRabForProj('${esc(S.rabKodeProj)}');setTab('rab','input')">${ic('edit')} Edit RAB</button></div>
   </div>`;
 }
 // ── SUBKON
 function pgSubkon(){
   const tab=S.tab.subkon||'input';
   return `<div class="row" style="margin-bottom:11px">
-    <div class="sec-title" style="margin:0">🔨 Subkontraktor</div>
+    <div class="sec-title" style="margin:0">${ic('hammer')} Subkontraktor</div>
     <div class="tabs">
       <button class="tab ${tab==='input'?'tab-on':'tab-off'}" onclick="setTab('subkon','input')">Input</button>
       <button class="tab ${tab==='log'?'tab-on':'tab-off'}" onclick="setTab('subkon','log')">Log</button>
@@ -3276,7 +3306,7 @@ function pgSubkon(){
     </div></div>${tab==='input'?subkonInput():tab==='log'?subkonLog():tab==='master'?subkonMaster():subkonRekap()}`;
 }
 function subkonInput(){
-  if(!S.masterSubkon.length)return `<div class="info-box">💡 Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
+  if(!S.masterSubkon.length)return `<div class="info-box">${ic('bulb')} Tambah subkontraktor dulu di tab <strong>Master</strong></div><button class="btn btn-o btn-w" onclick="setTab('subkon','master')">→ Ke Master Subkon</button>`;
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}">${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}">${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
   if(!S.skF)S.skF={tgl:'',prj:'',sk:'',urai:'',kontrak:0,start:'',ket:''};
@@ -3294,7 +3324,7 @@ function subkonInput(){
         <div class="num-hint">Contoh: 5.000.000</div></div>
       <div class="fg"><label class="fl">Tgl Mulai</label><input class="fc" type="date" id="sk-start" value="${f.start||today()}" onchange="S.skF.start=this.value"></div></div>
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="sk-ket" value="${esc(f.ket||'')}" oninput="S.skF.ket=this.value"></div>
-    <button class="btn btn-p btn-w" onclick="submitSubkon()">💾 Simpan Pekerjaan Subkon</button></div>`;
+    <button class="btn btn-p btn-w" onclick="submitSubkon()">${ic('save')} Simpan Pekerjaan Subkon</button></div>`;
 }
 function submitSubkon(){
   const f=S.skF||{};
@@ -3307,7 +3337,7 @@ function submitSubkon(){
   const skData=S.masterSubkon.find(sk=>sk.id===idSubkon);
   const projData=S.projects.find(p=>p.kode===kodeProj);
   const newLS={id:'LSK-'+Date.now(),tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,tglMulai:f.start||today(),statusBayar:'Belum Dibayar',nominalBayar:0,tglBayar:'',ket:f.ket||'',pending:true};
-  S.logSubkon.push(newLS);ss(KS.lsk,S.logSubkon);showToast('✅ Pekerjaan subkon dicatat');
+  S.logSubkon.push(newLS);ss(KS.lsk,S.logSubkon);showToast('Pekerjaan subkon dicatat');
   S.skF=null;setTab('subkon','log');
   doSync('addLogSubkon',newLS);
 }
@@ -3336,29 +3366,29 @@ function subkonLog(){
           ?`<details style="margin-top:4px"><summary style="list-style:none;display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:var(--text2);padding:2px 0"><span>▾</span><span>${rw.length} transaksi pembayaran</span></summary>
             <div style="margin-top:6px;background:var(--ic-green);border-radius:8px;padding:8px">
               ${rw.map((r,ri)=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:11px;padding:4px 0${ri<rw.length-1?';border-bottom:1px dashed var(--bd-green)':''}">
-                <span style="color:var(--text2)">📅 ${fDate(r.tgl)}</span>
+                <span style="color:var(--text2)">${ic('calendar')} ${fDate(r.tgl)}</span>
                 <div style="text-align:right">
                   <span style="font-weight:700;color:var(--green)">+${fRp(r.nominal)}</span>
-                  ${r.potongan?`<div style="font-size:10px;color:var(--purple)">✂ Potong kasbon: ${fRp(r.potongan)}</div>`:''}
+                  ${r.potongan?`<div style="font-size:10px;color:var(--purple)">${ic('scissors')} Potong kasbon: ${fRp(r.potongan)}</div>`:''}
                 </div>
               </div>`).join('')}
             </div></details>`
-          :ls.tglBayar?`<div style="font-size:11px;color:var(--text2);margin-top:2px">📅 Dibayar: ${fDate(ls.tglBayar)}</div>`:'';
+          :ls.tglBayar?`<div style="font-size:11px;color:var(--text2);margin-top:2px">${ic('calendar')} Dibayar: ${fDate(ls.tglBayar)}</div>`:'';
         return `<div style="font-size:12px;color:var(--text2);margin-bottom:8px">
           Dibayar: <strong style="color:var(--green)">${fRp(sudahBayar)}</strong>
           ${!isLunas?` · Sisa: <strong style="color:var(--red)">${fRp(sisa)}</strong>`:' · <span style="color:var(--green);font-weight:600">✓ Lunas</span>'}
           ${riwayatHtml}
         </div>`;
       })():''}
-      ${ls.buktiUrls?`<div style="margin-bottom:8px">${String(ls.buktiUrls).split('\n').map(u=>u.trim()).filter(Boolean).map((u,bi)=>`<a href="${esc(u)}" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:var(--blue);background:var(--ic-blue);border:1px solid var(--bd-blue);border-radius:7px;padding:3px 9px;margin:0 6px 4px 0;text-decoration:none">📎 Bukti ${bi+1}</a>`).join('')}</div>`:''}
+      ${ls.buktiUrls?`<div style="margin-bottom:8px">${String(ls.buktiUrls).split('\n').map(u=>u.trim()).filter(Boolean).map((u,bi)=>`<a href="${esc(u)}" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:var(--blue);background:var(--ic-blue);border:1px solid var(--bd-blue);border-radius:7px;padding:3px 9px;margin:0 6px 4px 0;text-decoration:none">${ic('paperclip')} Bukti ${bi+1}</a>`).join('')}</div>`:''}
       ${!isLunas?`<div style="margin-bottom:6px">
         <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(sudahBayar/ls.nilaiKontrak*100)}%;background:var(--green)"></div></div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px">${Math.round(sudahBayar/ls.nilaiKontrak*100)}% terbayar</div>
       </div>`:''}
       <div class="act-row">
-        ${!isLunas?`<button class="btn btn-o btn-sm" onclick="openBayarSubkon(${ri})">💰 Bayar (sisa ${fRp(sisa)})</button>`:''}
-        <button class="btn btn-sm" style="background:var(--ic-blue);color:var(--blue);border:none;border-radius:8px;padding:6px 12px;cursor:pointer" onclick="openEditLogSubkon(${ri})">✏️ Edit</button>
-        <button class="btn btn-d btn-sm" onclick="delLogSubkon(${ri})">🗑 Hapus</button>
+        ${!isLunas?`<button class="btn btn-o btn-sm" onclick="openBayarSubkon(${ri})">${ic('cash')} Bayar (sisa ${fRp(sisa)})</button>`:''}
+        <button class="btn btn-sm" style="background:var(--ic-blue);color:var(--blue);border:none;border-radius:8px;padding:6px 12px;cursor:pointer" onclick="openEditLogSubkon(${ri})">${ic('edit')} Edit</button>
+        <button class="btn btn-d btn-sm" onclick="delLogSubkon(${ri})">${ic('trash')} Hapus</button>
       </div></div>`;
   }).join('');
 }
@@ -3367,8 +3397,8 @@ function openEditLogSubkon(idx){
   const sudahBayar=ls.nominalBayar||0;
   const prjOpts=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${ls.kodeProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const skOpts=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}"${ls.idSubkon===sk.id?' selected':''}>${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
-  openModal(`<div class="modal-title">✏️ Edit Pekerjaan Subkon</div>
-    ${sudahBayar>0?`<div style="background:var(--ic-orange);border:1px solid var(--bd-orange);border-radius:9px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:12px">⚠️ Sudah ada pembayaran ${fRp(sudahBayar)}. Edit nilai kontrak akan mengubah sisa hutang.</div>`:''}
+  openModal(`<div class="modal-title">${ic('edit')} Edit Pekerjaan Subkon</div>
+    ${sudahBayar>0?`<div style="background:var(--ic-orange);border:1px solid var(--bd-orange);border-radius:9px;padding:8px 12px;font-size:11px;color:var(--orange);margin-bottom:12px">${ic('alert')} Sudah ada pembayaran ${fRp(sudahBayar)}. Edit nilai kontrak akan mengubah sisa hutang.</div>`:''}
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="elk-tgl" value="${esc(ls.tgl||'')}"></div>
     <div class="fg"><label class="fl">Proyek<span class="req">*</span></label><select class="fc" id="elk-prj">${prjOpts}</select></div>
     <div class="fg"><label class="fl">Subkontraktor<span class="req">*</span></label><select class="fc" id="elk-sk">${skOpts}</select></div>
@@ -3379,7 +3409,7 @@ function openEditLogSubkon(idx){
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" id="elk-ket" value="${esc(ls.ket||'')}"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveEditLogSubkon(${idx})">💾 Simpan</button>
+      <button class="btn btn-p" onclick="saveEditLogSubkon(${idx})">${ic('save')} Simpan</button>
     </div>`);
 }
 function saveEditLogSubkon(idx){
@@ -3396,7 +3426,7 @@ function saveEditLogSubkon(idx){
   S.logSubkon[idx]={...ls,tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,ket};
   ss(KS.lsk,S.logSubkon);
   closeModal();
-  showToast('✅ Pekerjaan subkon diupdate');
+  showToast('Pekerjaan subkon diupdate');
   go('subkon');
   doSync('editLogSubkon',{id:ls.id,tgl,kodeProj,namaProj:projData?.nama||'',idSubkon,namaSubkon:skData?.nama||'',uraian,nilaiKontrak,ket});
 }
@@ -3415,7 +3445,7 @@ function openBayarSubkon(idx){
   const karOpts=karHutang.length
     ?karHutang.map(([id,v])=>`<option value="${esc(id)}">${esc(v.nama)} (hutang ${fRp(v.hutang)})</option>`).join('')
     :'<option value="">-- Tidak ada hutang kasbon --</option>';
-  openModal(`<div class="modal-title">💰 Catat Pembayaran Subkon</div>
+  openModal(`<div class="modal-title">${ic('cash')} Catat Pembayaran Subkon</div>
     <div style="margin-bottom:12px"><div class="item-name">${esc(ls.namaSubkon)}</div>
       <div class="item-sub">${esc(ls.uraian)} · ${esc(ls.namaProj||ls.kodeProj)}</div></div>
     <div class="g3" style="margin-bottom:12px">
@@ -3433,13 +3463,13 @@ function openBayarSubkon(idx){
     <div class="fg" id="kar-pot-wrap" style="display:none">
       <label class="fl">Karyawan yang Dipotong<span class="req">*</span></label>
       <select class="fc" id="sb-kar">${karOpts}</select></div>
-    <div class="fg"><label class="fl">📷 Foto Bukti Transfer <span style="color:var(--text3);font-weight:400">(opsional — screenshot PC / foto HP)</span></label>
+    <div class="fg"><label class="fl">${ic('camera')} Foto Bukti Transfer <span style="color:var(--text3);font-weight:400">(opsional — screenshot PC / foto HP)</span></label>
       <input class="fc" type="file" id="sb-foto" accept="image/*" style="padding:8px">
       <div class="num-hint">Otomatis dikompres & disimpan ke Google Drive, link tercatat di pembayaran ini</div></div>
     <div id="sb-net-preview" style="margin:6px 0 4px;font-size:12px;color:var(--text2);text-align:right;min-height:18px"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveBayarSubkon(${idx})">💾 Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveBayarSubkon(${idx})">${ic('save')} Simpan</button></div>`);
 }
 function sbPreview(){
   const p=document.getElementById('sb-net-preview');if(!p)return;
@@ -3498,7 +3528,7 @@ function saveBayarSubkon(idx){
     }
   }
   closeModal();
-  showToast(sts==='Lunas'?'✅ Lunas! Pembayaran selesai':'✅ Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
+  showToast(sts==='Lunas'?'Lunas! Pembayaran selesai':'Pembayaran dicatat · Sisa: '+fRp(Math.max(0,sisa)));
   go('subkon');
   doSync('updateLogSubkon',{
     id:ls.id,kodeProj:ls.kodeProj,uraian:ls.uraian,
@@ -3513,14 +3543,14 @@ function saveBayarSubkon(idx){
 }
 async function uploadBuktiSubkon(idLog,file){
   try{
-    showToast('📤 Mengupload bukti transfer…','info');
+    showToast('Mengupload bukti transfer…','info');
     const b64=await compressImage(file);
     const d=await gsPost('uploadBuktiSubkon',{idLog,b64,mime:'image/jpeg',filename:'bukti-'+idLog+'-'+Date.now()+'.jpg'});
     if(d)applyGS(d);
-    showToast('✅ Bukti tersimpan di Google Drive');
+    showToast('Bukti tersimpan di Google Drive');
     go(S.page);
   }catch(e){
-    showToast('⚠️ Upload bukti gagal: '+e.message+' — pembayaran tetap tercatat','err');
+    showToast('Upload bukti gagal: '+e.message+' — pembayaran tetap tercatat','err');
   }
 }
 function subkonMaster(){
@@ -3537,8 +3567,8 @@ function subkonMaster(){
         ${totalK>0?`<div class="item-sub" style="margin-top:4px">Total: ${fRp(totalK)}${sisa>0?' · <strong style="color:var(--red)">Hutang: '+fRp(sisa)+'</strong>':''}</div>`:''}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;margin-left:8px">
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditSubkon(${i})">✏️</button>
-        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delSubkon('${esc(sk.id)}')">🗑</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="openEditSubkon(${i})">${ic('edit','b')}</button>
+        <button style="background:none;border:none;font-size:18px;cursor:pointer" onclick="delSubkon('${esc(sk.id)}')">${ic('trash','b')}</button>
       </div></div></div>`;
   }).join('')}`;
 }
@@ -3553,7 +3583,7 @@ function openAddSubkon(){
     <div class="fg"><label class="fl">Alamat / Catatan</label><input class="fc" id="sk2-alm"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveSubkon(false)">💾 Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveSubkon(false)">${ic('save')} Simpan</button></div>`);
 }
 function openEditSubkon(i){
   const sk=S.masterSubkon[i];
@@ -3567,23 +3597,23 @@ function openEditSubkon(i){
     <div class="fg"><label class="fl">Alamat / Catatan</label><input class="fc" id="sk2-alm" value="${esc(sk.alamat||'')}"></div>
     <div class="act-row" style="justify-content:flex-end">
       <button class="btn btn-g" onclick="closeModal()">Batal</button>
-      <button class="btn btn-p" onclick="saveSubkon(true)">💾 Simpan</button></div>`);
+      <button class="btn btn-p" onclick="saveSubkon(true)">${ic('save')} Simpan</button></div>`);
 }
 function saveSubkon(isEdit){
   const nama=document.getElementById('sk2-nama').value.trim();if(!nama){showToast('Nama wajib diisi','err');return;}
   const id=document.getElementById('sk2-id').value;
   const d={id,nama,spesialisasi:document.getElementById('sk2-spes').value,noHP:document.getElementById('sk2-hp').value,alamat:document.getElementById('sk2-alm').value};
   if(isEdit){const idx=Number(document.getElementById('sk2-idx').value);S.masterSubkon[idx]=d;}else S.masterSubkon.push(d);
-  ss(KS.sk,S.masterSubkon);closeModal();showToast(isEdit?'✅ Subkon diperbarui':'✅ Subkon ditambahkan');go('subkon');
+  ss(KS.sk,S.masterSubkon);closeModal();showToast(isEdit?'Subkon diperbarui':'Subkon ditambahkan');go('subkon');
   doSync(isEdit?'updateSubkon':'addSubkon',d);
 }
 async function delSubkon(id){
   if(!(await askConfirm('Hapus subkon '+id+'?',{ok:'Hapus',danger:1})))return;
-  S.masterSubkon=S.masterSubkon.filter(sk=>sk.id!==id);ss(KS.sk,S.masterSubkon);go('subkon');showToast('🗑 Dihapus');doSync('deleteSubkon',{id});
+  S.masterSubkon=S.masterSubkon.filter(sk=>sk.id!==id);ss(KS.sk,S.masterSubkon);go('subkon');showToast('Dihapus');doSync('deleteSubkon',{id});
 }
 async function delLogSubkon(idx){
   const ls=S.logSubkon[idx];if(!(await askConfirm('Hapus pekerjaan "'+ls.uraian+'"?',{ok:'Hapus',danger:1})))return;
-  S.logSubkon.splice(idx,1);ss(KS.lsk,S.logSubkon);showToast('🗑 Dihapus');go('subkon');
+  S.logSubkon.splice(idx,1);ss(KS.lsk,S.logSubkon);showToast('Dihapus');go('subkon');
   doSync('deleteLogSubkon',{id:ls.id,kodeProj:ls.kodeProj,uraian:ls.uraian});
 }
 function subkonRekap(){
@@ -3636,7 +3666,7 @@ function subkonRekap(){
                   ?`<details style="margin-top:7px"><summary style="list-style:none;display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:var(--blue);padding:2px 0"><span>▾</span><span>${rw.length} cicilan pembayaran</span></summary>
                     <div style="margin-top:6px;background:var(--ic-blue);border-radius:8px;padding:8px">
                       ${rw.map((r,ri)=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0${ri<rw.length-1?';border-bottom:1px dashed var(--bd-blue)':''}">
-                        <span style="color:var(--text2)">📅 ${fDate(r.tgl)}</span>
+                        <span style="color:var(--text2)">${ic('calendar')} ${fDate(r.tgl)}</span>
                         <span style="font-weight:700;color:var(--green)">+${fRp(r.nominal)}</span>
                       </div>`).join('')}
                       <div style="display:flex;justify-content:space-between;font-size:11px;padding:5px 0 0;border-top:1px solid var(--bd-blue);margin-top:2px">
@@ -3645,12 +3675,12 @@ function subkonRekap(){
                       </div>
                     </div></details>`
                   :ls.nominalBayar>0
-                    ?`<div style="font-size:11px;color:var(--text2);margin-top:5px">💰 Dibayar: <strong style="color:var(--green)">${fRp(ls.nominalBayar)}</strong>${ls.tglBayar?' · '+fDate(ls.tglBayar):''}</div>`
+                    ?`<div style="font-size:11px;color:var(--text2);margin-top:5px">${ic('cash')} Dibayar: <strong style="color:var(--green)">${fRp(ls.nominalBayar)}</strong>${ls.tglBayar?' · '+fDate(ls.tglBayar):''}</div>`
                     :'';
                 return `<div class="sub-card" style="margin-bottom:6px">
                   <div class="row">
                     <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(ls.uraian)}</div>
-                      <div class="item-sub">📅 ${fDate(ls.tgl)}</div></div>
+                      <div class="item-sub">${ic('calendar')} ${fDate(ls.tgl)}</div></div>
                     <div style="text-align:right;flex-shrink:0;margin-left:8px">
                       <div style="font-size:12px;font-weight:700">${fRp(ls.nilaiKontrak)}</div>
                       ${bdg(ls.statusBayar)}
@@ -4707,7 +4737,7 @@ function askConfirm(msg,o){
   return new Promise(res=>{
     let el=document.getElementById('cfm');
     if(!el){el=document.createElement('div');el.id='cfm';document.body.appendChild(el);}
-    const lines=String(msg).split('\n');const title=lines.shift();const body=lines.join('\n').trim();
+    const lines=String(msg).split('\n');const title=lines.shift().replace(/^(?:\p{Extended_Pictographic}\uFE0F?\s*)+/u,'');const body=lines.join('\n').trim();
     el.innerHTML=`<div class="cfm-box" role="alertdialog" aria-modal="true" aria-labelledby="cfm-t">
       <div class="cfm-ic${o.danger?' d':''}">${o.danger?'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6 7l1 13h10l1-13"/><path d="M10 11v5M14 11v5"/></svg>':'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/></svg>'}</div>
       <div id="cfm-t" class="cfm-t"></div><div class="cfm-b"></div>
