@@ -230,6 +230,34 @@ textarea.fc{min-height:0}
 .pj-note .ic{margin-top:2px}
 .pj-acts{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border)}
 .pj-acts .pj-del{margin-left:auto;background:var(--ic-red);color:var(--red)}
+/* [v1.44] menu samping hanya untuk PC */
+.nav-side{display:none}
+@media (min-width:1024px){
+  #app{display:grid;grid-template-columns:244px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  #hdr{grid-column:1/-1;grid-row:1;height:calc(64px + env(safe-area-inset-top,0px));padding-left:22px;padding-right:24px}
+  #nav{grid-column:1;grid-row:2;flex-direction:column;border-top:none;border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto}
+  #nav .nav-btn{display:none}
+  .nav-side{display:flex;flex-direction:column;gap:2px}
+  .side-btn{display:flex;align-items:center;gap:11px;width:100%;min-height:42px;padding:0 12px;border-radius:10px;border:none;background:transparent;color:var(--text2);font-size:13.5px;font-weight:500;cursor:pointer;text-align:left}
+  .side-btn:hover{background:var(--bg4);color:var(--text)}
+  .side-btn.on{background:var(--accent-soft);color:var(--accent);font-weight:700}
+  .side-btn .ic{font-size:18px}
+  .side-lbl{font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text3);padding:16px 12px 6px}
+  #content{grid-column:2;grid-row:2;padding:26px max(32px,calc((100% - 1200px)/2)) 48px}
+  #content[data-page=beli],#content[data-page=absensi],#content[data-page=kasbon],#content[data-page=closing],#content[data-page=bayar],#content[data-page=karyawan],#content[data-page=catatan],#content[data-page=rab],#content[data-page=subkon]{padding-left:max(32px,calc((100% - 860px)/2));padding-right:max(32px,calc((100% - 860px)/2))}
+  .sec-title{font-size:26px}
+  .chipf-row{margin:0 0 14px;padding:0}
+  .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);column-gap:28px;row-gap:12px;padding:22px 24px;align-items:start}
+  .hero>*{grid-column:1}
+  .hero-big{font-size:40px}
+  .hero-mini{grid-column:2;grid-row:1 / span 4;align-self:center}
+  .pj-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+  #overlay{justify-content:flex-end;align-items:stretch;padding:0;overflow:hidden}
+  #overlay .modal{max-width:540px;height:100%;margin:0;border-radius:20px 0 0 20px;border-right:none;overflow-y:auto;padding:24px 26px;animation:slidein .2s ease}
+  #toast{left:auto;right:24px;bottom:24px;max-width:420px}
+}
+@media (min-width:1500px){.pj-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@keyframes slidein{from{transform:translateX(30px);opacity:.6}to{transform:none;opacity:1}}
 .dash-sync{width:100%;margin-bottom:12px;background:transparent;border:1.5px dashed var(--border2);border-radius:12px;min-height:46px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
@@ -334,8 +362,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.43';
+const APP_VERSION='v1.44';
 const APP_CHANGELOG=[
+  {v:'v1.44',date:'3 Okt 2026',desc:'Tampilan PC/laptop: menu di samping kiri (semua menu langsung terlihat), Dashboard & daftar proyek 2–3 kolom, form terbuka sebagai panel di kanan. Tampilan HP tetap sama'},
   {v:'v1.43',date:'3 Okt 2026',desc:'Dashboard baru: kotak ringkasan (est. laba, margin, berapa proyek perlu perhatian) dan kartu proyek yang lebih ringkas — peringatan dengan penjelasan, bar biaya vs RAB & progres, proyek bermasalah di atas. Piutang, Hutang & Master Proyek ikut gaya baru. Angka tidak berubah'},
   {v:'v1.42',date:'3 Okt 2026',desc:'Emoji di menu, tombol & judul diganti ikon garis yang seragam; tab halaman berbentuk segmen; tombol lebih besar & mudah diketuk. Angka & cara kerja tidak berubah'},
   {v:'v1.41',date:'3 Okt 2026',desc:'Tampilan baru gaya Arthabumi (sama dengan FCC): warna terang hangat, huruf baru, tema gelap (tombol bulan di atas), konfirmasi hapus di dalam app, ikon app baru (hapus & tambah ulang shortcut di HP). Angka & cara kerja tidak berubah'},
@@ -605,7 +634,10 @@ function buildNav(){
     <span style="font-size:10px;font-weight:600">Lainnya</span>
     ${lainActive?'<div class="nav-dot"></div>':''}
   </button>`;
-  return mainBtns+lainBtn;
+  // [v1.44] menu samping untuk PC (semua menu; urutan utama mengikuti Atur Menu)
+  const sb=n=>`<button class="side-btn${S.page===n.id?' on':''}" onclick="go('${n.id}')">${ic(n.icon)}<span>${n.label}</span></button>`;
+  const side=`<div class="nav-side">${mainIds.map(id=>sb(NAV.find(x=>x.id===id))).join('')}<div class="side-lbl">LAINNYA</div>${NAV.filter(n=>!mainIds.includes(n.id)).map(sb).join('')}</div>`;
+  return mainBtns+lainBtn+side;
 }
 // Bottom sheet "Lainnya" — grid menu sekunder + tombol Atur Menu
 function buildNavSheet(){
@@ -675,7 +707,7 @@ function saveNavCustom(){
 function go(page){
   S.page=page;if(!S.tab[page])S.tab[page]='input';
   closeLainnya();
-  document.getElementById('content').innerHTML=buildPage(page);
+  const ct=document.getElementById('content');ct.dataset.page=page;ct.innerHTML=buildPage(page);
   document.getElementById('nav').innerHTML=buildNav();
   window.scrollTo&&window.scrollTo(0,0);
 }
@@ -1112,7 +1144,7 @@ function pgProject(){
     <div class="sec-title" style="margin:0">Master Proyek</div>
     <button class="btn btn-p btn-sm" onclick="openAddProject()">+ Tambah</button></div>
   <div class="tabs" style="margin-bottom:11px;flex-wrap:wrap;gap:6px">${tabs}</div>
-  ${list.length===0?`<div class="empty">Tidak ada proyek berstatus "${esc(f)}"</div>`:list.map(p=>{
+  ${list.length===0?`<div class="empty">Tidak ada proyek berstatus "${esc(f)}"</div>`:'<div class="pj-list">'+list.map(p=>{
     const gi=S.projects.indexOf(p);const vs=vSum(p);
     return `<article class="card pj">
     <div class="pj-head" style="cursor:pointer" onclick="openRekapProyek('${esc(p.kode)}')">
@@ -1131,7 +1163,7 @@ function pgProject(){
       <button class="btn btn-sm pj-del" onclick="delProject('${esc(p.kode)}')" aria-label="Hapus proyek">${ic('trash','b')}</button>
     </div>
     </article>`;
-  }).join('')}`;
+  }).join('')+'</div>'}`;
 }
 function openAddProject(){
   const kode=padId('PRJ',S.projects,'kode');

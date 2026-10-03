@@ -13,6 +13,16 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🖥️ SESSION 28 (v1.44) — 2026-10-03 — Redesain gaya B, Fase 4 Tampilan PC (redesain SELESAI)
+
+### Frontend saja — backend tidak berubah
+- `@media (min-width:1024px)`: #app jadi grid (header penuh di atas, menu samping 244px, isi). `buildNav()` kini juga merender `.nav-side` (menu utama sesuai Atur Menu + label LAINNYA + sisanya), tersembunyi di HP. `go()` menandai `#content[data-page]` → halaman input/log selebar 860px, Dashboard/Proyek 1200px.
+- Dashboard PC: hero 2 kolom (angka kiri, rincian kanan), kartu proyek 2 kolom (3 di ≥1500px); Master Proyek & Piutang ikut `.pj-list`. Modal tampil sebagai panel kanan; toast di pojok kanan bawah.
+- Catatan PRD: "tabel lebar untuk Log Pembelian/Absensi" tidak dibuat sebagai tabel (butuh render ulang daftar = risiko logika); diganti kolom isi yang lebar & rapi.
+- Uji: teks 46 layar HP identik dengan v1.43 (kecuali catatan versi); 46 layar PC 1280px 0 error; uji dialog/tema/toast lulus.
+
+---
+
 # 🎨 SESSION 27 (v1.43) — 2026-10-03 — Redesain gaya B, Fase 3 Dashboard & Proyek
 
 ### Frontend saja — backend tidak berubah

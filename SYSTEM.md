@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.43 (Latest) — 2026-10-03 (redesain gaya B fase 3 Dashboard, ikon via ic(); huruf di `fonts/`, ikon di `icons/` — ikut di-push)
+- **Versi aktif:** v1.44 (Latest) — 2026-10-03 (redesain gaya B selesai: + tampilan PC ≥1024px, ikon via ic(); huruf di `fonts/`, ikon di `icons/` — ikut di-push)
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
