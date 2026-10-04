@@ -258,6 +258,12 @@ textarea.fc{min-height:0}
 }
 @media (min-width:1500px){.pj-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @keyframes slidein{from{transform:translateX(30px);opacity:.6}to{transform:none;opacity:1}}
+/* [v1.45] */
+.fcc-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;background:var(--ic-blue);color:var(--blue);font-size:11px;font-weight:700;white-space:nowrap}
+.fcc-note{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;margin-bottom:10px;border-radius:12px;background:var(--ic-blue);border:1px solid var(--bd-blue);color:var(--blue);font-size:12.5px;line-height:1.5}
+.fcc-note .ic{margin-top:2px;font-size:16px}
+.abs-cepat{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.abs-cepat .btn{flex:1}
 .dash-sync{width:100%;margin-bottom:12px;background:transparent;border:1.5px dashed var(--border2);border-radius:12px;min-height:46px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
@@ -362,8 +368,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.44';
+const APP_VERSION='v1.45';
 const APP_CHANGELOG=[
+  {v:'v1.45',date:'5 Okt 2026',desc:'Absensi lebih cepat (Salin hari kerja terakhir, Semua hadir). Data dari FCC bertanda & dikunci (ubah lewat FCC). Pengingat di Input Kasbon & Bayar supaya tidak dobel. Setengah hari kini dihitung 0,5 juga di Hutang Upah & Closing. Data hasil sync otomatis langsung tampil'},
   {v:'v1.44',date:'3 Okt 2026',desc:'Tampilan PC/laptop: menu di samping kiri (semua menu langsung terlihat), Dashboard & daftar proyek 2–3 kolom, form terbuka sebagai panel di kanan. Tampilan HP tetap sama'},
   {v:'v1.43',date:'3 Okt 2026',desc:'Dashboard baru: kotak ringkasan (est. laba, margin, berapa proyek perlu perhatian) dan kartu proyek yang lebih ringkas — peringatan dengan penjelasan, bar biaya vs RAB & progres, proyek bermasalah di atas. Piutang, Hutang & Master Proyek ikut gaya baru. Angka tidak berubah'},
   {v:'v1.42',date:'3 Okt 2026',desc:'Emoji di menu, tombol & judul diganti ikon garis yang seragam; tab halaman berbentuk segmen; tombol lebih besar & mudah diketuk. Angka & cara kerja tidak berubah'},
@@ -539,7 +546,8 @@ function applyGS(d){
 }
 async function doFetch(url){
   const u=url||S.webAppUrl;if(!u)return;S.syncing=true;updateSyncBadge();setBusy(true,false);
-  try{const d=await gsFetch(u);applyGS(d);}
+  let _ubah=false;
+  try{const d=await gsFetch(u);const sb=_dataSig();applyGS(d);_ubah=_dataSig()!==sb;}
   catch(e){
     const msg=e.name==='AbortError'?'GSheet lambat/timeout — data lokal dipakai':('GSheet: '+e.message);
     S.syncError=msg;showToast(''+msg,'err');
@@ -550,7 +558,18 @@ async function doFetch(url){
     // Hanya render ulang saat muat pertama (skeleton → data). Polling TIDAK render ulang,
     // supaya form yang sedang diisi tidak terhapus di tengah jalan.
     if(wasFirst&&S.page)go(S.page);
+    // [v1.45] Data berubah dari sync → render ulang hanya bila aman (tidak ada form/dialog/isian aktif)
+    else if(_ubah&&S.page&&_bolehRenderUlang()){const ct=document.getElementById('content');const sc=ct.scrollTop;go(S.page);ct.scrollTop=sc;}
   }
+}
+function _dataSig(){try{return JSON.stringify([S.projects,S.pembelian,S.karyawan,S.logAbsensi,S.logKasbon,S.logPembayaran,S.rab,S.masterSubkon,S.logSubkon,S.riwayatBayarSubkon]);}catch(e){return String(Math.random());}}
+function _bolehRenderUlang(){
+  if(document.getElementById('overlay')?.classList.contains('show')||_cfmOpen)return false;
+  if(document.getElementById('nav-sheet')?.classList.contains('show'))return false;
+  const ae=document.activeElement;if(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))return false;
+  const p=S.page,t=S.tab[p]||'input';
+  if(['dashboard','project','karyawan'].includes(p))return true;   // halaman lihat saja
+  return p!=='catatan'&&['log','hutang','rekap','master','perband'].includes(t);   // tab daftar/rekap, bukan form isian
 }
 async function doSync(action,payload){
   if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();setBusy(true,true);
@@ -1243,7 +1262,7 @@ function pgHutang(){
     if(!upahByProj[a.kodeProj].karyawan[a.idKaryawan])
       upahByProj[a.kodeProj].karyawan[a.idKaryawan]={nama:a.nama||a.idKaryawan,total:0,hari:0};
     upahByProj[a.kodeProj].karyawan[a.idKaryawan].total+=(Number(a.upahHariIni)||0);
-    upahByProj[a.kodeProj].karyawan[a.idKaryawan].hari++;
+    upahByProj[a.kodeProj].karyawan[a.idKaryawan].hari+=_hariAbs(a);
     upahByProj[a.kodeProj].total+=(Number(a.upahHariIni)||0);
   });
   const totalHutangUpah=Object.values(upahByProj).reduce((s,x)=>s+x.total,0);
@@ -1289,7 +1308,7 @@ function pgHutang(){
           </div>
           <div style="background:var(--ic-orange);border-radius:8px;padding:8px 10px">
             ${krList.map(kr=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--ic-orange);font-size:12px">
-              <span style="color:var(--amber)">${esc(kr.nama)} <span style="color:var(--amber);font-size:11px">${kr.hari} hari</span></span>
+              <span style="color:var(--amber)">${esc(kr.nama)} <span style="color:var(--amber);font-size:11px">${fHari(kr.hari)}</span></span>
               <span style="font-weight:700;color:var(--orange)">${fRp(kr.total)}</span>
             </div>`).join('')}
           </div>
@@ -1325,6 +1344,8 @@ function pgHutang(){
   return kpi+upahSection+subkonSection;
 }
 // ── REKAP PROYEK ──────────────────────────────────────────────────────
+// [v1.45] Nilai hari satu baris absensi (Hadir 1, Setengah Hari 0,5, lainnya 0) — dipakai semua hitungan hari
+function _hariAbs(a){return a.status==='Setengah Hari'?0.5:(a.status==='Hadir'?1:0);}
 // [v1.36] Format jumlah hari kerja — Setengah Hari dihitung 0,5
 function fHari(n){const v=Math.round((Number(n)||0)*10)/10;return String(v).replace('.',',')+' hari';}
 function toggleTk(i){
@@ -1643,7 +1664,7 @@ function beliHutang(){
   }).join('');
 }
 async function tandaiLunasBeli(idx){
-  const b=S.pembelian[idx];if(!b)return;
+  const b=S.pembelian[idx];if(!b)return;if(_fccLock(b))return;
   if(!(await askConfirm('Tandai "'+b.namaBarang+'" sudah lunas ke toko?',{ok:'Tandai lunas'})))return;
   S.pembelian[idx]={...b,bayarToko:'Lunas'};
   ss(KS.beli,S.pembelian);showToast('Ditandai Lunas');go('beli');
@@ -1681,8 +1702,8 @@ function beliItemCard(b,showToko,hideTgl){
         <div class="item-sub">${sub}</div></div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px;color:var(--green)">${fRp(calcTotal(b))}</div>${bdg(b.status)}</div>
-        <button style="background:var(--ic-blue);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--blue)" onclick="openEditBeli(${ri})">${ic('edit','b')}</button>
-        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembelian(${ri})">${ic('trash','b')}</button>
+        ${_isFCC(b)?_fccTag():`<button style="background:var(--ic-blue);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--blue)" onclick="openEditBeli(${ri})">${ic('edit','b')}</button>
+        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembelian(${ri})">${ic('trash','b')}</button>`}
       </div></div>
       <div class="item-sub">${b.qty} ${esc(b.satuan)} × ${fRp(b.harga)}${Number(b.diskon)>0?' · diskon '+fRp(b.diskon):''}</div></div>`;
 }
@@ -2006,13 +2027,13 @@ function submitBeli(){
   showBeliConfirmation(S.formItems,total);
 }
 async function delPembelian(idx){
-  const b=S.pembelian[idx];if(!b)return;
+  const b=S.pembelian[idx];if(!b)return;if(_fccLock(b))return;
   if(!(await askConfirm('Hapus "'+b.namaBarang+'"?',{ok:'Hapus',danger:1})))return;
   S.pembelian.splice(idx,1);ss(KS.beli,S.pembelian);showToast('Dihapus');go('beli');
   doSync('deletePembelian',{id:b.id,tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang});
 }
 function openEditBeli(idx){
-  const b=S.pembelian[idx];if(!b)return;
+  const b=S.pembelian[idx];if(!b)return;if(_fccLock(b))return;
   S.editBeliIdx=idx;
   S.editBeliOrig={id:b.id,tgl:b.tgl,kodeProj:b.kodeProj,namaBarang:b.namaBarang};
   const projOpts=`<option value="">— Tanpa Proyek —</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}" ${p.kode===b.kodeProj?'selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
@@ -2226,7 +2247,7 @@ function absInput(){
       <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj" onchange="S.absDefProj=this.value"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}"${S.absDefProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select></div></div>
     <div style="font-size:11px;color:var(--text3);margin-top:-4px">${ic('bulb')} Proyek default untuk karyawan yang belum pilih</div>
   </div>
-  ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':rows}
+  ${S.karyawan.length===0?'<div class="empty">Tambah karyawan dulu</div>':`<div class="abs-cepat"><button class="btn btn-o btn-sm" onclick="absSalinTerakhir()">${ic('undo')} Salin hari kerja terakhir</button><button class="btn btn-g btn-sm" onclick="absSemuaHadir()">${ic('check-circle')} Semua hadir</button></div>`+rows}
   ${S.karyawan.length>0?`<div style="background:var(--ic-green);border:1px solid var(--bd-green);border-radius:11px;padding:10px;margin-bottom:10px;font-size:12px;color:var(--green)">
     ${ic('check-circle')} Hadir: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Hadir').length}</strong> &nbsp;
     ${ic('dot')} Setengah: <strong>${S.karyawan.filter((_,i)=>S.absRows[i]?.status==='Setengah Hari').length}</strong> &nbsp;
@@ -2235,6 +2256,23 @@ function absInput(){
   <button class="btn btn-p btn-w" onclick="submitAbsensi()">${ic('save')} Simpan Absensi</button>`:''}`;
 }
 function setAbsRow(i,key,val){if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:'',jamLembur:0};if(key==='status'&&S.absRows[i].status===val){S.absRows[i].status='';S.absRows[i].jamLembur=0;go('absensi');return;}S.absRows[i][key]=val;if(key==='status')go('absensi');}
+// [v1.45] Absensi cepat: salin status + proyek dari tanggal absensi terakhir sebelum tanggal yang dipilih (lembur tidak ikut)
+function absSalinTerakhir(){
+  const tgl=S.absTgl||document.getElementById('abs-tgl')?.value||today();
+  const prev=S.logAbsensi.map(a=>String(a.tgl||'')).filter(t=>t&&t<tgl).sort().pop();
+  if(!prev){showToast('Belum ada absensi sebelum tanggal ini','info');return;}
+  let n=0;
+  S.absRows=S.karyawan.map((k,i)=>{
+    const a=S.logAbsensi.find(x=>x.tgl===prev&&x.idKaryawan===k.id);
+    if(!a)return{status:'',kodeProj:'',ket:'',jamLembur:0};
+    n++;return{status:a.status||'',kodeProj:a.kodeProj||'',ket:'',jamLembur:0};
+  });
+  go('absensi');showToast('Disalin dari '+fDate(prev)+' ('+n+' karyawan) — ubah yang beda, lalu Simpan');
+}
+function absSemuaHadir(){
+  S.absRows=S.karyawan.map((k,i)=>{const r=S.absRows[i]||{status:'',kodeProj:'',ket:'',jamLembur:0};return{...r,status:'Hadir'};});
+  go('absensi');
+}
 function setLembur(i,val){
   const k=S.karyawan[i];if(!k)return;
   if(!S.absRows[i])S.absRows[i]={status:'',kodeProj:'',ket:'',jamLembur:0};
@@ -2454,7 +2492,7 @@ function kasbonInput(){
   const f=S.ksbF;
   const krOpts=`<option value="">-- Pilih Karyawan --</option>`+S.karyawan.map(k=>`<option value="${esc(k.id)}"${f.kr===k.id?' selected':''}>${esc(k.nama)}</option>`).join('');
   const projOpts=`<option value="">— Tidak Terkait Proyek —</option>`+S.projects.filter(p=>p.status==='Berjalan').map(p=>`<option value="${esc(p.kode)}"${f.proj===p.kode?' selected':''}>${esc(p.nama)}</option>`).join('');
-  return `<div class="card">
+  return `<div class="fcc-note">${ic('info')}<span><b>Kasbon (Pinjam & Kembali Tunai) sekarang dicatat di FCC.</b> Yang dicatat di FCC otomatis masuk ke sini — kalau dicatat juga di sini jadi dobel. Pakai form ini hanya untuk koreksi.</span></div><div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="ksb-tgl" value="${f.tgl||today()}" onchange="S.ksbF.tgl=this.value"></div>
     <div class="fg"><label class="fl">Karyawan</label><select class="fc" id="ksb-kr" onchange="S.ksbF.kr=this.value">${krOpts}</select></div>
     <div class="fg"><label class="fl">Tipe</label><select class="fc" id="ksb-tipe" onchange="S.ksbF.tipe=this.value"><option${f.tipe!=='POTONG'?' selected':''}>AMBIL</option><option${f.tipe==='POTONG'?' selected':''}>POTONG</option></select></div>
@@ -2468,12 +2506,13 @@ function kasbonInput(){
       <input class="fc" id="ksb-ket" value="${esc(f.ket||'')}" oninput="S.ksbF.ket=this.value" placeholder="Contoh: Beli material cat, Ongkos transport, Kebutuhan keluarga…"></div>
     <button class="btn btn-p btn-w" onclick="submitKasbon()">${ic('save')} Simpan Kasbon</button></div>`;
 }
-function submitKasbon(){
+async function submitKasbon(){
   const f=S.ksbF||{};
   const id=f.kr||document.getElementById('ksb-kr')?.value||'';
   const nom=f.nom||getNum('ksb-nom');
   if(!id||!nom){showToast('Lengkapi karyawan & nominal','err');return;}
   const kodeProj=(f.proj||'').trim();
+  if(!(await askConfirm('Kasbon sekarang dicatat di FCC\nPinjam & Kembali Tunai yang dicatat di FCC otomatis masuk ke app ini. Kalau dicatat juga di sini, jadi dobel.\n\nTetap simpan di app kontraktor?',{ok:'Tetap simpan'})))return;
   const nk={id:'KSB-'+Date.now(),tgl:f.tgl||today(),idKaryawan:id,nama:S.karyawan.find(k=>k.id===id)?.nama||'',tipe:f.tipe||'AMBIL',nominal:nom,kodeProj,ket:f.ket||'',noClosing:'',pending:true};
   S.logKasbon.push(nk);ss(KS.ksb,S.logKasbon);showToast('Kasbon disimpan');
   S.ksbF=null;setTab('kasbon','log');
@@ -2606,13 +2645,13 @@ function kasbonLog(){
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="text-align:right"><div style="font-weight:700;font-size:13px">${fRp(k.nominal)}</div>${bdg(k.tipe)}</div>
-        ${canDel?`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delKasbon(${ri})">${ic('trash','b')}</button>`
+        ${_isFCC(k)?_fccTag():canDel?`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delKasbon(${ri})">${ic('trash','b')}</button>`
           :'<span title="Sudah closing" style="font-size:14px;opacity:.4">'+ic('lock')+'</span>'}
       </div></div></div>`;
   }).join('');
 }
 async function delKasbon(idx){
-  const k=S.logKasbon[idx];if(!k)return;
+  const k=S.logKasbon[idx];if(!k)return;if(_fccLock(k))return;
   if(k.noClosing&&k.noClosing.trim()!==''){showToast('Tidak bisa hapus -- terkait closing '+k.noClosing,'err');return;}
   if(!(await askConfirm('Hapus kasbon '+fRp(k.nominal)+' ('+k.tipe+') untuk '+k.nama+'?',{ok:'Hapus',danger:1})))return;
   S.logKasbon.splice(idx,1);ss(KS.ksb,S.logKasbon);showToast('Kasbon dihapus');go('kasbon');
@@ -2634,12 +2673,12 @@ function getClosingList(){
   S.logAbsensi.forEach(a=>{
     if(!a.noClosing||a.noClosing.trim()==='')return;
     if(!map[a.noClosing]){
-      map[a.noClosing]={noClosing:a.noClosing,tglBayar:a.tglBayar||'',karyawan:[],totalUpah:0,jmlRecord:0};
+      map[a.noClosing]={noClosing:a.noClosing,tglBayar:a.tglBayar||'',karyawan:[],totalUpah:0,jmlRecord:0,hari:0};
     }
     const c=map[a.noClosing];
     if(!c.karyawan.includes(a.idKaryawan))c.karyawan.push(a.idKaryawan);
     c.totalUpah+=Number(a.upahHariIni)||0;
-    c.jmlRecord++;
+    c.jmlRecord++;c.hari+=_hariAbs(a);
   });
   return Object.values(map).sort((a,b)=>b.noClosing.localeCompare(a.noClosing));
 }
@@ -2683,7 +2722,7 @@ function closingLog(){
       <div class="row" style="margin-bottom:10px">
         <div style="flex:1;min-width:0">
           <div class="item-name" style="color:var(--blue)">${ic('lock')} ${esc(c.noClosing)}</div>
-          <div class="item-sub" style="margin-top:3px">${ic('calendar')} ${fDate(c.tglBayar)} &nbsp;·&nbsp; ${ic('user')} ${c.karyawan.length} karyawan &nbsp;·&nbsp; ${c.jmlRecord} hari kerja</div>
+          <div class="item-sub" style="margin-top:3px">${ic('calendar')} ${fDate(c.tglBayar)} &nbsp;·&nbsp; ${ic('user')} ${c.karyawan.length} karyawan &nbsp;·&nbsp; ${fHari(c.hari)} kerja</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
           <span style="font-size:11px;color:var(--text2)">Lihat detail →</span>
@@ -2756,7 +2795,7 @@ function openClosingDetail(noClosing){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
           <div style="font-weight:700;font-size:13px;color:var(--text)">${esc(kr.nama)}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">${kr.records.length} hari · ${hariHadir}× Hadir${hariSetengah>0?' · '+hariSetengah+'× Setengah':''}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${fHari(kr.records.reduce((s,a)=>s+_hariAbs(a),0))} · ${hariHadir}× Hadir${hariSetengah>0?' · '+hariSetengah+'× Setengah':''}</div>
         </div>
         <div style="text-align:right">
           <div style="font-size:12px;color:var(--text2)">Upah: <strong style="color:var(--green)">${fRp(kr.totalUpah)}</strong></div>
@@ -2778,10 +2817,10 @@ function openClosingDetail(noClosing){
     if(!byProj[kd])byProj[kd]={kode:kd,nama:kd?(S.projects.find(p=>p.kode===kd)?.nama||kd):'(Tanpa Proyek)',upah:0,hari:0,kar:{}};
     const g=byProj[kd];
     g.upah+=Number(a.upahHariIni)||0;
-    g.hari++;
+    g.hari+=_hariAbs(a);
     if(!g.kar[a.idKaryawan])g.kar[a.idKaryawan]={nama:a.nama||a.idKaryawan,upah:0,hari:0,lembur:0};
     g.kar[a.idKaryawan].upah+=Number(a.upahHariIni)||0;
-    g.kar[a.idKaryawan].hari++;
+    g.kar[a.idKaryawan].hari+=_hariAbs(a);
     g.kar[a.idKaryawan].lembur+=Number(a.jamLembur)||0;
   });
   // Bonus & potongan kasbon ikut dibebankan ke proyek sesuai kodeProj-nya
@@ -2800,7 +2839,7 @@ function openClosingDetail(noClosing){
       <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bg4)">
         <div>
           <span style="font-size:12px;font-weight:600;color:var(--text)">${esc(kk.nama)}</span>
-          <span style="font-size:10px;color:var(--text3);margin-left:6px">${kk.hari} hari</span>
+          <span style="font-size:10px;color:var(--text3);margin-left:6px">${fHari(kk.hari)}</span>
           ${kk.lembur>0?`<span style="font-size:10px;color:var(--amber);margin-left:4px;font-weight:700">${ic('clock')}${kk.lembur}j</span>`:''}
         </div>
         <span style="font-size:12px;font-weight:600;color:var(--green)">${fRp(kk.upah)}</span>
@@ -2809,7 +2848,7 @@ function openClosingDetail(noClosing){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:13px;color:var(--text)">${ic('building')} ${esc(g.nama)}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">${karList.length} karyawan · ${g.hari} hari kerja</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${karList.length} karyawan · ${fHari(g.hari)} kerja</div>
         </div>
         <div style="text-align:right;flex-shrink:0;margin-left:8px">
           <div style="font-size:12px;color:var(--text2)">Upah: <strong style="color:var(--green)">${fRp(g.upah)}</strong></div>
@@ -2834,7 +2873,7 @@ function openClosingDetail(noClosing){
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="color:var(--text2);font-size:12px">${ic('user')} Karyawan</span>
-        <span style="color:var(--text);font-weight:600;font-size:12px">${c.karyawan.length} orang · ${c.jmlRecord} hari kerja</span>
+        <span style="color:var(--text);font-weight:600;font-size:12px">${c.karyawan.length} orang · ${fHari(c.hari)} kerja</span>
       </div>
       <div style="height:1px;background:var(--text);margin:8px 0"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
@@ -3157,7 +3196,7 @@ function bayarInput(){
       <div class="fg"><label class="fl">Referensi</label><input class="fc" value="${esc(it.ref)}" oninput="S.payItems[${i}].ref=this.value"></div></div>
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" value="${esc(it.ket)}" oninput="S.payItems[${i}].ket=this.value"></div>
   </div>`).join('');
-  return `<div class="card">
+  return `<div class="fcc-note">${ic('info')}<span><b>Pembayaran klien sekarang dicatat di FCC.</b> Yang dicatat di FCC otomatis masuk ke sini — kalau dicatat juga di sini jadi dobel. Pakai form ini hanya untuk koreksi.</span></div><div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="pay-tgl" value="${S.payTgl||today()}" onchange="S.payTgl=this.value"></div>
     ${items}
     <div class="act-row">
@@ -3166,9 +3205,10 @@ function bayarInput(){
 }
 function addPayRow(){S.payItems.push({kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''});go('bayar');}
 function delPayRow(i){S.payItems.splice(i,1);go('bayar');}
-function submitPay(){
+async function submitPay(){
   if(S.payItems.some(it=>!it.kodeProj||!it.nominal)){showToast('Lengkapi proyek & nominal','err');return;}
   const tgl=S.payTgl||document.getElementById('pay-tgl')?.value||today();
+  if(!(await askConfirm('Pembayaran klien sekarang dicatat di FCC\nPembayaran klien yang dicatat di FCC otomatis masuk ke app ini. Kalau dicatat juga di sini, jadi dobel.\n\nTetap simpan di app kontraktor?',{ok:'Tetap simpan'})))return;
   const ni=S.payItems.map(it=>({id:'PAY-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),tgl,...it,nominal:Number(it.nominal),namaProj:S.projects.find(p=>p.kode===it.kodeProj)?.nama||'',pending:true}));
   S.logPembayaran.push(...ni);ss(KS.bayar,S.logPembayaran);showToast(''+ni.length+' pembayaran dicatat');
   S.payItems=[{kodeProj:'',nominal:0,metode:'Transfer',bank:'',ket:'',ref:''}];S.payTgl='';setTab('bayar','log');
@@ -3185,13 +3225,13 @@ function bayarLog(){
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-left:8px;flex-shrink:0">
         <div style="font-weight:700;color:var(--green);font-size:14px">${fRp(p.nominal)}</div>
-        <button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembayaran(${ri})">${ic('trash','b')}</button>
+        ${_isFCC(p)?_fccTag():`<button style="background:var(--ic-red);border:none;border-radius:7px;padding:5px 9px;font-size:14px;cursor:pointer;color:var(--red)" onclick="delPembayaran(${ri})">${ic('trash','b')}</button>`}
       </div></div>
       ${p.ket?`<div class="item-sub" style="margin-top:4px">${esc(p.ket)}</div>`:''}</div>`;
   }).join('');
 }
 async function delPembayaran(idx){
-  const p=S.logPembayaran[idx];if(!p)return;
+  const p=S.logPembayaran[idx];if(!p)return;if(_fccLock(p))return;
   if(!(await askConfirm('Hapus pembayaran '+fRp(p.nominal)+' dari proyek '+p.kodeProj+'?',{ok:'Hapus',danger:1})))return;
   S.logPembayaran.splice(idx,1);ss(KS.bayar,S.logPembayaran);showToast('Pembayaran dihapus');go('bayar');
   doSync('deletePembayaran',{id:p.id,tgl:p.tgl,kodeProj:p.kodeProj,nominal:p.nominal});
@@ -4783,6 +4823,10 @@ function printRekapProyek(kode){
   closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html,chartScripts);
 }
 function setTab(page,tab){S.tab[page]=tab;go(page);}
+// [v1.45] Data yang dikirim FCC (ID BLI-/KSB-/PAY-FCC-…) dikunci di app ini: ubah/hapus lewat FCC supaya dua app tidak beda
+function _isFCC(x){return !!(x&&/^(BLI|KSB|PAY)-FCC-/.test(String(x.id||'')));}
+function _fccTag(){return '<span class="fcc-tag" title="Dicatat dari FCC — ubah/hapus lewat FCC">'+ic('link')+' dari FCC</span>';}
+function _fccLock(x){if(!_isFCC(x))return false;showToast('Data ini dicatat dari FCC — ubah/hapus lewat FCC','info');return true;}
 // [v1.41] Tema terang/gelap — pilihan disimpan per perangkat (ab3-theme)
 function applyTheme(t){const d=t==='dark';document.documentElement.classList.toggle('dark',d);const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=d?'#1D1A16':'#FFFFFF';}
 function toggleTheme(){const t=document.documentElement.classList.contains('dark')?'light':'dark';try{localStorage.setItem('ab3-theme',t);}catch(e){}applyTheme(t);}

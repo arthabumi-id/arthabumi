@@ -13,6 +13,23 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔧 SESSION 29 (v1.45) — 2026-10-05 — Perbaikan kecil + pengaman integrasi FCC (PRD docs/PRD-perbaikan-v1.45.md)
+
+### Frontend (index.html)
+- **U5** `_hariAbs(a)` (Hadir 1, Setengah Hari 0,5, lainnya 0) dipakai Dashboard Hutang Upah, daftar & Detail Closing (per karyawan & per proyek). `jmlRecord` tetap untuk teks batalkan closing (jumlah baris absensi). Upah tidak berubah.
+- **U2** `doFetch`: bila data berubah (`_dataSig`) dan `_bolehRenderUlang()` (tidak ada modal/dialog/sheet/isian aktif; halaman Dashboard/Proyek/Karyawan atau tab log/hutang/rekap/master/perband) → render ulang, posisi gulir dipertahankan.
+- **Kunci data FCC**: `_isFCC` (ID BLI-/KSB-/PAY-FCC-) → label "dari FCC" menggantikan tombol ubah/hapus; `_fccLock` di openEditBeli/delPembelian/tandaiLunasBeli/delKasbon/delPembayaran.
+- **Pengingat** di Input Kasbon & Input Bayar + konfirmasi "Tetap simpan" (`submitKasbon`/`submitPay` jadi async).
+- **Absensi cepat**: `absSalinTerakhir()` (status + proyek dari tanggal absensi terakhir sebelum tanggal dipilih; lembur tidak ikut) & `absSemuaHadir()`.
+
+### Backend (backend/setup.gs) — paste ke editor Apps Script lalu Simpan (web app tidak berubah, tidak perlu versi baru)
+- **U1** `_formatDataArea`: baris akhir dari `getLastRow()` bila tidak diberikan, zebra lewat satu `setBackgrounds`; 10 pemanggil `ROWS.*.end` → null; area data MASTER PROJECT tidak diformat ulang (blok ringkasan buatan tangan, U6). Diuji dengan Sheet tiruan: versi lama gagal (`getRange(,1,1,12)`), versi baru 0 argumen salah.
+
+### Uji
+- Teks 46 layar vs v1.44: beda hanya tombol absensi cepat, pengingat FCC, angka hari Hutang Upah (setengah = 0,5; tidak hadir = 0) & catatan versi. 18 uji alur v1.45 + uji dialog/tema/toast lulus, 0 error.
+
+---
+
 # 🖥️ SESSION 28 (v1.44) — 2026-10-03 — Redesain gaya B, Fase 4 Tampilan PC (redesain SELESAI)
 
 ### Frontend saja — backend tidak berubah

@@ -1,7 +1,7 @@
 # ARTHABUMI — TODO & Feature Backlog
 
 Terakhir diupdate: **2026-10-03**
-Versi kode saat ini: **v1.44** (redesain gaya B SELESAI — v1.41 warna/huruf/tema, v1.42 ikon, v1.43 Dashboard, v1.44 PC; menunggu push).
+Versi kode saat ini: **v1.45** (menunggu push + paste setup.gs). Berikutnya v1.46: pengingat Dashboard, bisa dibuka tanpa sinyal, slip closing → WA (docs/PRD-perbaikan-v1.45.md). Lalu PRD print/export rekap tenaga per proyek (B2). Stok material sisa DIABAIKAN (keputusan Eddy 5 Okt).
 > 📌 Redesain selesai 3 Okt 2026 → sudah diingatkan ke Eddy — utang U2/U3/U5 dikerjakan lewat PRD terpisah (U3 confirm() sudah beres di v1.41).
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 

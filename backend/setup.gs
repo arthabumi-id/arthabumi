@@ -100,21 +100,27 @@ function _formatHeaders(ws, headers) {
 }
 
 function _formatDataArea(ws, startRow, endRow, lastCol) {
-  var dataRange = ws.getRange(startRow, 1, endRow - startRow + 1, lastCol);
+  // v1.45 (U1): ROWS.*.end sudah dihapus di constants v2.0 → baris akhir dihitung dari isi sheet.
+  // Warna selang-seling ditulis sekali (setBackgrounds) supaya sheet besar tidak kehabisan waktu.
+  if (!(endRow >= startRow)) endRow = Math.max(ws.getLastRow(), startRow);
+  var n = endRow - startRow + 1;
+  var dataRange = ws.getRange(startRow, 1, n, lastCol);
   dataRange
-    .setBackground("#ffffff").setFontColor("#1e293b")
+    .setFontColor("#1e293b")
     .setFontSize(10).setFontFamily("Arial")
     .setVerticalAlignment("middle")
     .setBorder(false, true, false, true, false, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
-  // Alternating row zebra stripes
-  for (var r = startRow; r <= endRow; r += 2) {
-    ws.getRange(r, 1, 1, lastCol).setBackground("#f8fafc");
+  var bg = [];
+  for (var r = 0; r < n; r++) {
+    var c = (r % 2 === 0) ? "#f8fafc" : "#ffffff", row = [];
+    for (var k = 0; k < lastCol; k++) row.push(c);
+    bg.push(row);
   }
+  dataRange.setBackgrounds(bg);
   ws.getRange(endRow, 1, 1, lastCol)
     .setBorder(false, false, true, false, false, false, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 }
 
-// Tambah conditional format rules untuk kolom status
 function _addStatusCF(ws, range, rulesMap) {
   var rules = ws.getConditionalFormatRules();
   Object.keys(rulesMap).forEach(function (text) {
@@ -142,7 +148,8 @@ function _setupSheetMasterProject(ss) {
     "Biaya Material (Rp)","Biaya Upah (Rp)","Total Biaya (Rp)","Est. Laba (Rp)","Margin %",
     "Tgl Mulai","Pembayaran (Rp)","Piutang (Rp)","Catatan","Progress (%)"
   ]);
-  _formatDataArea(ws, ROWS.PROJECT.start, ROWS.PROJECT.end, lastCol);
+  // v1.45 (U1): area data MASTER PROJECT TIDAK diformat ulang — ada blok RINGKASAN TOTAL buatan tangan
+  // di baris 54–60 dan proyek sesudahnya (lihat docs/TODO.md U6). Judul & header tetap diformat.
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 110); ws.setColumnWidth(3, 220);
   ws.setColumnWidth(4, 120); ws.setColumnWidth(5, 100); ws.setColumnWidth(6, 150);
@@ -182,7 +189,7 @@ function _setupSheetPembelian(ss) {
     "  Log semua pembelian bahan per proyek — max 300 baris (baris 4–303)", lastCol);
   _formatHeaders(ws, ["No","Tanggal","Kode Proyek","Nama Barang","Kategori","Satuan",
     "Qty","Harga Satuan (Rp)","Diskon (Rp)","Status","Toko / Supplier","Total (Rp)"]);
-  _formatDataArea(ws, ROWS.PEMBELIAN.start, ROWS.PEMBELIAN.end, lastCol);
+  _formatDataArea(ws, ROWS.PEMBELIAN.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 200); ws.setColumnWidth(5, 110); ws.setColumnWidth(6, 80);
@@ -212,7 +219,7 @@ function _setupSheetMasterKaryawan(ss) {
     "  Daftar karyawan & ringkasan upah/kasbon otomatis — max 50 orang", lastCol);
   _formatHeaders(ws, ["No","ID Karyawan","Nama","Jabatan","Upah Harian (Rp)","No HP",
     "Total Hari","Total Upah (Rp)","Kas Diambil (Rp)","Kas Dipotong (Rp)","Sisa Kasbon (Rp)","Catatan"]);
-  _formatDataArea(ws, ROWS.KARYAWAN.start, ROWS.KARYAWAN.end, lastCol);
+  _formatDataArea(ws, ROWS.KARYAWAN.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 180);
   ws.setColumnWidth(4, 120); ws.setColumnWidth(5, 150); ws.setColumnWidth(6, 130);
@@ -242,7 +249,7 @@ function _setupSheetLogAbsensi(ss) {
     "Nama Proyek","Upah Hari Ini (Rp)","Status Bayar","No Closing",
     "Tgl Bayar","Keterangan","Jam Lembur","Upah Lembur (Rp)"
   ]);
-  _formatDataArea(ws, ROWS.ABSENSI.start, ROWS.ABSENSI.end, lastCol);
+  _formatDataArea(ws, ROWS.ABSENSI.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 180); ws.setColumnWidth(5, 110); ws.setColumnWidth(6, 110);
@@ -281,7 +288,7 @@ function _setupSheetLogKasbon(ss) {
   _formatHeaders(ws, [
     "No","Tanggal","ID Karyawan","Tipe","Nominal (Rp)","Nama","No Closing","Keterangan","Kode Proyek"
   ]);
-  _formatDataArea(ws, ROWS.KASBON.start, ROWS.KASBON.end, lastCol);
+  _formatDataArea(ws, ROWS.KASBON.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 90);  ws.setColumnWidth(5, 150); ws.setColumnWidth(6, 180);
@@ -309,7 +316,7 @@ function _setupSheetLogPembayaran(ss) {
     "  Riwayat penerimaan pembayaran dari klien — max 500 baris (baris 4–503)", lastCol);
   _formatHeaders(ws, ["No","Tanggal","Kode Proyek","Nama Proyek","Nominal (Rp)",
     "Metode","Bank / Akun","Keterangan","Referensi / No Bukti"]);
-  _formatDataArea(ws, ROWS.PEMBAYARAN.start, ROWS.PEMBAYARAN.end, lastCol);
+  _formatDataArea(ws, ROWS.PEMBAYARAN.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 110);
   ws.setColumnWidth(4, 200); ws.setColumnWidth(5, 160); ws.setColumnWidth(6, 100);
@@ -338,7 +345,7 @@ function _setupSheetMasterBarang(ss) {
   _formatHeaders(ws, ["No","ID Barang","Nama Barang","Kategori","Satuan",
     "Harga Awal (Rp)","Harga Terakhir (Rp)"]);
   // Data mulai baris 5 — baris 4 sengaja tidak ditimpa
-  _formatDataArea(ws, ROWS.BARANG.start, ROWS.BARANG.end, lastCol);
+  _formatDataArea(ws, ROWS.BARANG.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 90);  ws.setColumnWidth(3, 230);
   ws.setColumnWidth(4, 130); ws.setColumnWidth(5, 80);  ws.setColumnWidth(6, 150);
@@ -358,7 +365,7 @@ function _setupSheetMasterToko(ss) {
     "  🏪  MASTER TOKO / SUPPLIER",
     "  Daftar toko & supplier langganan", lastCol);
   _formatHeaders(ws, ["No","Nama Toko / Supplier","Keterangan"]);
-  _formatDataArea(ws, ROWS.TOKO.start, ROWS.TOKO.end, lastCol);
+  _formatDataArea(ws, ROWS.TOKO.start, null, lastCol);
 
   ws.setColumnWidth(1, 40);  ws.setColumnWidth(2, 250); ws.setColumnWidth(3, 300);
   ws.getRange("A4:A103").setHorizontalAlignment("center");
@@ -373,7 +380,7 @@ function _setupSheetRAB(ss) {
     "  Rencana Anggaran Biaya per Proyek — 1 baris per proyek", lastCol);
   _formatHeaders(ws, ["No","Kode Proyek","Material (Rp)","Upah (Rp)",
     "Subkon (Rp)","Overhead (Rp)","Total RAB (Rp)","Tgl Update"]);
-  _formatDataArea(ws, ROWS.RAB.start, ROWS.RAB.end, lastCol);
+  _formatDataArea(ws, ROWS.RAB.start, null, lastCol);
 
   ws.setColumnWidth(1, 45);  ws.setColumnWidth(2, 110); ws.setColumnWidth(3, 140);
   ws.setColumnWidth(4, 130); ws.setColumnWidth(5, 130); ws.setColumnWidth(6, 130);
@@ -393,7 +400,7 @@ function _setupSheetMasterSubkon(ss) {
     "  🔨  MASTER SUBKONTRAKTOR",
     "  Daftar subkontraktor & tim borongan yang pernah bekerja", lastCol);
   _formatHeaders(ws, ["No","ID","Nama / Tim","Spesialisasi","No HP","Alamat / Catatan"]);
-  _formatDataArea(ws, ROWS.SUBKON.start, ROWS.SUBKON.end, lastCol);
+  _formatDataArea(ws, ROWS.SUBKON.start, null, lastCol);
 
   ws.setColumnWidth(1, 45);  ws.setColumnWidth(2, 90);  ws.setColumnWidth(3, 200);
   ws.setColumnWidth(4, 130); ws.setColumnWidth(5, 130); ws.setColumnWidth(6, 220);
@@ -411,7 +418,7 @@ function _setupSheetLogSubkon(ss) {
   _formatHeaders(ws, ["No","Tanggal","Kode Proyek","Nama Proyek","ID Subkon","Nama Subkon",
     "Uraian Pekerjaan","Nilai Kontrak (Rp)","Status Bayar",
     "Nominal Dibayar (Rp)","Tgl Bayar","Keterangan"]);
-  _formatDataArea(ws, ROWS.LOG_SUBKON.start, ROWS.LOG_SUBKON.end, lastCol);
+  _formatDataArea(ws, ROWS.LOG_SUBKON.start, null, lastCol);
 
   ws.setColumnWidth(1, 45);  ws.setColumnWidth(2, 100); ws.setColumnWidth(3, 100);
   ws.setColumnWidth(4, 180); ws.setColumnWidth(5, 90);  ws.setColumnWidth(6, 170);
