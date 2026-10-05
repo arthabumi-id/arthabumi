@@ -13,6 +13,16 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 📶 SESSION 30 (v1.46) — 2026-10-05 — Pengingat Dashboard, tanpa sinyal, slip closing (PRD docs/PRD-perbaikan-v1.45.md bagian 2)
+
+### Frontend saja — backend tidak berubah
+- **Pengingat Dashboard** `_pengingatDash()`: (1) absensi hari ini kosong padahal hari kerja terakhir ≤ 7 hari lalu & proyeknya Berjalan → tombol Isi absensi; (2) absensi Belum Dibayar tertua > 7 hari → "Upah belum di-closing n hari" + total (= Hutang Upah) → tombol Buat closing.
+- **Tanpa sinyal**: file baru `sw.js` (cache `ab-v1.46`, network-first, cadangan cache bila gagal/>4 dtk; hanya file app sendiri — Apps Script/CDN tidak disentuh). Didaftarkan di DOMContentLoaded. **Naikkan CACHE di sw.js tiap rilis.**
+- **Slip closing**: `slipText(no,id)` (rumus sama dengan Detail Closing: upah + bonus − potong, rincian per proyek dengan `_hariAbs`) + tombol Bagikan slip per karyawan → `navigator.share` (WA dll.), cadangan salin ke clipboard, cadangan terakhir kotak teks.
+- Uji: teks 46 layar — beda hanya pengingat absensi (data contoh), tombol slip, catatan versi; 12 uji alur v1.46 (isi slip Darto/Yanto, share & clipboard, 2 pengingat & tombolnya, service worker + buka tanpa sinyal) + uji v1.45 & v1.41 lulus, 0 error.
+
+---
+
 # 🔧 SESSION 29 (v1.45) — 2026-10-05 — Perbaikan kecil + pengaman integrasi FCC (PRD docs/PRD-perbaikan-v1.45.md)
 
 ### Frontend (index.html)

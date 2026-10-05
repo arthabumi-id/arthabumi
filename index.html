@@ -264,6 +264,16 @@ textarea.fc{min-height:0}
 .fcc-note .ic{margin-top:2px;font-size:16px}
 .abs-cepat{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .abs-cepat .btn{flex:1}
+/* [v1.46] pengingat Dashboard */
+.remind-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.remind{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;border:1px solid var(--border);background:var(--bg2)}
+.remind-ic{flex-shrink:0;width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.remind.blue .remind-ic{background:var(--ic-blue);color:var(--blue)}
+.remind.amber .remind-ic{background:var(--ic-amber);color:var(--amber)}
+.remind-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.remind-t b{font-size:13.5px}
+.remind-t span{font-size:12px;color:var(--text2);line-height:1.4}
+.remind .btn{flex-shrink:0}
 .dash-sync{width:100%;margin-bottom:12px;background:transparent;border:1.5px dashed var(--border2);border-radius:12px;min-height:46px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
@@ -368,8 +378,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.45';
+const APP_VERSION='v1.46';
 const APP_CHANGELOG=[
+  {v:'v1.46',date:'5 Okt 2026',desc:'Pengingat di Dashboard (absensi hari ini belum diisi, upah lama belum di-closing). App bisa dibuka tanpa sinyal setelah sekali dibuka online. Detail Closing: tombol Bagikan slip per karyawan (WhatsApp dll.)'},
   {v:'v1.45',date:'5 Okt 2026',desc:'Absensi lebih cepat (Salin hari kerja terakhir, Semua hadir). Data dari FCC bertanda & dikunci (ubah lewat FCC). Pengingat di Input Kasbon & Bayar supaya tidak dobel. Setengah hari kini dihitung 0,5 juga di Hutang Upah & Closing. Data hasil sync otomatis langsung tampil'},
   {v:'v1.44',date:'3 Okt 2026',desc:'Tampilan PC/laptop: menu di samping kiri (semua menu langsung terlihat), Dashboard & daftar proyek 2–3 kolom, form terbuka sebagai panel di kanan. Tampilan HP tetap sama'},
   {v:'v1.43',date:'3 Okt 2026',desc:'Dashboard baru: kotak ringkasan (est. laba, margin, berapa proyek perlu perhatian) dan kartu proyek yang lebih ringkas — peringatan dengan penjelasan, bar biaya vs RAB & progres, proyek bermasalah di atas. Piutang, Hutang & Master Proyek ikut gaya baru. Angka tidak berubah'},
@@ -1083,6 +1094,7 @@ function pgDashboard(){
   return `<div class="sec-title">${esc(S.companyName)}</div>
     ${tabBar}
     <div class="chipf-row">${filterBar}</div>
+    ${_pengingatDash()}
     <section class="hero">
       <div class="hero-lbl">Est. laba · ${filtered.length} proyek${S.dashFilter==='Semua'?'':' '+S.dashFilter.toLowerCase()}</div>
       <div class="hero-big" style="color:${tL>=0?'var(--text)':'var(--red)'}">${fRp(tL)}</div>
@@ -1099,6 +1111,25 @@ function pgDashboard(){
     <button class="dash-sync" onclick="updateGSheetRekap()">${ic('chart')} Update Rekap ke Google Sheets</button>`;
 }
 
+// [v1.46] Pengingat Dashboard — hanya muncul bila perlu
+function _selisihHari(a,b){return Math.round((Date.parse(b+'T00:00:00')-Date.parse(a+'T00:00:00'))/864e5);}
+function _pengingatDash(){
+  const t=today(),out=[];
+  const card=(ikon,judul,isi,tombol,aksi,warna)=>`<div class="remind ${warna}"><span class="remind-ic">${ic(ikon)}</span><div class="remind-t"><b>${judul}</b><span>${isi}</span></div><button class="btn btn-sm btn-o" onclick="${aksi}">${tombol}</button></div>`;
+  // 1) absensi hari ini belum diisi (hari kerja terakhir ≤ 7 hari lalu, proyeknya masih Berjalan)
+  const prev=S.logAbsensi.map(a=>String(a.tgl||'')).filter(x=>x&&x<t).sort().pop();
+  if(prev&&!S.logAbsensi.some(a=>a.tgl===t)&&_selisihHari(prev,t)<=7){
+    const kode=[...new Set(S.logAbsensi.filter(a=>a.tgl===prev&&a.kodeProj).map(a=>a.kodeProj))].filter(k=>(S.projects.find(p=>p.kode===k)||{}).status==='Berjalan');
+    if(kode.length)out.push(card('clipboard-check','Absensi hari ini belum diisi','Terakhir '+fDate(prev)+': '+kode.map(k=>esc(S.projects.find(p=>p.kode===k)?.nama||k)).join(', '),'Isi absensi',"S.absTgl=today();setTab('absensi','input')",'blue'));
+  }
+  // 2) upah belum di-closing lebih dari 7 hari
+  const belum=S.logAbsensi.filter(a=>a.statusBayar==='Belum Dibayar'&&(Number(a.upahHariIni)||0)>0&&a.tgl);
+  if(belum.length){
+    const tua=belum.map(a=>String(a.tgl)).sort()[0],n=_selisihHari(tua,t);
+    if(n>7)out.push(card('clock','Upah belum di-closing '+n+' hari','Sejak '+fDate(tua)+' · total '+fRp(belum.reduce((s,a)=>s+(Number(a.upahHariIni)||0),0)),'Buat closing',"setTab('closing','baru')",'amber'));
+  }
+  return out.length?`<div class="remind-list">${out.join('')}</div>`:'';
+}
 // ── DASHBOARD PIUTANG ─────────────────────────────────────────────────
 function pgPiutang(){
   const projs=S.projects
@@ -2740,6 +2771,30 @@ function closingLog(){
 
 // ── Detail Closing — modal rincian per karyawan / per proyek [v1.33]
 function setClsDetailView(noClosing,v){S.clsDetailView=v;openClosingDetail(noClosing);}
+// [v1.46] Slip gaji satu karyawan dari satu closing (angka sama dengan Detail Closing) → menu bagikan HP / salin
+function slipText(noClosing,idK){
+  const c=getClosingList().find(x=>x.noClosing===noClosing);if(!c)return '';
+  const abs=S.logAbsensi.filter(a=>a.noClosing===noClosing&&a.idKaryawan===idK);
+  const potong=S.logKasbon.filter(k=>k.noClosing===noClosing&&k.tipe==='POTONG'&&k.idKaryawan===idK).reduce((s,k)=>s+(Number(k.nominal)||0),0);
+  const bonus=S.logKasbon.filter(k=>k.noClosing===noClosing&&k.tipe==='BONUS'&&k.idKaryawan===idK).reduce((s,k)=>s+(Number(k.nominal)||0),0);
+  const upah=abs.reduce((s,a)=>s+(Number(a.upahHariIni)||0),0);
+  const net=upah+bonus-potong;
+  const byP={};abs.forEach(a=>{const k=a.kodeProj||'';const g=byP[k]=byP[k]||{hari:0,upah:0,lembur:0};g.hari+=_hariAbs(a);g.upah+=Number(a.upahHariIni)||0;g.lembur+=Number(a.jamLembur)||0;});
+  const nama=abs[0]?.nama||S.karyawan.find(k=>k.id===idK)?.nama||idK;
+  const L=['*Slip Gaji — '+S.companyName+'*','No. closing: '+noClosing+(c.tglBayar?' · dibayar '+fDate(c.tglBayar):''),'Nama: '+nama,'','Rincian:'];
+  Object.entries(byP).forEach(([k,g])=>L.push('• '+(k?(S.projects.find(p=>p.kode===k)?.nama||k):'Tanpa proyek')+': '+fHari(g.hari)+(g.lembur>0?' + lembur '+g.lembur+' jam':'')+' — '+fRp(g.upah)));
+  L.push('','Total upah: '+fRp(upah));
+  if(bonus>0)L.push('Bonus: + '+fRp(bonus));else if(bonus<0)L.push('Koreksi: - '+fRp(Math.abs(bonus)));
+  if(potong>0)L.push('Potong kasbon: - '+fRp(potong));
+  L.push('*Net dibayar: '+fRp(net)+'*');
+  return L.join('\n');
+}
+async function bagikanSlip(noClosing,idK){
+  const text=slipText(noClosing,idK);if(!text)return;
+  if(navigator.share){try{await navigator.share({title:'Slip gaji',text});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+  try{await navigator.clipboard.writeText(text);showToast('Slip disalin — tempel di WhatsApp');}
+  catch(e){openModal('<div class="modal-title">Slip gaji</div><textarea class="fc" rows="14" style="font-size:13px" readonly>'+esc(text)+'</textarea><div class="act-row" style="justify-content:flex-end"><button class="btn btn-g" onclick="closeModal()">Tutup</button></div>');}
+}
 function openClosingDetail(noClosing){
   const c=getClosingList().find(x=>x.noClosing===noClosing);
   if(!c)return;
@@ -2807,6 +2862,7 @@ function openClosingDetail(noClosing){
       <div style="max-height:200px;overflow-y:auto;padding-top:4px">
         ${absRows}
       </div>
+      <button class="btn btn-o btn-sm" style="margin-top:9px;width:100%" onclick="bagikanSlip('${esc(noClosing)}','${esc(kr.id)}')">${ic('upload')} Bagikan slip ${esc(kr.nama)}</button>
     </div>`;
   }).join('');
 
@@ -4861,6 +4917,8 @@ function askConfirm(msg,o){
   });
 }
 window.addEventListener('DOMContentLoaded',async()=>{
+  // [v1.46] service worker: app tetap bisa dibuka tanpa sinyal (sw.js — naikkan CACHE tiap rilis)
+  if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
   loadLocal();
   S.webAppUrl=sg(KS.url,'');S.apiToken=sg(KS.tok,'');S.pollInterval=Number(sg(KS.poll,60))||60;
   const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
