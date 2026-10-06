@@ -13,6 +13,12 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# ⬆️ SESSION 33 (v1.49) — 2026-10-06 — Tombol Ke atas
+
+- Pil `#toTop` "Ke atas" di tengah bawah (PC: tengah area isi), muncul bila `#content` digulir > 400px; ketuk → gulir halus ke atas. Di tengah supaya tidak menimpa tombol ubah/hapus di kanan kartu. sw.js CACHE ab-v1.49. Uji HP & PC lulus.
+
+---
+
 # ⚡ SESSION 32 (v1.48) — 2026-10-06 — Sync ringan (keluhan Eddy: lemot saat dipakai & sync)
 
 ### Diagnosa

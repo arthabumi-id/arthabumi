@@ -1,7 +1,7 @@
 # ARTHABUMI — TODO & Feature Backlog
 
 Terakhir diupdate: **2026-10-03**
-Versi kode saat ini: **v1.48** (backend config.gs v1.12 SUDAH deploy = versi 50; frontend menunggu push). Pindah ke Cloudflare: sesudah v1.48 terbukti (lihat kecepatan di Pengaturan). PRD-perbaikan-v1.45 SELESAI. Berikutnya: PRD print/export rekap tenaga per proyek (B2). Stok material sisa DIABAIKAN (keputusan Eddy 5 Okt). Ingat: tiap rilis naikkan CACHE di sw.js.
+Versi kode saat ini: **v1.49** (backend config.gs v1.12 SUDAH deploy = versi 50; frontend menunggu push). Pindah ke Cloudflare: sesudah v1.48 terbukti (lihat kecepatan di Pengaturan). PRD-perbaikan-v1.45 SELESAI. Berikutnya: PRD print/export rekap tenaga per proyek (B2). Stok material sisa DIABAIKAN (keputusan Eddy 5 Okt). Ingat: tiap rilis naikkan CACHE di sw.js.
 > 📌 Redesain selesai 3 Okt 2026 → sudah diingatkan ke Eddy — utang U2/U3/U5 dikerjakan lewat PRD terpisah (U3 confirm() sudah beres di v1.41).
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 
