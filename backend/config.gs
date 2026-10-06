@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — config.gs  v1.11 (v1.38: token · v1.39: jalur ringan utk FCC · v1.40: closing & bayar subkon FCC)
+// ARTHABUMI — config.gs  v1.12 (v1.38: token · v1.39: jalur ringan utk FCC · v1.40: closing & bayar subkon FCC · v1.48: versi data & sync ringan)
 // Isi: Entry Points (doGet/doPost) + Router ONLY
 //
 // Helper date/find functions → helpers.gs
@@ -42,6 +42,8 @@ function doGet(e) {
     }
 
     var action = p.action || "getAllData";
+    // v1.48: sync ringan — app cukup menanyakan nomor versi data (tanpa membaca sheet)
+    if (action === "versi") return _apiJson({ ok: true, ts: new Date().getTime(), versi: _versiData() });
     // v1.39: baca ringan untuk FCC (Tes sambungan, daftar barang) — tanpa log pembelian/absensi/kasbon
     if (action === "ringkas") return _apiRingkas(ss);
     // v1.40: closing gaji untuk antrean FCC (tanggal bayar >= sejak)
@@ -54,6 +56,9 @@ function doGet(e) {
         return _apiError(new Error("Payload JSON tidak valid: " + pe.message));
       }
       _apiHandleAction(ss, action, payload);
+      _versiNaik();
+      // v1.48: app baru mengirim ringan=1 → cukup ok + versi (data terbaru diambil app sesudahnya)
+      if (p.ringan) return _apiOk();
     }
     return _apiResponse(ss);
   } catch (err) {
@@ -74,6 +79,7 @@ function doPost(e) {
     }
 
     _apiHandleAction(ss, parsed.action || "", parsed.data || {});
+    _versiNaik();   // v1.48
     // v1.39: kiriman dari FCC (server ke server) cukup dijawab ok — tidak perlu membaca seluruh sheet
     if (parsed.ringan) return _apiOk();
     return _apiResponse(ss);
@@ -84,9 +90,11 @@ function doPost(e) {
 
 // ── Response Builder ───────────────────────────────────────────────────
 function _apiResponse(ss) {
+  var versi = _versiData();   // v1.48: dibaca SEBELUM sheet — kalau ada perubahan selama membaca, app akan mengunduh lagi
   var result = {
     ok: true,
     ts: new Date().getTime(), // timestamp untuk debug sync
+    versi: versi,
     data: {
       projects:      _apiReadProjects(ss),
       pembelian:     _apiReadPembelian(ss),
@@ -107,10 +115,15 @@ function _apiResponse(ss) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// v1.48: nomor versi data (Script Properties DATA_VERSI) — naik setiap perubahan lewat _apiHandleAction
+function _versiData() { return PropertiesService.getScriptProperties().getProperty("DATA_VERSI") || "0"; }
+function _versiNaik() { PropertiesService.getScriptProperties().setProperty("DATA_VERSI", String(new Date().getTime())); }
+function _apiJson(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
 // v1.39: jawaban ringan untuk FCC
 function _apiOk() {
   return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, ts: new Date().getTime() }))
+    .createTextOutput(JSON.stringify({ ok: true, ts: new Date().getTime(), versi: _versiData() }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 function _apiRingkas(ss) {

@@ -13,6 +13,23 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# ⚡ SESSION 32 (v1.48) — 2026-10-06 — Sync ringan (keluhan Eddy: lemot saat dipakai & sync)
+
+### Diagnosa
+- GitHub Pages bukan penyebab (373 KB, 0,3–0,9 dtk dari cache Singapura). Setiap sync 60 dtk & setiap simpan membaca **12 sheet penuh** (`_apiResponse`), padahal Apps Script yang sama juga melayani FCC.
+
+### Backend config.gs v1.12 — paste lalu Deploy → Manage deployments → Edit → New version (URL tetap)
+- Script Property `DATA_VERSI` naik setiap `_apiHandleAction` berhasil (dari app maupun FCC, doGet & doPost). `?action=versi` menjawab versi tanpa membaca sheet. Tulis dengan `ringan=1` dijawab `{ok,versi}`. `_apiResponse` menyertakan versi (dibaca sebelum sheet).
+
+### Frontend
+- `doFetch(url,full)`: cek versi dulu; unduh lengkap hanya bila versi beda, Sync manual, muat pertama, atau unduhan lengkap terakhir > 10 menit (jaga perubahan langsung di Sheet). Versi disimpan `ab3-ver`.
+- `gsWrite` mengirim `ringan=1`; bila dijawab ringkas → unduh lengkap di belakang layar (tombol tidak terkunci). Backend lama tetap didukung (versi ditolak → kembali ke cara lama; simpan dijawab data lengkap → dipakai langsung).
+- Pengaturan: kotak "Kecepatan sync" (cek perubahan & unduh lengkap: detik, KB, jam).
+- sw.js CACHE ab-v1.48.
+- Uji: router config.gs 8 uji (Node, Google tiruan); app 12 uji dengan Apps Script tiruan (3x sync tanpa perubahan = 0 unduh lengkap; kiriman FCC terdeteksi; simpan ringkas; Sync manual; batas 10 menit; backend lama); uji v1.41–v1.47 lulus; teks 46 layar sama.
+
+---
+
 # 🔎 SESSION 31 (v1.47) — 2026-10-06 — Dropdown bisa diketik, reset, tanggal custom mulus (permintaan Eddy)
 
 ### Frontend saja

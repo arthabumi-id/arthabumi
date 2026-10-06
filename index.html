@@ -289,6 +289,8 @@ textarea.fc{min-height:0}
 .filter-reset{display:flex;justify-content:flex-end;margin-bottom:10px}
 .filter-reset .btn[disabled]{opacity:.55;cursor:default}
 .form-top{display:flex;justify-content:flex-end;margin-bottom:8px}
+.spd-box{display:flex;flex-direction:column;gap:3px;padding:10px 12px;margin-bottom:10px;border-radius:11px;background:var(--bg3);border:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.5}
+.spd-box b{color:var(--text);font-size:12.5px}
 .dash-sync{width:100%;margin-bottom:12px;background:transparent;border:1.5px dashed var(--border2);border-radius:12px;min-height:46px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
@@ -393,8 +395,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.47';
+const APP_VERSION='v1.48';
 const APP_CHANGELOG=[
+  {v:'v1.48',date:'6 Okt 2026',desc:'Sync jauh lebih ringan: tiap menit app hanya menanyakan apakah ada perubahan; data lengkap diunduh hanya bila berubah. Simpan tidak lagi menunggu seluruh data. Kecepatan sync terlihat di Pengaturan. (Perlu backend config.gs v1.12)'},
   {v:'v1.47',date:'6 Okt 2026',desc:'Pilihan proyek, toko, karyawan & subkon bisa diketik untuk mencari. Tombol Reset filter di Log Pembelian & Absensi, tombol Kosongkan isian di form input. Tanggal Custom di filter tidak lagi melompat saat diketik'},
   {v:'v1.46',date:'5 Okt 2026',desc:'Pengingat di Dashboard (absensi hari ini belum diisi, upah lama belum di-closing). App bisa dibuka tanpa sinyal setelah sekali dibuka online. Detail Closing: tombol Bagikan slip per karyawan (WhatsApp dll.)'},
   {v:'v1.45',date:'5 Okt 2026',desc:'Absensi lebih cepat (Salin hari kerja terakhir, Semua hadir). Data dari FCC bertanda & dikunci (ubah lewat FCC). Pengingat di Input Kasbon & Bayar supaya tidak dobel. Setengah hari kini dihitung 0,5 juga di Hutang Upah & Closing. Data hasil sync otomatis langsung tampil'},
@@ -477,9 +480,12 @@ async function gsFetch(url,tok){
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),30000); // 30 detik — GAS cold start bisa 20-25 detik
   try{
+    const t0=Date.now();
     const r=await fetch(url+'?action=getAllData'+_tokQ(tok)+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();if(!j.ok)throw new Error(j.error||'GSheet error');return j.data;
+    const tx=await r.text();const j=JSON.parse(tx);if(!j.ok)throw new Error(j.error||'GSheet error');
+    _spdCatat('full',Date.now()-t0,tx.length);_gsVersiTerakhir=j.versi||'';   // [v1.48]
+    return j.data;
   }finally{clearTimeout(tid);}
 }
 async function gsWrite(url,action,data){
@@ -488,11 +494,35 @@ async function gsWrite(url,action,data){
   const ctrl=new AbortController();
   const tid=setTimeout(()=>ctrl.abort(),45000); // 45 detik — GAS bisa cold-start lama
   try{
-    const r=await fetch(url+'?action='+action+'&payload='+encodeURIComponent(ps)+_tokQ()+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
+    const r=await fetch(url+'?action='+action+'&payload='+encodeURIComponent(ps)+_tokQ()+'&ringan=1&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});   // [v1.48] ringan=1: backend baru cukup menjawab ok + versi
     if(!r.ok)throw new Error('HTTP '+r.status);
     let j;try{j=await r.json();}catch{throw new Error('Response bukan JSON');}
     if(!j.ok)throw new Error(j.error||'Apps Script error');return j.data;
   }finally{clearTimeout(tid);}
+}
+// [v1.48] Sync ringan. Backend v1.12 menyimpan nomor versi data yang naik setiap ada perubahan (dari app maupun FCC).
+// Sync otomatis cukup menanyakan versi; data lengkap (12 sheet) hanya diunduh bila versi berubah, saat Sync manual,
+// atau bila unduhan lengkap terakhir > 10 menit lalu (jaga-jaga ada yang mengubah Google Sheet langsung).
+let _gsVersiTerakhir='',_backendVersi=null;
+async function gsVersi(url){
+  const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),30000);const t0=Date.now();
+  try{
+    const r=await fetch(url+'?action=versi'+_tokQ()+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    if(!j.ok){if(/Unknown action/i.test(j.error||'')){_backendVersi=false;return null;}throw new Error(j.error||'GSheet error');}
+    _backendVersi=true;_spdCatat('cek',Date.now()-t0,0);return String(j.versi||'');
+  }finally{clearTimeout(tid);}
+}
+function _spdCatat(k,ms,bytes){S.spd=S.spd||{};S.spd[k]={ms,kb:Math.round(bytes/1024),at:Date.now()};try{localStorage.setItem('ab3-spd',JSON.stringify(S.spd));}catch(e){}}
+function _spdTeks(){
+  const s=S.spd||(()=>{try{return JSON.parse(localStorage.getItem('ab3-spd')||'null');}catch(e){return null;}})()||{};
+  const j=t=>new Date(t).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+  const d=ms=>(ms/1000).toFixed(1).replace('.',',')+' dtk';
+  const a=[];
+  if(s.cek)a.push('Cek perubahan: '+d(s.cek.ms)+' ('+j(s.cek.at)+')');
+  if(s.full)a.push('Unduh data lengkap: '+d(s.full.ms)+' · '+s.full.kb+' KB ('+j(s.full.at)+')');
+  return a.length?a.join('<br>'):'Belum ada sync tercatat di perangkat ini.';
 }
 
 // POST ke Apps Script (untuk payload besar spt foto — GET dibatasi ±50KB).
@@ -571,10 +601,19 @@ function applyGS(d){
   }
   S.lastSync=new Date();S.syncError=null;updateSyncBadge();
 }
-async function doFetch(url){
+async function doFetch(url,full){
   const u=url||S.webAppUrl;if(!u)return;S.syncing=true;updateSyncBadge();setBusy(true,false);
   let _ubah=false;
-  try{const d=await gsFetch(u);const sb=_dataSig();applyGS(d);_ubah=_dataSig()!==sb;}
+  try{
+    // [v1.48] cek versi dulu — kalau tidak ada perubahan, tidak perlu unduh 12 sheet
+    if(!full&&!S._firstLoad&&S.dataVersi&&_backendVersi!==false&&Date.now()-(S._lastFull||0)<600000){
+      const v=await gsVersi(u);
+      if(v&&v===S.dataVersi){S.lastSync=new Date();S.syncError=null;return;}
+    }
+    const d=await gsFetch(u);const sb=_dataSig();applyGS(d);_ubah=_dataSig()!==sb;
+    S._lastFull=Date.now();
+    if(_gsVersiTerakhir&&!_cfmOpen){S.dataVersi=_gsVersiTerakhir;ss('ab3-ver',S.dataVersi);}
+  }
   catch(e){
     const msg=e.name==='AbortError'?'GSheet lambat/timeout — data lokal dipakai':('GSheet: '+e.message);
     S.syncError=msg;showToast(''+msg,'err');
@@ -601,7 +640,7 @@ function _bolehRenderUlang(){
 async function doSync(action,payload){
   if(!S.webAppUrl)return;S.syncing=true;S.syncError=null;updateSyncBadge();setBusy(true,true);
   showToast('Menyimpan ke GSheet…','info');
-  try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('GSheet berhasil diupdate!');go(S.page);}
+  try{const d=await gsWrite(S.webAppUrl,action,payload);applyGS(d);showToast('GSheet berhasil diupdate!');go(S.page);if(!d)setTimeout(()=>doFetch(null,true),50);}   // [v1.48] backend baru menjawab ringkas → ambil data terbaru tanpa mengunci tombol
   catch(e){
     const msg=e.name==='AbortError'?'GSheet timeout — data disimpan lokal, retry otomatis':e.message;
     S.syncError=msg;S.retryQ.push({action,payload,retries:0});showToast(''+msg,'err');
@@ -618,7 +657,7 @@ function updateSyncBadge(){
   const rb=document.getElementById('retry-badge');if(rb){rb.style.display=S.retryQ.length>0?'inline':'none';rb.textContent='Antre '+S.retryQ.length;}
   const sb=document.getElementById('btn-sync');if(sb)sb.style.display=S.webAppUrl?'inline-flex':'none';
 }
-function manualSync(){S.countdown=S.pollInterval;doFetch();}
+function manualSync(){S.countdown=S.pollInterval;doFetch(null,true);}   // [v1.48] Sync manual selalu unduh lengkap
 let countdownTimer=null;
 function startPoll(){
   if(countdownTimer)clearInterval(countdownTimer);
@@ -637,7 +676,7 @@ setInterval(async()=>{
   const item=S.retryQ[0];if(!item)return;
   if(item.retries>=3){S.retryQ.shift();showToast('Retry gagal 3x','err');return;}
   S.syncing=true;setBusy(true,false);
-  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('Retry OK');}
+  try{const d=await gsWrite(S.webAppUrl,item.action,item.payload);applyGS(d);S.retryQ.shift();showToast('Retry OK');if(!d)setTimeout(()=>doFetch(null,true),50);}
   catch{item.retries++;}
   finally{S.syncing=false;updateSyncBadge();setBusy(false,false);}
 },30000);
@@ -799,6 +838,7 @@ function openSettings(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${[{v:30,l:'30 dtk'},{v:60,l:'1 mnt'},{v:120,l:'2 mnt'},{v:300,l:'5 mnt'},{v:0,l:'Manual'}].map(o=>`<button class="tab ${S.pollInterval===o.v?'tab-on':'tab-off'}" onclick="setPoll(${o.v})">${o.l}</button>`).join('')}
       </div></div>
+    <div class="spd-box"><b>${ic('clock')} Kecepatan sync (perangkat ini)</b><span>${_spdTeks()}</span></div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap;margin-bottom:12px">
       <button class="btn btn-o btn-sm" onclick="testConn()">${ic('search')} Test</button>
@@ -4992,7 +5032,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   // [v1.46] service worker: app tetap bisa dibuka tanpa sinyal (sw.js — naikkan CACHE tiap rilis)
   if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
   loadLocal();
-  S.webAppUrl=sg(KS.url,'');S.apiToken=sg(KS.tok,'');S.pollInterval=Number(sg(KS.poll,60))||60;
+  S.webAppUrl=sg(KS.url,'');S.apiToken=sg(KS.tok,'');S.dataVersi=sg('ab3-ver','');   // [v1.48]S.pollInterval=Number(sg(KS.poll,60))||60;
   const hn=document.getElementById('hdr-name');if(hn)hn.textContent=S.companyName;
   const sn=document.getElementById('spl-name');if(sn)sn.textContent=S.companyName;
   document.title=S.companyName;
