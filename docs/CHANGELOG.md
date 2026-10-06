@@ -18,7 +18,7 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 ### Diagnosa
 - GitHub Pages bukan penyebab (373 KB, 0,3–0,9 dtk dari cache Singapura). Setiap sync 60 dtk & setiap simpan membaca **12 sheet penuh** (`_apiResponse`), padahal Apps Script yang sama juga melayani FCC.
 
-### Backend config.gs v1.12 — paste lalu Deploy → Manage deployments → Edit → New version (URL tetap)
+### Backend config.gs v1.12 — ✅ DEPLOYED 6 Okt 2026 17.17 lewat clasp oleh Claude (Proceed Eddy): Apps Script versi **50**, deployment web app yang sama (URL tetap). Isi editor sebelum deploy dicek = repo (kecuali config.gs). Rollback: update deployment ke versi 49.
 - Script Property `DATA_VERSI` naik setiap `_apiHandleAction` berhasil (dari app maupun FCC, doGet & doPost). `?action=versi` menjawab versi tanpa membaca sheet. Tulis dengan `ringan=1` dijawab `{ok,versi}`. `_apiResponse` menyertakan versi (dibaca sebelum sheet).
 
 ### Frontend
