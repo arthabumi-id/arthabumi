@@ -13,6 +13,17 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# 🔎 SESSION 31 (v1.47) — 2026-10-06 — Dropdown bisa diketik, reset, tanggal custom mulus (permintaan Eddy)
+
+### Frontend saja
+- **Tanggal Custom** di Log Pembelian & Log Absensi: onchange kini hanya `_renderBeliItems()`/`_renderAbsItems()` (dulu `go()` → kolom tanggal digambar ulang di tengah ketikan; terbukti di versi lama tahun tersimpan "0002" & fokus hilang).
+- **Dropdown cari**: `<select>` dengan ≥ 7 pilihan otomatis diberi kotak ketik (`cbxEnhance`, MutationObserver). Select asli disembunyikan & tetap dipakai: pilih → `sel.value` + event change (onchange lama jalan). Setter `value/selectedIndex` disinkronkan ke kotak ketik. Saring semua kata (urutan bebas, juga kode). Enter/↑↓/Esc, tombol × = pilihan kosong. `data-nocbx` untuk mengecualikan.
+- **Reset filter** (`_resetFilterBtn`) di Log Pembelian & Log Absensi; **Kosongkan isian** (`kosongkanForm`, dengan konfirmasi) di form Pembelian, Absensi, Kasbon, Bayar, Subkon, Closing baru — hanya state form, data tersimpan tidak disentuh.
+- sw.js CACHE ab-v1.47.
+- Uji: teks 46 layar beda hanya tombol baru & dropdown yang kini tersembunyi; 22 uji alur v1.47 + uji v1.41/v1.45/v1.46 lulus, 0 error.
+
+---
+
 # 📶 SESSION 30 (v1.46) — 2026-10-05 — Pengingat Dashboard, tanpa sinyal, slip closing (PRD docs/PRD-perbaikan-v1.45.md bagian 2)
 
 ### Frontend saja — backend tidak berubah

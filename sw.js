@@ -2,7 +2,7 @@
 // Network-first: ambil versi terbaru dari internet; kalau gagal atau > 4 detik, pakai simpanan terakhir.
 // Hanya file app sendiri (index.html, huruf, ikon). Panggilan ke Apps Script / CDN tidak disentuh.
 // SETIAP RILIS: naikkan CACHE (sama dengan APP_VERSION di index.html).
-const CACHE = 'ab-v1.46';
+const CACHE = 'ab-v1.47';
 const ASSETS = [
   './', 'index.html',
   'fonts/plus-jakarta-sans-latin-400-normal.woff2', 'fonts/plus-jakarta-sans-latin-500-normal.woff2',

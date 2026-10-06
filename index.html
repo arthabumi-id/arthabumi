@@ -274,6 +274,21 @@ textarea.fc{min-height:0}
 .remind-t b{font-size:13.5px}
 .remind-t span{font-size:12px;color:var(--text2);line-height:1.4}
 .remind .btn{flex-shrink:0}
+/* [v1.47] dropdown cari, reset */
+.cbx-src{display:none!important}
+.cbx{position:relative;min-width:0}
+.cbx-in{padding-right:40px;text-overflow:ellipsis}
+.cbx-x{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:none;background:none;color:var(--text3);display:none;align-items:center;justify-content:center;cursor:pointer;font-size:17px}
+.cbx.has-val .cbx-x{display:flex}
+.cbx-list{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;max-height:280px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.2);padding:4px}
+.cbx.open .cbx-list{display:block}
+.cbx-opt{padding:11px 12px;border-radius:8px;font-size:14px;line-height:1.35;cursor:pointer;color:var(--text)}
+.cbx-opt.on,.cbx-opt:hover{background:var(--accent-soft);color:var(--accent)}
+.cbx-opt.ph{color:var(--text3)}
+.cbx-none{padding:11px 12px;font-size:13px;color:var(--text3)}
+.filter-reset{display:flex;justify-content:flex-end;margin-bottom:10px}
+.filter-reset .btn[disabled]{opacity:.55;cursor:default}
+.form-top{display:flex;justify-content:flex-end;margin-bottom:8px}
 .dash-sync{width:100%;margin-bottom:12px;background:transparent;border:1.5px dashed var(--border2);border-radius:12px;min-height:46px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
@@ -378,8 +393,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.46';
+const APP_VERSION='v1.47';
 const APP_CHANGELOG=[
+  {v:'v1.47',date:'6 Okt 2026',desc:'Pilihan proyek, toko, karyawan & subkon bisa diketik untuk mencari. Tombol Reset filter di Log Pembelian & Absensi, tombol Kosongkan isian di form input. Tanggal Custom di filter tidak lagi melompat saat diketik'},
   {v:'v1.46',date:'5 Okt 2026',desc:'Pengingat di Dashboard (absensi hari ini belum diisi, upah lama belum di-closing). App bisa dibuka tanpa sinyal setelah sekali dibuka online. Detail Closing: tombol Bagikan slip per karyawan (WhatsApp dll.)'},
   {v:'v1.45',date:'5 Okt 2026',desc:'Absensi lebih cepat (Salin hari kerja terakhir, Semua hadir). Data dari FCC bertanda & dikunci (ubah lewat FCC). Pengingat di Input Kasbon & Bayar supaya tidak dobel. Setengah hari kini dihitung 0,5 juga di Hutang Upah & Closing. Data hasil sync otomatis langsung tampil'},
   {v:'v1.44',date:'3 Okt 2026',desc:'Tampilan PC/laptop: menu di samping kiri (semua menu langsung terlihat), Dashboard & daftar proyek 2–3 kolom, form terbuka sebagai panel di kanan. Tampilan HP tetap sama'},
@@ -1640,7 +1656,7 @@ function beliInput(){
       <div class="fg"><label class="fl">Status</label><select class="fc" onchange="S.formItems[${i}].status=this.value"><option ${it.status==='HABIS'?'selected':''}>HABIS</option><option ${it.status==='SISA'?'selected':''}>SISA</option><option ${it.status==='ASET'?'selected':''}>ASET</option></select></div>
     </div>
   </div>`).join('');
-  return `<datalist id="brg-dl">${brg}</datalist><datalist id="tk-dl">${tk}</datalist>
+  return `<div class="form-top"><button class="btn btn-g btn-sm" onclick="kosongkanForm('beli')">${ic('undo')} Kosongkan isian</button></div><datalist id="brg-dl">${brg}</datalist><datalist id="tk-dl">${tk}</datalist>
   <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
     <button class="btn btn-o btn-sm" onclick="openPasteBeli()">${ic('clipboard')} Paste Daftar</button></div>
   <div class="card">
@@ -1763,8 +1779,8 @@ function beliLog(){
       <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setBeliDateFilter('custom')">Custom</button>
     </div>
     ${dateMode==='custom'?`<div class="g2" style="margin-bottom:8px">
-      <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;go('beli')"></div>
-      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;go('beli')"></div>
+      <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" value="${fromD}" onchange="S.tab.beliDateFrom=this.value;_renderBeliItems()"></div>
+      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" value="${toD}" onchange="S.tab.beliDateTo=this.value;_renderBeliItems()"></div>
     </div>`:''}
     <div class="g2" style="margin-bottom:8px">
       <select class="fc" onchange="S.beliFilter=this.value;go('beli')">${prjOpts}</select>
@@ -1773,7 +1789,8 @@ function beliLog(){
     <input class="fc" type="search" id="beli-log-q" placeholder="Cari nama barang..."
       value="${esc(S.beliLogQ||'')}"
       oninput="S.beliLogQ=this.value;_renderBeliItems()"
-      style="font-size:14px;margin-bottom:10px">`;
+      style="font-size:14px;margin-bottom:8px">
+    ${_resetFilterBtn("S.tab.beliDateMode='all';S.tab.beliDateFrom='';S.tab.beliDateTo='';S.beliFilter='';S.beliTokoFilter='';S.beliLogQ='';go('beli')",(S.tab.beliDateMode||'all')!=='all'||S.beliFilter||S.beliTokoFilter||S.beliLogQ)}`;
   return viewBar+filterBar+`<div id="beli-items">${_beliItemsList()}</div>`;
 }
 function _beliFiltered(){
@@ -2272,7 +2289,7 @@ function absInput(){
       <div class="fg" style="margin-bottom:0;margin-top:7px">${projSel}</div>
     </div>`;
   }).join('');
-  return `<div class="card" style="margin-bottom:10px">
+  return `<div class="form-top"><button class="btn btn-g btn-sm" onclick="kosongkanForm('absensi')">${ic('undo')} Kosongkan isian</button></div><div class="card" style="margin-bottom:10px">
     <div class="g2">
       <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="abs-tgl" value="${S.absTgl||today()}" onchange="S.absTgl=this.value"></div>
       <div class="fg"><label class="fl">Proyek Default</label><select class="fc" id="abs-prj" onchange="S.absDefProj=this.value"><option value="">-- Tidak ada --</option>${S.projects.map(p=>`<option value="${esc(p.kode)}"${S.absDefProj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('')}</select></div></div>
@@ -2399,11 +2416,11 @@ function absLog(){
       <button class="tab ${dateMode==='custom'?'tab-on':'tab-off'} btn-sm" onclick="setAbsDateFilter('custom')">Custom</button>
     </div>
     ${dateMode==='custom'?`<div class="g2" style="margin-bottom:8px">
-      <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;go('absensi')"></div>
-      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;go('absensi')"></div>
+      <div class="fg"><label class="fl">Dari</label><input class="fc" type="date" value="${fromD}" onchange="S.tab.absDateFrom=this.value;_renderAbsItems()"></div>
+      <div class="fg"><label class="fl">Sampai</label><input class="fc" type="date" value="${toD}" onchange="S.tab.absDateTo=this.value;_renderAbsItems()"></div>
     </div>`:''}
     </div>`;
-  return filterBar+`<div id="abs-items">${_absItemsList()}</div>`;
+  return filterBar+_resetFilterBtn("S.tab.absDateMode='all';S.tab.absDateFrom='';S.tab.absDateTo='';S.absKarFilter='';go('absensi')",(S.tab.absDateMode||'all')!=='all'||S.absKarFilter)+`<div id="abs-items">${_absItemsList()}</div>`;
 }
 function _absItemsList(){
   const dateMode=S.tab.absDateMode||'all';
@@ -2523,7 +2540,7 @@ function kasbonInput(){
   const f=S.ksbF;
   const krOpts=`<option value="">-- Pilih Karyawan --</option>`+S.karyawan.map(k=>`<option value="${esc(k.id)}"${f.kr===k.id?' selected':''}>${esc(k.nama)}</option>`).join('');
   const projOpts=`<option value="">— Tidak Terkait Proyek —</option>`+S.projects.filter(p=>p.status==='Berjalan').map(p=>`<option value="${esc(p.kode)}"${f.proj===p.kode?' selected':''}>${esc(p.nama)}</option>`).join('');
-  return `<div class="fcc-note">${ic('info')}<span><b>Kasbon (Pinjam & Kembali Tunai) sekarang dicatat di FCC.</b> Yang dicatat di FCC otomatis masuk ke sini — kalau dicatat juga di sini jadi dobel. Pakai form ini hanya untuk koreksi.</span></div><div class="card">
+  return `<div class="form-top"><button class="btn btn-g btn-sm" onclick="kosongkanForm('kasbon')">${ic('undo')} Kosongkan isian</button></div><div class="fcc-note">${ic('info')}<span><b>Kasbon (Pinjam & Kembali Tunai) sekarang dicatat di FCC.</b> Yang dicatat di FCC otomatis masuk ke sini — kalau dicatat juga di sini jadi dobel. Pakai form ini hanya untuk koreksi.</span></div><div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="ksb-tgl" value="${f.tgl||today()}" onchange="S.ksbF.tgl=this.value"></div>
     <div class="fg"><label class="fl">Karyawan</label><select class="fc" id="ksb-kr" onchange="S.ksbF.kr=this.value">${krOpts}</select></div>
     <div class="fg"><label class="fl">Tipe</label><select class="fc" id="ksb-tipe" onchange="S.ksbF.tipe=this.value"><option${f.tipe!=='POTONG'?' selected':''}>AMBIL</option><option${f.tipe==='POTONG'?' selected':''}>POTONG</option></select></div>
@@ -2730,7 +2747,7 @@ function closingBaru(){
   if(!S.clsF)S.clsF={dari:'',smp:'',bayar:'',noc:''};
   const f=S.clsF;
   const autoNo='CLO-'+today().slice(0,7).replace('-','')+'-'+String(getClosingList().length+1).padStart(3,'0');
-  return `<div class="card">
+  return `<div class="form-top"><button class="btn btn-g btn-sm" onclick="kosongkanForm('closing')">${ic('undo')} Kosongkan isian</button></div><div class="card">
     <div class="g2">
       <div class="fg"><label class="fl">Dari Tanggal</label><input class="fc" type="date" id="cls-dari" value="${f.dari||''}" onchange="S.clsF.dari=this.value"></div>
       <div class="fg"><label class="fl">Sampai Tanggal</label><input class="fc" type="date" id="cls-smp" value="${f.smp||today()}" onchange="S.clsF.smp=this.value"></div></div>
@@ -3252,7 +3269,7 @@ function bayarInput(){
       <div class="fg"><label class="fl">Referensi</label><input class="fc" value="${esc(it.ref)}" oninput="S.payItems[${i}].ref=this.value"></div></div>
     <div class="fg"><label class="fl">Keterangan</label><input class="fc" value="${esc(it.ket)}" oninput="S.payItems[${i}].ket=this.value"></div>
   </div>`).join('');
-  return `<div class="fcc-note">${ic('info')}<span><b>Pembayaran klien sekarang dicatat di FCC.</b> Yang dicatat di FCC otomatis masuk ke sini — kalau dicatat juga di sini jadi dobel. Pakai form ini hanya untuk koreksi.</span></div><div class="card">
+  return `<div class="form-top"><button class="btn btn-g btn-sm" onclick="kosongkanForm('bayar')">${ic('undo')} Kosongkan isian</button></div><div class="fcc-note">${ic('info')}<span><b>Pembayaran klien sekarang dicatat di FCC.</b> Yang dicatat di FCC otomatis masuk ke sini — kalau dicatat juga di sini jadi dobel. Pakai form ini hanya untuk koreksi.</span></div><div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="pay-tgl" value="${S.payTgl||today()}" onchange="S.payTgl=this.value"></div>
     ${items}
     <div class="act-row">
@@ -3467,7 +3484,7 @@ function subkonInput(){
   const f=S.skF;
   const prjOptsSel=`<option value="">-- Pilih Proyek --</option>`+S.projects.map(p=>`<option value="${esc(p.kode)}"${f.prj===p.kode?' selected':''}>${esc(p.nama)} (${esc(p.kode)})</option>`).join('');
   const skOptsSel=`<option value="">-- Pilih Subkon --</option>`+S.masterSubkon.map(sk=>`<option value="${esc(sk.id)}"${f.sk===sk.id?' selected':''}>${esc(sk.nama)} (${esc(sk.spesialisasi)})</option>`).join('');
-  return `<div class="card">
+  return `<div class="form-top"><button class="btn btn-g btn-sm" onclick="kosongkanForm('subkon')">${ic('undo')} Kosongkan isian</button></div><div class="card">
     <div class="fg"><label class="fl">Tanggal</label><input class="fc" type="date" id="sk-tgl" value="${f.tgl||today()}" onchange="S.skF.tgl=this.value"></div>
     <div class="fg"><label class="fl">Proyek<span class="req">*</span></label><select class="fc" id="sk-prj" onchange="S.skF.prj=this.value">${prjOptsSel}</select></div>
     <div class="fg"><label class="fl">Subkontraktor<span class="req">*</span></label><select class="fc" id="sk-sk" onchange="S.skF.sk=this.value">${skOptsSel}</select></div>
@@ -4879,6 +4896,61 @@ function printRekapProyek(kode){
   closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html,chartScripts);
 }
 function setTab(page,tab){S.tab[page]=tab;go(page);}
+// [v1.47] Tombol reset filter (tampil aktif bila ada filter terpasang)
+function _resetFilterBtn(aksi,aktif){return `<div class="filter-reset"><button class="btn btn-sm ${aktif?'btn-o':'btn-g'}" onclick="${aksi}"${aktif?'':' disabled'}>${ic('undo')} Reset filter</button></div>`;}
+// [v1.47] Kosongkan semua isian form (dengan konfirmasi). Hanya isian layar — data tersimpan tidak tersentuh.
+async function kosongkanForm(k){
+  if(!(await askConfirm('Kosongkan semua isian form ini?\nYang sudah tersimpan tidak ikut terhapus.',{ok:'Kosongkan'})))return;
+  if(k==='beli'){S.formItems=null;S.formBeliProj='';S.formBeliTgl='';S.formBayarToko='Lunas';}
+  else if(k==='absensi'){S.absRows=[];S.absDefProj='';S.absTgl='';}
+  else if(k==='kasbon'){S.ksbF=null;}
+  else if(k==='bayar'){S.payItems=null;S.payTgl='';}
+  else if(k==='subkon'){S.skF=null;}
+  else if(k==='closing'){S.clsF=null;clsRekap=[];clsSel={};}
+  go(S.page);showToast('Isian dikosongkan','info');
+}
+// [v1.47] Dropdown panjang (≥ 7 pilihan) bisa diketik untuk mencari. <select> asli tetap ada (disembunyikan):
+// onchange & .value lama tetap dipakai, jadi logika app tidak berubah.
+const CBX_MIN=7;
+function _cbxLabel(sel){const o=sel.options[sel.selectedIndex];return o&&o.value!==''?o.text:'';}
+function _cbxSync(sel){const w=sel._cbx;if(!w)return;const inp=w.querySelector('.cbx-in');if(document.activeElement!==inp)inp.value=_cbxLabel(sel);const ph=[...sel.options].find(o=>o.value==='');inp.placeholder=ph?ph.text:'Ketik untuk mencari…';w.classList.toggle('has-val',!!sel.value);}
+function cbxEnhance(sel){
+  if(sel._cbx||sel.disabled||sel.multiple||sel.options.length<CBX_MIN||sel.hasAttribute('data-nocbx'))return;
+  const w=document.createElement('div');w.className='cbx';const st=sel.getAttribute('style');if(st)w.setAttribute('style',st);
+  w.innerHTML='<input class="fc cbx-in" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"><button type="button" class="cbx-x" tabindex="-1" aria-label="Hapus pilihan">'+ic('x-circle')+'</button><div class="cbx-list" role="listbox"></div>';
+  sel.after(w);sel.classList.add('cbx-src');sel._cbx=w;
+  const inp=w.querySelector('.cbx-in'),list=w.querySelector('.cbx-list');let act=-1,items=[];
+  const close=()=>w.classList.remove('open');
+  const pick=o=>{sel.value=o.value;close();inp.blur();_cbxSync(sel);sel.dispatchEvent(new Event('change',{bubbles:true}));};
+  const mark=()=>{list.querySelectorAll('.cbx-opt').forEach((d,i)=>d.classList.toggle('on',i===act));const a=list.querySelector('.cbx-opt.on');if(a)a.scrollIntoView({block:'nearest'});};
+  const render=q=>{
+    const ws=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+    items=[...sel.options].filter(o=>!o.disabled&&(!ws.length||(o.value!==''&&ws.every(x=>o.text.toLowerCase().includes(x)||String(o.value).toLowerCase().includes(x)))));
+    act=ws.length?0:items.findIndex(o=>o.value===sel.value);
+    list.innerHTML=items.length?items.map((o,i)=>'<div class="cbx-opt'+(o.value===''?' ph':'')+'" data-i="'+i+'">'+esc(o.text)+'</div>').join(''):'<div class="cbx-none">Tidak ada yang cocok</div>';
+    w.classList.add('open');mark();
+  };
+  inp.addEventListener('focus',()=>{inp.select();render('');});
+  inp.addEventListener('input',()=>render(inp.value));
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!w.classList.contains('open'))render('');act=Math.max(0,Math.min(items.length-1,act+(e.key==='ArrowDown'?1:-1)));mark();}
+    else if(e.key==='Enter'){e.preventDefault();if(items[act])pick(items[act]);}
+    else if(e.key==='Escape'){close();inp.value=_cbxLabel(sel);inp.blur();}
+  });
+  inp.addEventListener('blur',()=>setTimeout(()=>{close();if(document.activeElement!==inp)inp.value=_cbxLabel(sel);},150));
+  list.addEventListener('pointerdown',e=>{e.preventDefault();const d=e.target.closest('.cbx-opt');if(d)pick(items[+d.dataset.i]);});
+  w.querySelector('.cbx-x').addEventListener('pointerdown',e=>{e.preventDefault();const o=[...sel.options].find(o=>o.value==='');if(o)pick(o);else{inp.value='';inp.focus();render('');}});
+  _cbxSync(sel);
+}
+(()=>{ // nilai yang diubah lewat kode (sel.value=…) ikut tampil di kotak ketik
+  for(const p of ['value','selectedIndex']){const d=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,p);if(!d||!d.set)continue;
+    Object.defineProperty(HTMLSelectElement.prototype,p,{configurable:true,enumerable:d.enumerable,get(){return d.get.call(this);},set(v){d.set.call(this,v);if(this._cbx)_cbxSync(this);}});}
+})();
+function _cbxScan(root){if(!root||root.nodeType!==1)return;if(root.tagName==='SELECT')cbxEnhance(root);else root.querySelectorAll('select').forEach(cbxEnhance);}
+new MutationObserver(ms=>{for(const m of ms){
+  if(m.target.tagName==='SELECT'){if(m.target._cbx)_cbxSync(m.target);else cbxEnhance(m.target);continue;}
+  m.addedNodes.forEach(_cbxScan);
+}}).observe(document.documentElement,{childList:true,subtree:true});
 // [v1.45] Data yang dikirim FCC (ID BLI-/KSB-/PAY-FCC-…) dikunci di app ini: ubah/hapus lewat FCC supaya dua app tidak beda
 function _isFCC(x){return !!(x&&/^(BLI|KSB|PAY)-FCC-/.test(String(x.id||'')));}
 function _fccTag(){return '<span class="fcc-tag" title="Dicatat dari FCC — ubah/hapus lewat FCC">'+ic('link')+' dari FCC</span>';}
