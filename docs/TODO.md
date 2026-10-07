@@ -5,7 +5,7 @@ Terakhir diupdate: **2026-10-07**
 
 ## ▶ STATUS SEKARANG (7 Okt 2026)
 - **Live:** frontend **v1.49** di GitHub Pages; **v1.50 (siap pindah Cloudflare) menunggu push**. Backend config.gs v1.12 = Apps Script versi 50.
-- **Pindah Cloudflare (PRD-cloudflare-v1.50, disetujui 7 Okt):** Hari 1 (7 Okt) hubungkan Cloudflare · **Hari H Kamis 8 Okt 11.00** pindah perangkat · **Minggu 11 Okt** repo privat.
+- **Pindah Cloudflare (PRD-cloudflare-v1.50, disetujui 7 Okt):** Hari 1 (7 Okt) ✅ Cloudflare Pages LIVE https://arthabumi-kontraktor.pages.dev (v1.50, header aktif, backend/docs/tests tidak tersaji, dicek Claude) · **Hari H Kamis 8 Okt 11.00** pindah perangkat · **Minggu 11 Okt** repo privat.
 - Selesai Okt 2026: redesain gaya B (v1.41–44), PRD-perbaikan-v1.45 (v1.45–46), dropdown cari & reset (v1.47), sync ringan (v1.48), tombol Ke atas (v1.49).
 
 ## ▶ BERIKUTNYA (urut)

@@ -19,6 +19,7 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - `_bannerPindah()` di Dashboard hanya di alamat *.github.io → tombol "Salin pengaturan & buka alamat baru" (`ALAMAT_BARU`).
 - `_headers` (Cloudflare): X-Frame-Options DENY, nosniff, no-referrer, index.html & sw.js no-cache.
 - Build Cloudflare: `mkdir -p dist && cp -r index.html sw.js fonts icons _headers dist/`, output `dist` → backend/docs/tests/backups TIDAK tersaji.
+- ✅ 7 Okt 2026: Cloudflare Pages proyek arthabumi-kontraktor LIVE (dicek: v1.50, huruf, service worker, header keamanan; /backend, /docs, /tests mengembalikan index.html, bukan isi file). Alamat lama menampilkan banner pindah.
 - Uji: tests/interact150.js 13 uji (dua origin = dua localStorage) + semua uji lama lulus.
 
 ---
