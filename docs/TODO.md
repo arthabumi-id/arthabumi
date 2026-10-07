@@ -42,11 +42,7 @@ Terakhir diupdate: **2026-10-07**
 - `fixAllProjectFormulas()` dijalankan → **24 proyek diupdate**.
 - Verifikasi MASTER PROJECT (cocok dengan hitungan manual):
 
-  | Kode | Kontrak awal (F) | Nilai Final (R) | Laba (J) | Piutang (N) |
-  |---|---|---|---|---|
-  | SPL-01 | 165.000.000 | 225.000.000 | 85.680.063 | 0 |
-  | PRJ-007 | 120.000.000 | 139.000.000 | 60.896.317 | 0 |
-  | PRJ-008 | 1.000.000.000 | 1.010.000.000 | 942.837.882 | 700.000.000 |
+  (tabel angka kontrak asli dihapus dari dokumen publik 7 Okt 2026 — hasil cek cocok dengan hitungan manual)
 
 - ⏳ **Sisa satu langkah manual Eddy:** buka app → tekan **📊 Update Rekap ke GSheet**
   supaya tab REKAP ikut terbarui (isinya masih potret 13 Agustus, 19 proyek — sekarang ada 24).

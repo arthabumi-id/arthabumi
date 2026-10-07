@@ -99,7 +99,7 @@ Ringkas — rinciannya di `docs/CHANGELOG.md` (Session 25–33), PRD di `docs/PR
 - File repo **LF**. Git `core.autocrlf=true` → **JANGAN `git stash`/`git checkout -- file`** (working copy jadi CRLF). Untuk pembanding versi lama
   pakai `git show HEAD:index.html > folder-temp/...`. Patch lewat skrip Node dengan hitungan anchor (berhenti kalau jumlah tidak cocok).
 - **Uji otomatis** di `tests/` (Playwright dengan data contoh — tidak menyentuh Sheet asli). Lihat `tests/README.md`.
-- **Deploy backend bisa oleh Claude lewat clasp** (login `arthabumi.id@gmail.com`): clone Script ID project ke folder sementara
+- **Deploy backend bisa oleh Claude lewat clasp** (login akun Google bisnis Eddy — lihat memori Claude, jangan ditulis di repo publik): clone Script ID project ke folder sementara
   (BUKAN di repo — repo publik), bandingkan dengan `backend/*.gs`, ganti file yang berubah, `clasp push` → `clasp create-version` →
   `clasp update-deployment <deploymentId yang dipakai app> -V <n>` (URL tetap). Script ID & deployment ID JANGAN ditulis di repo.
   Tetap tunjukkan rencana & tunggu Eddy ketik **"Proceed"**. Terakhir: v1.48 → Apps Script versi **50** (rollback: 49).
