@@ -408,8 +408,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.50';
+const APP_VERSION='v1.51';
 const APP_CHANGELOG=[
+  {v:'v1.51',date:'7 Okt 2026',desc:'Sync lebih sabar terhadap Google yang lambat bangun (batas 60 detik), sync otomatis yang telat tidak lagi memunculkan pesan merah. Pengaturan menampilkan berapa lama kerja server vs menunggu Google. (Perlu backend config.gs v1.13)'},
   {v:'v1.50',date:'7 Okt 2026',desc:'Persiapan pindah ke alamat baru (Cloudflare): Pengaturan → Salin pengaturan / Tempel pengaturan, dan pengingat pindah di alamat lama'},
   {v:'v1.49',date:'6 Okt 2026',desc:'Tombol Ke atas: muncul di tengah bawah saat halaman digulir ke bawah, ketuk untuk langsung kembali ke paling atas'},
   {v:'v1.48',date:'6 Okt 2026',desc:'Sync jauh lebih ringan: tiap menit app hanya menanyakan apakah ada perubahan; data lengkap diunduh hanya bila berubah. Simpan tidak lagi menunggu seluruh data. Kecepatan sync terlihat di Pengaturan. (Perlu backend config.gs v1.12)'},
@@ -493,13 +494,13 @@ function skel(n){return `<div>${Array.from({length:n||3},()=>'<div class="sk sk-
 function _tokQ(tok){const t=(tok===undefined?S.apiToken:tok)||'';return t?'&token='+encodeURIComponent(t):'';}
 async function gsFetch(url,tok){
   const ctrl=new AbortController();
-  const tid=setTimeout(()=>ctrl.abort(),30000); // 30 detik — GAS cold start bisa 20-25 detik
+  const tid=setTimeout(()=>ctrl.abort(),60000); // [v1.51] 60 detik — Apps Script bangun ±20 dtk + baca 12 sheet ±12 dtk (diukur 7 Okt)
   try{
     const t0=Date.now();
     const r=await fetch(url+'?action=getAllData'+_tokQ(tok)+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const tx=await r.text();const j=JSON.parse(tx);if(!j.ok)throw new Error(j.error||'GSheet error');
-    _spdCatat('full',Date.now()-t0,tx.length);_gsVersiTerakhir=j.versi||'';   // [v1.48]
+    _spdCatat('full',Date.now()-t0,tx.length,j.ms);_gsVersiTerakhir=j.versi||'';   // [v1.48] [v1.51] + waktu kerja server
     return j.data;
   }finally{clearTimeout(tid);}
 }
@@ -520,23 +521,24 @@ async function gsWrite(url,action,data){
 // atau bila unduhan lengkap terakhir > 10 menit lalu (jaga-jaga ada yang mengubah Google Sheet langsung).
 let _gsVersiTerakhir='',_backendVersi=null;
 async function gsVersi(url){
-  const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),30000);const t0=Date.now();
+  const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),45000);const t0=Date.now();
   try{
     const r=await fetch(url+'?action=versi'+_tokQ()+'&t='+Date.now(),{redirect:'follow',cache:'no-cache',signal:ctrl.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json();
     if(!j.ok){if(/Unknown action/i.test(j.error||'')){_backendVersi=false;return null;}throw new Error(j.error||'GSheet error');}
-    _backendVersi=true;_spdCatat('cek',Date.now()-t0,0);return String(j.versi||'');
+    _backendVersi=true;_spdCatat('cek',Date.now()-t0,0,j.ms);return String(j.versi||'');
   }finally{clearTimeout(tid);}
 }
-function _spdCatat(k,ms,bytes){S.spd=S.spd||{};S.spd[k]={ms,kb:Math.round(bytes/1024),at:Date.now()};try{localStorage.setItem('ab3-spd',JSON.stringify(S.spd));}catch(e){}}
+function _spdCatat(k,ms,bytes,srv){S.spd=S.spd||{};S.spd[k]={ms,kb:Math.round(bytes/1024),at:Date.now(),srv:(typeof srv==='number'?srv:null)};try{localStorage.setItem('ab3-spd',JSON.stringify(S.spd));}catch(e){}}
 function _spdTeks(){
   const s=S.spd||(()=>{try{return JSON.parse(localStorage.getItem('ab3-spd')||'null');}catch(e){return null;}})()||{};
   const j=t=>new Date(t).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
   const d=ms=>(ms/1000).toFixed(1).replace('.',',')+' dtk';
   const a=[];
-  if(s.cek)a.push('Cek perubahan: '+d(s.cek.ms)+' ('+j(s.cek.at)+')');
-  if(s.full)a.push('Unduh data lengkap: '+d(s.full.ms)+' · '+s.full.kb+' KB ('+j(s.full.at)+')');
+  const sv=x=>x&&typeof x.srv==='number'?' — kerja server '+d(x.srv)+', sisanya antre/bangun di Google':'';
+  if(s.cek)a.push('Cek perubahan: '+d(s.cek.ms)+' ('+j(s.cek.at)+')'+sv(s.cek));
+  if(s.full)a.push('Unduh data lengkap: '+d(s.full.ms)+' · '+s.full.kb+' KB ('+j(s.full.at)+')'+sv(s.full));
   return a.length?a.join('<br>'):'Belum ada sync tercatat di perangkat ini.';
 }
 
@@ -631,7 +633,7 @@ async function doFetch(url,full){
   }
   catch(e){
     const msg=e.name==='AbortError'?'GSheet lambat/timeout — data lokal dipakai':('GSheet: '+e.message);
-    S.syncError=msg;showToast(''+msg,'err');
+    S.syncError=msg;if(full||S._firstLoad||e.name!=='AbortError')showToast(''+msg,'err');   // [v1.51] sync otomatis yang timeout tidak memunculkan toast merah
   }
   finally{
     const wasFirst=S._firstLoad;S.syncing=false;S._firstLoad=false;

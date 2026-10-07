@@ -12,8 +12,8 @@ const srv = http.createServer((q, r) => {
   if (u.pathname === '/gas') {
     const a = u.searchParams.get('action') || 'getAllData'; let o;
     r.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
-    if (a === 'versi') { hit.versi++; o = lama ? { ok: false, error: 'Unknown action: versi (line 9)' } : { ok: true, versi }; }
-    else if (a === 'getAllData') { hit.full++; o = { ok: true, versi: lama ? undefined : versi, data: DATA }; }
+    if (a === 'versi') { hit.versi++; o = lama ? { ok: false, error: 'Unknown action: versi (line 9)' } : { ok: true, versi, ms: 40 }; }
+    else if (a === 'getAllData') { hit.full++; o = { ok: true, versi: lama ? undefined : versi, data: DATA, ms: lama ? undefined : 9100 }; }
     else { hit.tulis++; versi = String(+versi + 1); if (u.searchParams.get('ringan') && !lama) { hit.tulisRingan++; o = { ok: true, versi }; } else o = { ok: true, data: DATA }; }
     return r.end(JSON.stringify(o));
   }
@@ -52,7 +52,14 @@ const tunggu = ms => new Promise(r => setTimeout(r, ms));
   // pengukur
   await p.evaluate(() => openSettings()); await p.waitForTimeout(150);
   const spd = await p.locator('.spd-box').innerText();
-  ok(/Cek perubahan: [\d,]+ dtk/.test(spd) && /Unduh data lengkap: [\d,]+ dtk · \d+ KB/.test(spd), 'Pengaturan menampilkan kecepatan sync:\n' + spd);
+  ok(/Cek perubahan: [\d,]+ dtk/.test(spd) && /Unduh data lengkap: [\d,]+ dtk · \d+ KB/.test(spd) && /kerja server 0,0 dtk/.test(spd) && /kerja server 9,1 dtk/.test(spd), 'Pengaturan menampilkan kecepatan sync + waktu kerja server (v1.51):\n' + spd);
+  // [v1.51] sync otomatis yang timeout: tanpa toast merah; Sync manual yang timeout: tetap ada pesan
+  await p.evaluate(() => { document.getElementById('toast').textContent = ''; const f = window.fetch; window.fetch = (u, o) => String(u).includes('/gas') ? Promise.reject(Object.assign(new Error('t'), { name: 'AbortError' })) : f(u, o); window._fetchAsli = f; });
+  await p.evaluate(() => doFetch()); await p.waitForTimeout(100);
+  ok(!(await p.locator('#toast').innerText()).includes('timeout') && await p.evaluate(() => !!S.syncError), 'sync otomatis timeout → tanpa toast merah (tanda di header saja)');
+  await p.evaluate(() => manualSync()); await p.waitForTimeout(150);
+  ok((await p.locator('#toast').innerText()).includes('timeout'), 'Sync manual timeout → pesan tetap muncul');
+  await p.evaluate(() => { window.fetch = window._fetchAsli; });
   await p.screenshot({ path: path.join(__dirname, 'out', 'v148-settings.png') });
   await p.evaluate(() => closeModal());
   // backend lama (belum di-deploy): tetap jalan seperti dulu

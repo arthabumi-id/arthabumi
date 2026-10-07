@@ -13,6 +13,21 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# ⏱️ SESSION 35 (v1.51) — 2026-10-07 — Sabar terhadap Google yang lambat bangun
+
+### Diukur 7 Okt (Chrome Eddy & curl)
+- Panggilan tanpa token (tanpa baca sheet): 19,4 → 12,0 → 5,8 → 1,9 dtk berturut-turut = waktu bangun Apps Script. Unduh lengkap 557 KB ±11,5 dtk. Bangun + unduh ≈ 30 dtk = batas lama → "Gagal/timeout".
+
+### Frontend
+- Batas waktu unduh lengkap 30 → **60 dtk**, cek versi 30 → 45 dtk. Sync otomatis yang timeout tidak lagi memunculkan toast merah (tetap tanda di header; Sync manual/muat pertama tetap menampilkan pesan).
+- Kecepatan sync di Pengaturan kini memisahkan **kerja server** (`ms` dari backend) vs antre/bangun di Google.
+
+### Backend config.gs v1.13
+- `doGet`: Script Properties dibaca SEKALI (`getProperties`) untuk token & versi, SEBELUM `getActiveSpreadsheet()`. Semua jawaban membawa `ms` (waktu kerja server).
+- Uji: gstest148 8 uji; interact148 +2 (toast timeout), semua interact lulus.
+
+---
+
 # ☁️ SESSION 34 (v1.50) — 2026-10-07 — Siap pindah ke Cloudflare Pages (PRD docs/PRD-cloudflare-v1.50.md)
 
 - `salinPengaturan()` / `tempelPengaturan()` (Pengaturan → Pindah perangkat / alamat): paket teks `ARTHABUMI-PENGATURAN:1:<base64>` lewat clipboard (bukan URL) berisi `PINDAH_KUNCI` = ab3-url, ab3-tok, ab3-poll, ab3-nav, ab3-co, ab3-theme, **ab3-rbsk (riwayat cicilan subkon — hanya ada di HP)**. Salin ditolak bila ada antrean kirim / data pending. Tempel → simpan → muat ulang → data diunduh dari Sheet. Cadangan: kotak teks bila clipboard tidak bisa dipakai.

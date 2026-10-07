@@ -5,7 +5,7 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.50 — 7 Okt 2026 (siap pindah Cloudflare) (cek `APP_VERSION` di index.html, jangan percaya angka di dok). Backend live: config.gs v1.12 = Apps Script versi 50. Baca bagian **WAJIB TAHU SEJAK OKT 2026** di bawah.
+- **Versi aktif:** v1.51 — 7 Okt 2026 (Cloudflare live; batas sync 60 dtk; backend config.gs v1.13) (cek `APP_VERSION` di index.html, jangan percaya angka di dok). Backend live: config.gs v1.12 = Apps Script versi 50. Baca bagian **WAJIB TAHU SEJAK OKT 2026** di bawah.
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`). **LIVE sejak 7 Okt 2026: Cloudflare Pages `https://arthabumi-kontraktor.pages.dev`** (build: `mkdir -p dist && cp -r index.html sw.js fonts icons _headers dist/`, output `dist`) — GitHub Pages lama `arthabumi-id.github.io/arthabumi` dimatikan saat repo privat (11 Okt). File baru yang harus tersaji WAJIB ditambahkan ke build command.

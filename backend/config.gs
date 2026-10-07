@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════════════
-// ARTHABUMI — config.gs  v1.12 (v1.38: token · v1.39: jalur ringan utk FCC · v1.40: closing & bayar subkon FCC · v1.48: versi data & sync ringan)
+// ARTHABUMI — config.gs  v1.13 (v1.51: token & versi sebelum Sheet dibuka, ms server · v1.38: token · v1.39: jalur ringan utk FCC · v1.40: closing & bayar subkon FCC · v1.48: versi data & sync ringan)
 // Isi: Entry Points (doGet/doPost) + Router ONLY
 //
 // Helper date/find functions → helpers.gs
@@ -31,19 +31,26 @@ function buatToken() {
 
 // ── Entry Point GET ────────────────────────────────────────────────────
 // Digunakan untuk READ dan WRITE (karena limitasi CORS Google Apps Script)
+var _T0 = 0;   // v1.51: awal permintaan (untuk ms kerja server di setiap jawaban)
+function _ms() { return _T0 ? new Date().getTime() - _T0 : null; }
 function doGet(e) {
+  _T0 = new Date().getTime();
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
     var p  = e && e.parameter ? e.parameter : {};
+    // v1.51: token & versi dibaca SEKALI dari Script Properties, sebelum Sheet dibuka
+    var props = {};
+    try { props = PropertiesService.getScriptProperties().getProperties() || {}; } catch (pe0) {}
+    var tok = String(props.API_TOKEN || API_TOKEN || "").trim();
 
     // ── Token check (v1.38: Script Properties API_TOKEN) ──
-    if (_apiTokenSalah(p.token)) {
+    if (tok && String(p.token || "") !== tok) {
       return _apiError(new Error(_ERR_TOKEN));
     }
 
     var action = p.action || "getAllData";
     // v1.48: sync ringan — app cukup menanyakan nomor versi data (tanpa membaca sheet)
-    if (action === "versi") return _apiJson({ ok: true, ts: new Date().getTime(), versi: _versiData() });
+    if (action === "versi") return _apiJson({ ok: true, ts: new Date().getTime(), versi: props.DATA_VERSI || "0", ms: _ms() });
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     // v1.39: baca ringan untuk FCC (Tes sambungan, daftar barang) — tanpa log pembelian/absensi/kasbon
     if (action === "ringkas") return _apiRingkas(ss);
     // v1.40: closing gaji untuk antrean FCC (tanggal bayar >= sejak)
@@ -95,6 +102,7 @@ function _apiResponse(ss) {
     ok: true,
     ts: new Date().getTime(), // timestamp untuk debug sync
     versi: versi,
+    ms: null,
     data: {
       projects:      _apiReadProjects(ss),
       pembelian:     _apiReadPembelian(ss),
@@ -110,6 +118,7 @@ function _apiResponse(ss) {
       bayarSubkonFCC: _apiReadBayarSubkonFCC(ss)   // v1.40: riwayat bayar subkon dari FCC
     }
   };
+  result.ms = _ms();   // v1.51: waktu kerja server (termasuk membaca 12 sheet)
   return ContentService
     .createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
@@ -123,7 +132,7 @@ function _apiJson(o) { return ContentService.createTextOutput(JSON.stringify(o))
 // v1.39: jawaban ringan untuk FCC
 function _apiOk() {
   return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, ts: new Date().getTime(), versi: _versiData() }))
+    .createTextOutput(JSON.stringify({ ok: true, ts: new Date().getTime(), versi: _versiData(), ms: _ms() }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 function _apiRingkas(ss) {
