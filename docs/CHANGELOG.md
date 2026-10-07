@@ -22,7 +22,8 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - Batas waktu unduh lengkap 30 → **60 dtk**, cek versi 30 → 45 dtk. Sync otomatis yang timeout tidak lagi memunculkan toast merah (tetap tanda di header; Sync manual/muat pertama tetap menampilkan pesan).
 - Kecepatan sync di Pengaturan kini memisahkan **kerja server** (`ms` dari backend) vs antre/bangun di Google.
 
-### Backend config.gs v1.13
+### Backend config.gs v1.13 — ✅ DEPLOYED 7 Okt 2026 21.13 via clasp = Apps Script versi **51** (rollback: 50)
+- Hasil ukur setelah deploy (Chrome Eddy, dengan token): kerja server cek versi **29–41 ms**, total 5,6–28,7 dtk → >99% waktu = antrean/bangun Apps Script di Google, bukan kode kita.
 - `doGet`: Script Properties dibaca SEKALI (`getProperties`) untuk token & versi, SEBELUM `getActiveSpreadsheet()`. Semua jawaban membawa `ms` (waktu kerja server).
 - Uji: gstest148 8 uji; interact148 +2 (toast timeout), semua interact lulus.
 
