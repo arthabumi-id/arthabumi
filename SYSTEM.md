@@ -5,11 +5,11 @@
 
 ## IDENTITAS PROYEK
 - **Nama:** Arthabumi | **Owner:** Eddy Santoso | **Bisnis:** Kontraktor (besi, interior, renovasi, waterproofing)
-- **Versi aktif:** v1.49 (Latest) — 2026-10-06 (tombol Ke atas; sync ringan via DATA_VERSI — backend config.gs v1.12; dropdown ≥7 pilihan otomatis jadi kotak cari — cbxEnhance; (sw.js: naikkan CACHE tiap rilis; perbaikan: data FCC dikunci, absensi cepat, U1/U2/U5; redesain gaya B v1.41–44, ikon via ic(); huruf di `fonts/`, ikon di `icons/` — ikut di-push)
+- **Versi aktif:** v1.49 — 6 Okt 2026 (cek `APP_VERSION` di index.html, jangan percaya angka di dok). Backend live: config.gs v1.12 = Apps Script versi 50. Baca bagian **WAJIB TAHU SEJAK OKT 2026** di bawah.
 - **App:** Single HTML file, pure vanilla JS, zero dependencies
 - **Backend:** Google Apps Script → Google Sheets
 - **Deploy frontend:** GitHub Desktop → push ke repo `arthabumi-id/arthabumi` (branch `main`) → live di GitHub Pages `https://arthabumi-id.github.io/arthabumi/`. Setelah push, refresh PWA (hapus & tambah ulang shortcut) karena cache.
-- **Deploy backend:** paste file `.gs` ke editor Google Apps Script (TERPISAH dari GitHub), lalu Deploy → New version.
+- **Deploy backend:** paste file `.gs` ke editor Google Apps Script (TERPISAH dari GitHub) lalu Deploy → Manage deployments → Edit → New version — ATAU Claude lewat clasp (lihat WAJIB TAHU).
 
 ---
 
@@ -17,6 +17,9 @@
 ```
 arthabumi/
 ├── index.html                    ← App utama (cek `APP_VERSION` di dalamnya, jangan percaya angka di dok)
+├── sw.js                         ← Service worker (v1.46) — naikkan CACHE tiap rilis
+├── fonts/ icons/                 ← Huruf & ikon app (v1.41) — ikut di-push
+├── tests/                        ← Uji otomatis Playwright + data contoh (lihat tests/README.md)
 ├── SYSTEM.md                     ← File ini (briefing Claude)
 ├── backend/                      ← Backend LIVE = kumpulan file terpisah (paste SEMUA ke Apps Script)
 │   ├── config.gs                 ← ROUTER (doGet + _apiHandleAction switch) — entry point API
@@ -30,7 +33,8 @@ arthabumi/
 │   └── diagnostic.gs             ← cek fungsi
 └── docs/
     ├── CHANGELOG.md              ← Riwayat versi lengkap
-    ├── HANDOFF.md                ← Project status & TODO
+    ├── HANDOFF.md                ← (USANG, arsip v1.11)
+    ├── PRD-*.md                  ← PRD yang sudah disetujui
     └── TODO.md                   ← Backlog fitur + cleanup notes
 ```
 > ⚠️ **PENTING soal backend:** yang LIVE adalah file terpisah di atas, dengan **`config.gs` sebagai router**.
@@ -64,6 +68,41 @@ File yang diubah: [index.html / backend/*.gs / keduanya]
 - **Docs:** `arthabumi/docs/` (CHANGELOG, HANDOFF, TODO)
 - **Backup:** `backups/index-v{VERSION}-{TIMESTAMP}.html`
 - **Scripts:** Root folder (`backup-before-update.bat`, `backup-before-update.ps1`)
+
+---
+
+## ⚠️ WAJIB TAHU SEJAK OKT 2026 (v1.41–v1.49)
+Ringkas — rinciannya di `docs/CHANGELOG.md` (Session 25–33), PRD di `docs/PRD-redesain-b-v1.41.md` & `docs/PRD-perbaikan-v1.45.md`.
+
+**Tampilan (gaya B, sama dengan FCC)**
+- Warna HANYA lewat token CSS (`var(--bg2)`, `--text`, `--accent`, `--green`, `--ic-amber`, …): `:root` = terang, `:root.dark` = gelap
+  (pilihan di localStorage `ab3-theme`). Jangan tulis warna hex di kode layar. Pengecualian: dokumen cetak/laporan/Excel
+  (fungsi `_loadXlsx` … `printRekapProyek`) sengaja tidak memakai token.
+- Huruf di `fonts/` (Plus Jakarta Sans + Fraunces), ikon app di `icons/`.
+- **Tanpa emoji di layar.** Ikon lewat `ic('nama')` (SVG garis, daftar di `ICONS` paling atas skrip); `ic('nama','b')` untuk tombol tanpa teks.
+  `showToast()` otomatis menambah ikon sesuai jenis (ok/err/info).
+- Konfirmasi: `await askConfirm(pesan,{ok:'Hapus',danger:1})` — JANGAN `confirm()`. Selama dialog terbuka, hasil sync ditahan (`_cfmHold`).
+- PC ≥ 1024px: menu samping (`.nav-side` di `buildNav()`), `#content[data-page]` mengatur lebar, modal jadi panel kanan.
+- Dropdown ≥ 7 pilihan otomatis jadi kotak cari (`cbxEnhance`, MutationObserver). `<select>` asli tetap ada (disembunyikan) —
+  `onchange`/`.value` lama tetap jalan. Kecualikan dengan atribut `data-nocbx`.
+
+**Data & sync**
+- Data kiriman FCC (ID diawali `BLI-FCC-`, `KSB-FCC-`, `PAY-FCC-`) **dikunci**: `_isFCC()` / `_fccLock()`; ubah/hapus lewat FCC.
+- Hari kerja: `_hariAbs(a)` (Hadir 1, Setengah Hari 0,5, lainnya 0) + `fHari()` di semua hitungan hari.
+- **Sync ringan (v1.48):** backend menyimpan Script Property `DATA_VERSI` (naik setiap `_apiHandleAction` berhasil, dari app maupun FCC).
+  `doFetch()` tanya `?action=versi` dulu; unduh 12 sheet hanya bila versi beda / Sync manual / > 10 menit. Tulis kirim `ringan=1` →
+  dijawab `{ok,versi}` lalu unduh lengkap di belakang layar. Kecepatan tercatat di Pengaturan (`_spdTeks`).
+- `doFetch` render ulang otomatis hanya bila aman (`_bolehRenderUlang`: tidak ada modal/dialog/isian aktif).
+- **Service worker `sw.js`** (bisa dibuka tanpa sinyal): **setiap rilis naikkan `CACHE` di sw.js = APP_VERSION.**
+
+**Cara kerja di repo ini**
+- File repo **LF**. Git `core.autocrlf=true` → **JANGAN `git stash`/`git checkout -- file`** (working copy jadi CRLF). Untuk pembanding versi lama
+  pakai `git show HEAD:index.html > folder-temp/...`. Patch lewat skrip Node dengan hitungan anchor (berhenti kalau jumlah tidak cocok).
+- **Uji otomatis** di `tests/` (Playwright dengan data contoh — tidak menyentuh Sheet asli). Lihat `tests/README.md`.
+- **Deploy backend bisa oleh Claude lewat clasp** (login `arthabumi.id@gmail.com`): clone Script ID project ke folder sementara
+  (BUKAN di repo — repo publik), bandingkan dengan `backend/*.gs`, ganti file yang berubah, `clasp push` → `clasp create-version` →
+  `clasp update-deployment <deploymentId yang dipakai app> -V <n>` (URL tetap). Script ID & deployment ID JANGAN ditulis di repo.
+  Tetap tunjukkan rencana & tunggu Eddy ketik **"Proceed"**. Terakhir: v1.48 → Apps Script versi **50** (rollback: 49).
 
 ---
 
@@ -161,13 +200,14 @@ KS = { p, beli, kr, abs, ksb, bayar, brg, toko, url, poll }
 
 ❌ Jangan tambah React/Tailwind/Babel/jQuery
 ❌ Jangan pakai new Date().toISOString() untuk tanggal
+❌ Jangan pakai emoji di layar (pakai ic()), jangan confirm() (pakai askConfirm), jangan warna hex (pakai token)
 ```
 
 ### Pola Tambah Data (ikuti urutan ini)
 ```javascript
 S.array.push(newItem);          // 1. update state
 ss(KS.key, S.array);            // 2. simpan localStorage
-showToast('✅ ...');             // 3. feedback
+showToast('...');               // 3. feedback (tanpa emoji — ikon otomatis)
 go(S.page);                     // 4. re-render
 doSync('action', payload);      // 5. sync GSheet (background)
 ```
@@ -213,7 +253,12 @@ R=NILAI FINAL (angka, ditulis app) = F + Σtambah − Σkurang     ← v1.36
 
 ---
 
-## VERSI AKTIF: v1.40 — 2026-09-30
+## VERSI AKTIF: v1.49 — 2026-10-06
+v1.41–44 redesain gaya B (warna/huruf/tema gelap, ikon, Dashboard & kartu proyek, tampilan PC) · v1.45 data FCC dikunci, absensi cepat,
+pengingat input kasbon/bayar, U1/U2/U5 · v1.46 pengingat Dashboard, offline (sw.js), slip closing → bagikan · v1.47 dropdown cari, Reset filter,
+Kosongkan isian, tanggal custom mulus · v1.48 sync ringan (backend config.gs v1.12) · v1.49 tombol Ke atas. Rincian: docs/CHANGELOG.md.
+
+## (sebelumnya) v1.40 — 2026-09-30
 Perubahan v1.40 (Tahap 4 integrasi FCC): FCC membaca closing (`action=closing`, read.gs `_apiClosingFCC`) dan mencatat
 bayar subkon lewat sheet **LOG BAYAR SUBKON** (`bayarSubkonFCC`/`hapusBayarSubkonFCC`, write.gs). `S.riwayatBayarSubkon`
 kini juga berisi pembayaran dari FCC (`fcc:true`, dari `_apiResponse.bayarSubkonFCC`).

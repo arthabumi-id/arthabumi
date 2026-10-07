@@ -1,7 +1,7 @@
 # ARTHABUMI — Handoff Document
 **Owner:** Eddy Santoso
 **Terakhir diupdate isi teknisnya:** 2026-05-26 (v1.11)
-**Status proyek saat ini:** v1.37 (7 Sep 2026) — lihat `SYSTEM.md` & `docs/TODO.md`
+**Status proyek saat ini:** v1.49 (6 Okt 2026) — **jangan pakai dokumen ini**, baca `SYSTEM.md` → `docs/TODO.md`
 
 > ⚠️ **DOKUMEN INI SUDAH USANG.** Isinya berhenti di v1.11 (Mei 2026) dan sebagian sudah tidak berlaku
 > (mis. `arthabumi-webapi.gs` sudah dihapus, skema MASTER PROJECT kini sampai kolom R).

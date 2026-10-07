@@ -1,11 +1,25 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: **2026-10-03**
-Versi kode saat ini: **v1.49** (backend config.gs v1.12 SUDAH deploy = versi 50; frontend menunggu push). Pindah ke Cloudflare: sesudah v1.48 terbukti (lihat kecepatan di Pengaturan). PRD-perbaikan-v1.45 SELESAI. Berikutnya: PRD print/export rekap tenaga per proyek (B2). Stok material sisa DIABAIKAN (keputusan Eddy 5 Okt). Ingat: tiap rilis naikkan CACHE di sw.js.
-> 📌 Redesain selesai 3 Okt 2026 → sudah diingatkan ke Eddy — utang U2/U3/U5 dikerjakan lewat PRD terpisah (U3 confirm() sudah beres di v1.41).
+Terakhir diupdate: **2026-10-07**
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 
+## ▶ STATUS SEKARANG (7 Okt 2026)
+- **Live:** frontend **v1.49** (GitHub Pages, sudah push) · backend **config.gs v1.12 = Apps Script versi 50** (deploy via clasp 6 Okt).
+- Selesai Okt 2026: redesain gaya B (v1.41–44), PRD-perbaikan-v1.45 (v1.45–46), dropdown cari & reset (v1.47), sync ringan (v1.48), tombol Ke atas (v1.49).
+
+## ▶ BERIKUTNYA (urut)
+1. **Cek hasil sync ringan v1.48** — minta Eddy screenshot *Pengaturan → Kecepatan sync* setelah 1–2 hari pakai.
+   Target "Cek perubahan" ±1–2 dtk. Kalau masih lambat → lihat Apps Script Executions (durasi doGet).
+2. **PRD print/export rekap tenaga per proyek** (backlog B2, pilihan Eddy 5 Okt). Tulis PRD dulu, tunggu "setuju".
+3. **Pindah ke Cloudflare Pages** (repo bisa privat) — sesudah v1.48 terbukti. Ingat: alamat baru = localStorage baru →
+   URL Apps Script + token diisi ulang di tiap HP/PC, pastikan antrean kirim kosong dulu, shortcut PWA dipasang ulang. FCC tidak terpengaruh.
+4. Opsional kecil: pengingat absensi di hari Minggu (tanya Eddy apakah Minggu selalu libur).
+- **Diabaikan (keputusan Eddy 5 Okt):** stok material sisa (B1).
+- Utang yang masih terbuka: U4 (kolom R basi bila Q diedit manual) — info saja; U6 (blok ringkasan MASTER PROJECT) — Eddy memutuskan tidak diperbaiki.
+
 ---
+
+## (arsip) catatan lama di bawah ini
 
 ## ⏳ DEPLOY v1.37 — MENUNGGU PUSH
 
