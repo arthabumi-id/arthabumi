@@ -13,6 +13,16 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 
 ---
 
+# ☁️ SESSION 34 (v1.50) — 2026-10-07 — Siap pindah ke Cloudflare Pages (PRD docs/PRD-cloudflare-v1.50.md)
+
+- `salinPengaturan()` / `tempelPengaturan()` (Pengaturan → Pindah perangkat / alamat): paket teks `ARTHABUMI-PENGATURAN:1:<base64>` lewat clipboard (bukan URL) berisi `PINDAH_KUNCI` = ab3-url, ab3-tok, ab3-poll, ab3-nav, ab3-co, ab3-theme, **ab3-rbsk (riwayat cicilan subkon — hanya ada di HP)**. Salin ditolak bila ada antrean kirim / data pending. Tempel → simpan → muat ulang → data diunduh dari Sheet. Cadangan: kotak teks bila clipboard tidak bisa dipakai.
+- `_bannerPindah()` di Dashboard hanya di alamat *.github.io → tombol "Salin pengaturan & buka alamat baru" (`ALAMAT_BARU`).
+- `_headers` (Cloudflare): X-Frame-Options DENY, nosniff, no-referrer, index.html & sw.js no-cache.
+- Build Cloudflare: `mkdir -p dist && cp -r index.html sw.js fonts icons _headers dist/`, output `dist` → backend/docs/tests/backups TIDAK tersaji.
+- Uji: tests/interact150.js 13 uji (dua origin = dua localStorage) + semua uji lama lulus.
+
+---
+
 # ⬆️ SESSION 33 (v1.49) — 2026-10-06 — Tombol Ke atas
 
 - Pil `#toTop` "Ke atas" di tengah bawah (PC: tengah area isi), muncul bila `#content` digulir > 400px; ketuk → gulir halus ke atas. Di tengah supaya tidak menimpa tombol ubah/hapus di kanan kartu. sw.js CACHE ab-v1.49. Uji HP & PC lulus.

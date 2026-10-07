@@ -296,6 +296,13 @@ textarea.fc{min-height:0}
 #toTop .ic{font-size:17px}
 #toTop.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 @media (min-width:1024px){#toTop{left:calc(50% + 122px);bottom:28px}}
+/* [v1.50] pindah alamat */
+.pindah-banner{display:flex;gap:10px;align-items:flex-start;padding:13px 14px;margin-bottom:12px;border-radius:14px;background:var(--ic-blue);border:1px solid var(--bd-blue);color:var(--blue)}
+.pindah-banner>.ic{font-size:18px;margin-top:2px}
+.pindah-banner b{display:block;font-size:14px}
+.pindah-banner span{display:block;font-size:12.5px;line-height:1.45;margin:3px 0 9px;color:var(--text2)}
+.pindah-box{display:flex;flex-direction:column;gap:3px;padding:10px 12px;margin-bottom:10px;border-radius:11px;background:var(--bg3);border:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.5}
+.pindah-box b{color:var(--text);font-size:12.5px}
 .dash-sync{width:100%;margin-bottom:12px;background:transparent;border:1.5px dashed var(--border2);border-radius:12px;min-height:46px;font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
 /* [v1.41] Dialog konfirmasi di dalam app (pengganti confirm()) */
 #cfm{position:fixed;inset:0;z-index:900;background:var(--scrim);display:none;align-items:center;justify-content:center;padding:22px}
@@ -401,8 +408,9 @@ const S={
   companyName:'Arthabumi',companyTagline:'Manajemen Proyek Kontraktor',
 };
 const KS={p:'ab3-p',beli:'ab3-beli',kr:'ab3-kr',abs:'ab3-abs',ksb:'ab3-ksb',bayar:'ab3-bayar',brg:'ab3-brg',toko:'ab3-toko',url:'ab3-url',poll:'ab3-poll',rab:'ab3-rab',sk:'ab3-sk',lsk:'ab3-lsk',co:'ab3-co',rbsk:'ab3-rbsk',nav:'ab3-nav',tok:'ab3-tok'};
-const APP_VERSION='v1.49';
+const APP_VERSION='v1.50';
 const APP_CHANGELOG=[
+  {v:'v1.50',date:'7 Okt 2026',desc:'Persiapan pindah ke alamat baru (Cloudflare): Pengaturan → Salin pengaturan / Tempel pengaturan, dan pengingat pindah di alamat lama'},
   {v:'v1.49',date:'6 Okt 2026',desc:'Tombol Ke atas: muncul di tengah bawah saat halaman digulir ke bawah, ketuk untuk langsung kembali ke paling atas'},
   {v:'v1.48',date:'6 Okt 2026',desc:'Sync jauh lebih ringan: tiap menit app hanya menanyakan apakah ada perubahan; data lengkap diunduh hanya bila berubah. Simpan tidak lagi menunggu seluruh data. Kecepatan sync terlihat di Pengaturan. (Perlu backend config.gs v1.12)'},
   {v:'v1.47',date:'6 Okt 2026',desc:'Pilihan proyek, toko, karyawan & subkon bisa diketik untuk mencari. Tombol Reset filter di Log Pembelian & Absensi, tombol Kosongkan isian di form input. Tanggal Custom di filter tidak lagi melompat saat diketik'},
@@ -845,6 +853,8 @@ function openSettings(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${[{v:30,l:'30 dtk'},{v:60,l:'1 mnt'},{v:120,l:'2 mnt'},{v:300,l:'5 mnt'},{v:0,l:'Manual'}].map(o=>`<button class="tab ${S.pollInterval===o.v?'tab-on':'tab-off'}" onclick="setPoll(${o.v})">${o.l}</button>`).join('')}
       </div></div>
+    <div class="pindah-box"><b>${ic('phone')} Pindah perangkat / alamat</b><span>Salin pengaturan (URL, token, menu, tema) dari app ini, lalu tempel di app lain atau alamat baru.</span>
+      <div class="act-row" style="margin-top:6px"><button class="btn btn-o btn-sm" onclick="salinPengaturan(false)">${ic('upload')} Salin pengaturan</button><button class="btn btn-g btn-sm" onclick="tempelPengaturan()">${ic('download')} Tempel pengaturan</button></div></div>
     <div class="spd-box"><b>${ic('clock')} Kecepatan sync (perangkat ini)</b><span>${_spdTeks()}</span></div>
     <div id="cfg-res"></div>
     <div class="act-row" style="flex-wrap:wrap;margin-bottom:12px">
@@ -1157,7 +1167,7 @@ function pgDashboard(){
   return `<div class="sec-title">${esc(S.companyName)}</div>
     ${tabBar}
     <div class="chipf-row">${filterBar}</div>
-    ${_pengingatDash()}
+    ${_bannerPindah()}${_pengingatDash()}
     <section class="hero">
       <div class="hero-lbl">Est. laba · ${filtered.length} proyek${S.dashFilter==='Semua'?'':' '+S.dashFilter.toLowerCase()}</div>
       <div class="hero-big" style="color:${tL>=0?'var(--text)':'var(--red)'}">${fRp(tL)}</div>
@@ -4943,6 +4953,46 @@ function printRekapProyek(kode){
   closeModal();_openReport(`${esc(S.companyName)} — Rekap Proyek: ${esc(p.nama)}`,html,chartScripts);
 }
 function setTab(page,tab){S.tab[page]=tab;go(page);}
+// [v1.50] Pindah alamat (GitHub Pages → Cloudflare Pages). Data di HP tersimpan per alamat, jadi pengaturan dipindah lewat
+// clipboard (BUKAN lewat URL — token tidak boleh masuk riwayat browser). Data proyek diunduh ulang dari Sheet di alamat baru.
+const ALAMAT_BARU='https://arthabumi-kontraktor.pages.dev/';
+const PINDAH_KUNCI=['ab3-url','ab3-tok','ab3-poll','ab3-nav','ab3-co','ab3-theme','ab3-rbsk'];   // ab3-rbsk = riwayat cicilan subkon (hanya ada di HP)
+function _diAlamatLama(){return /github\.io$/i.test(location.hostname);}
+function _belumTerkirim(){
+  const arr=[S.pembelian,S.logAbsensi,S.logKasbon,S.logPembayaran,S.logSubkon];
+  return (S.retryQ||[]).length+arr.reduce((n,a)=>n+(a||[]).filter(x=>x&&x.pending===true).length,0);
+}
+async function salinPengaturan(bukaBaru){
+  const n=_belumTerkirim();
+  if(n>0){showToast('Masih ada '+n+' isian belum terkirim ke Sheet — tekan Sync dulu, lalu coba lagi','err');return;}
+  if(!S.webAppUrl){showToast('Belum ada koneksi Google Sheet di perangkat ini','err');return;}
+  const d={};PINDAH_KUNCI.forEach(k=>{const v=localStorage.getItem(k);if(v!==null)d[k]=v;});
+  const teks='ARTHABUMI-PENGATURAN:1:'+btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  try{await navigator.clipboard.writeText(teks);}
+  catch(e){openModal('<div class="modal-title">Salin pengaturan</div><div class="item-sub" style="margin-bottom:8px">Salin semua teks di bawah, lalu tempel di app alamat baru (Pengaturan → Tempel pengaturan).</div><textarea class="fc" rows="5" readonly onclick="this.select()">'+esc(teks)+'</textarea>');return;}
+  showToast('Pengaturan tersalin — buka alamat baru, lalu Pengaturan → Tempel pengaturan');
+  if(bukaBaru)setTimeout(()=>{location.href=ALAMAT_BARU;},900);
+}
+function _terapkanPengaturan(teks){
+  const m=String(teks||'').trim().match(/^ARTHABUMI-PENGATURAN:1:([A-Za-z0-9+/=]+)$/);
+  if(!m){showToast('Teks pengaturan tidak dikenali — salin ulang dari app lama','err');return false;}
+  let d;try{d=JSON.parse(decodeURIComponent(escape(atob(m[1]))));}catch(e){showToast('Teks pengaturan rusak — salin ulang','err');return false;}
+  Object.keys(d).forEach(k=>{if(PINDAH_KUNCI.includes(k))localStorage.setItem(k,d[k]);});
+  showToast('Pengaturan dipasang — memuat data dari Google Sheet…');
+  setTimeout(()=>location.reload(),700);return true;
+}
+async function tempelPengaturan(){
+  let teks='';try{teks=await navigator.clipboard.readText();}catch(e){}
+  if(/^ARTHABUMI-PENGATURAN:1:/.test(String(teks).trim())){
+    if(S.webAppUrl&&!(await askConfirm('Ganti pengaturan perangkat ini?\nURL & token yang sekarang akan diganti dengan yang disalin.',{ok:'Ganti'})))return;
+    _terapkanPengaturan(teks);return;
+  }
+  openModal('<div class="modal-title">Tempel pengaturan</div><div class="item-sub" style="margin-bottom:8px">Tempel teks dari app lama (Pengaturan → Salin pengaturan).</div><textarea class="fc" id="tp-teks" rows="5" placeholder="ARTHABUMI-PENGATURAN:1:…"></textarea><div class="act-row" style="justify-content:flex-end"><button class="btn btn-g" onclick="closeModal()">Batal</button><button class="btn btn-p" onclick="if(_terapkanPengaturan(document.getElementById(\'tp-teks\').value))closeModal()">Pasang</button></div>');
+}
+function _bannerPindah(){
+  if(!_diAlamatLama())return '';
+  return `<div class="pindah-banner">${ic('info')}<div><b>App pindah ke alamat baru</b><span>${ALAMAT_BARU.replace('https://','').replace(/\/$/,'')} — salin pengaturan di sini, lalu di alamat baru buka Pengaturan → Tempel pengaturan. Alamat ini akan dimatikan.</span><button class="btn btn-p btn-sm" onclick="salinPengaturan(true)">${ic('link')} Salin pengaturan & buka alamat baru</button></div></div>`;
+}
 // [v1.49] Tombol kembali ke atas — muncul bila halaman sudah digulir > 400px
 function keAtas(){const ct=document.getElementById('content');if(ct)ct.scrollTo({top:0,behavior:'smooth'});}
 function _toTopCek(){const ct=document.getElementById('content'),b=document.getElementById('toTop');if(ct&&b)b.classList.toggle('show',ct.scrollTop>400);}

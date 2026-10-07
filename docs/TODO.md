@@ -4,14 +4,15 @@ Terakhir diupdate: **2026-10-07**
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 
 ## ▶ STATUS SEKARANG (7 Okt 2026)
-- **Live:** frontend **v1.49** (GitHub Pages, sudah push) · backend **config.gs v1.12 = Apps Script versi 50** (deploy via clasp 6 Okt).
+- **Live:** frontend **v1.49** di GitHub Pages; **v1.50 (siap pindah Cloudflare) menunggu push**. Backend config.gs v1.12 = Apps Script versi 50.
+- **Pindah Cloudflare (PRD-cloudflare-v1.50, disetujui 7 Okt):** Hari 1 (7 Okt) hubungkan Cloudflare · **Hari H Kamis 8 Okt 11.00** pindah perangkat · **Minggu 11 Okt** repo privat.
 - Selesai Okt 2026: redesain gaya B (v1.41–44), PRD-perbaikan-v1.45 (v1.45–46), dropdown cari & reset (v1.47), sync ringan (v1.48), tombol Ke atas (v1.49).
 
 ## ▶ BERIKUTNYA (urut)
 1. **Cek hasil sync ringan v1.48** — minta Eddy screenshot *Pengaturan → Kecepatan sync* setelah 1–2 hari pakai.
    Target "Cek perubahan" ±1–2 dtk. Kalau masih lambat → lihat Apps Script Executions (durasi doGet).
 2. **PRD print/export rekap tenaga per proyek** (backlog B2, pilihan Eddy 5 Okt). Tulis PRD dulu, tunggu "setuju".
-3. **Pindah ke Cloudflare Pages** (repo bisa privat) — sesudah v1.48 terbukti. Ingat: alamat baru = localStorage baru →
+3. **Pindah ke Cloudflare Pages** — SEDANG BERJALAN (lihat status di atas). Ingat: alamat baru = localStorage baru →
    URL Apps Script + token diisi ulang di tiap HP/PC, pastikan antrean kirim kosong dulu, shortcut PWA dipasang ulang. FCC tidak terpengaruh.
 4. Opsional kecil: pengingat absensi di hari Minggu (tanya Eddy apakah Minggu selalu libur).
 - **Diabaikan (keputusan Eddy 5 Okt):** stok material sisa (B1).

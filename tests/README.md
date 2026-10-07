@@ -16,6 +16,7 @@ Jalankan dari folder `tests/`:
 | `node interact147.js` | Dropdown cari, Reset filter, Kosongkan isian, ketik tanggal custom. |
 | `node interact148.js` | Sync ringan dengan Apps Script tiruan (hitung unduhan lengkap vs cek versi, backend lama). |
 | `node interact149.js` | Tombol Ke atas (HP & PC). |
+| `node interact150.js` | Salin/Tempel pengaturan antar alamat (dua origin), banner pindah. |
 | `node gstest148.js` | Router `backend/config.gs` (versi, ringan, token) dengan Google tiruan. |
 | `node setup-gs-test.js` | `setupAllSheets()` di `backend/setup.gs` dengan Sheet tiruan. |
 | `node datetest.js <index-lama.html>` | Bandingkan ketik tanggal custom versi lama vs sekarang. |
