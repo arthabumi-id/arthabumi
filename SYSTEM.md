@@ -94,6 +94,10 @@ Ringkas — rinciannya di `docs/CHANGELOG.md` (Session 25–33), PRD di `docs/PR
   dijawab `{ok,versi}` lalu unduh lengkap di belakang layar. Kecepatan tercatat di Pengaturan (`_spdTeks`).
 - `doFetch` render ulang otomatis hanya bila aman (`_bolehRenderUlang`: tidak ada modal/dialog/isian aktif).
 - **Service worker `sw.js`** (bisa dibuka tanpa sinyal): **setiap rilis naikkan `CACHE` di sw.js = APP_VERSION.**
+- **Cloudflare Pages** (sejak 7 Okt): setiap push `main` otomatis ter-build (±2 menit). Cek: `curl -s https://arthabumi-kontraktor.pages.dev/ | grep APP_VERSION`.
+  Kalau tertinggal versi: dashboard → Workers & Pages → arthabumi-kontraktor → Deployments — banner kuning "disconnected from your Git account" berarti
+  sambungan GitHub putus (7 Okt sempat terjadi); "Retry" hanya mengulang commit lama → setelah tersambung, **push commit baru**.
+- Lambat sync = antrean/bangun Apps Script di Google (kerja server ±30 ms, total 5–29 dtk). Jangan mencari-cari di kode lagi; opsi berikutnya cache Cloudflare Worker.
 
 **Cara kerja di repo ini**
 - File repo **LF**. Git `core.autocrlf=true` → **JANGAN `git stash`/`git checkout -- file`** (working copy jadi CRLF). Untuk pembanding versi lama

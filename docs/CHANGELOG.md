@@ -23,6 +23,8 @@ Untuk dokumentasi teknis & arsitektur → baca `SYSTEM.md`
 - Kecepatan sync di Pengaturan kini memisahkan **kerja server** (`ms` dari backend) vs antre/bangun di Google.
 
 ### Backend config.gs v1.13 — ✅ DEPLOYED 7 Okt 2026 21.13 via clasp = Apps Script versi **51** (rollback: 50)
+- **Insiden 7 Okt ±21.15–21.33:** Cloudflare Pages "disconnected from your Git account" → push v1.51 & 2 commit log tidak ter-build; Retry hanya mengulang 26f373e. Izin GitHub App sudah benar; sambungan pulih sendiri, dibuktikan commit kosong 770b730 ter-build otomatis → pages.dev v1.51.
+- **PC Eddy pindah ke pages.dev** (dicek: 27 proyek, 1.043 pembelian, 588 absensi, 11 riwayat cicilan subkon, koneksi & tema ikut). HP menyusul (kalender 8 Okt 11.00).
 - Hasil ukur setelah deploy (Chrome Eddy, dengan token): kerja server cek versi **29–41 ms**, total 5,6–28,7 dtk → >99% waktu = antrean/bangun Apps Script di Google, bukan kode kita.
 - `doGet`: Script Properties dibaca SEKALI (`getProperties`) untuk token & versi, SEBELUM `getActiveSpreadsheet()`. Semua jawaban membawa `ms` (waktu kerja server).
 - Uji: gstest148 8 uji; interact148 +2 (toast timeout), semua interact lulus.

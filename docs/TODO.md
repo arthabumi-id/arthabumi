@@ -1,20 +1,30 @@
 # ARTHABUMI — TODO & Feature Backlog
 
-Terakhir diupdate: **2026-10-07**
+Terakhir diupdate: **2026-10-07 (malam)**
 > ⚠️ Jangan percaya angka versi di dokumen mana pun. Sumber kebenaran = `APP_VERSION` di `index.html`.
 
-## ▶ STATUS SEKARANG (7 Okt 2026)
-- **Live:** frontend **v1.49** di GitHub Pages; **v1.50 (siap pindah Cloudflare) menunggu push**. Backend config.gs v1.12 = Apps Script versi 50.
-- **Pindah Cloudflare (PRD-cloudflare-v1.50, disetujui 7 Okt):** Hari 1 (7 Okt) ✅ Cloudflare Pages LIVE https://arthabumi-kontraktor.pages.dev (v1.50, header aktif, backend/docs/tests tidak tersaji, dicek Claude) · **Hari H Kamis 8 Okt 11.00** pindah perangkat · **Minggu 11 Okt** repo privat.
-- Selesai Okt 2026: redesain gaya B (v1.41–44), PRD-perbaikan-v1.45 (v1.45–46), dropdown cari & reset (v1.47), sync ringan (v1.48), tombol Ke atas (v1.49).
+## ▶ STATUS SEKARANG (7 Okt 2026, malam)
+- **Live:** frontend **v1.51** di **https://arthabumi-kontraktor.pages.dev** (Cloudflare Pages, auto-deploy dari push `main`) — alamat lama
+  github.io juga v1.51 + banner "App pindah". Backend **config.gs v1.13 = Apps Script versi 51** (deploy via clasp; rollback: 50).
+- **Pindah Cloudflare (PRD-cloudflare-v1.50):** ✅ Cloudflare live · ✅ **PC Eddy sudah pindah** (data lengkap, pengaturan & riwayat cicilan subkon ikut;
+  shortcut PC baru belum dipasang) · ⏳ **HP belum** (pengingat kalender Kamis 8 Okt 11.00) · ⏳ **repo privat Minggu 11 Okt** (kalender).
+- **Lambat sync = antrean/bangun Apps Script di Google**, bukan kode: kerja server 29–41 ms vs total 5,6–28,7 dtk (diukur 7 Okt). v1.51 sudah
+  menaikkan batas waktu ke 60 dtk & menyembunyikan toast timeout sync otomatis.
+- Selesai Okt 2026: redesain gaya B (v1.41–44), PRD-perbaikan-v1.45 (v1.45–46), dropdown cari & reset (v1.47), sync ringan (v1.48),
+  tombol Ke atas (v1.49), siap pindah Cloudflare (v1.50), batas sync 60 dtk + ms server (v1.51).
 
 ## ▶ BERIKUTNYA (urut)
-1. **Cek hasil sync ringan v1.48** — minta Eddy screenshot *Pengaturan → Kecepatan sync* setelah 1–2 hari pakai.
-   Target "Cek perubahan" ±1–2 dtk. Kalau masih lambat → lihat Apps Script Executions (durasi doGet).
-2. **PRD print/export rekap tenaga per proyek** (backlog B2, pilihan Eddy 5 Okt). Tulis PRD dulu, tunggu "setuju".
-3. **Pindah ke Cloudflare Pages** — SEDANG BERJALAN (lihat status di atas). Ingat: alamat baru = localStorage baru →
-   URL Apps Script + token diisi ulang di tiap HP/PC, pastikan antrean kirim kosong dulu, shortcut PWA dipasang ulang. FCC tidak terpengaruh.
-4. Opsional kecil: pengingat absensi di hari Minggu (tanya Eddy apakah Minggu selalu libur).
+1. **Selesaikan pindah HP** (Eddy): app lama → "Salin pengaturan & buka alamat baru" → Pengaturan → Tempel pengaturan → shortcut baru.
+   Kalau setelah Tempel muncul timeout: tunggu, tekan Sync lagi (Apps Script baru bangun).
+2. **Minggu 11 Okt: repo privat** — GitHub → arthabumi-id/arthabumi → Settings → Change visibility → Private. Cloudflare tetap jalan
+   (akses lewat GitHub App "Cloudflare Workers and Pages", repo arthabumi sudah dicentang). Sesudahnya github.io mati.
+   Lalu: hapus event kalender yang sudah lewat bila perlu; matikan banner/kode pindah di versi berikut (opsional).
+3. **Nilai rasa kecepatan 1–2 hari** (Pengaturan → Kecepatan sync, sekarang ada "kerja server" vs tunggu Google). Kalau masih terasa lambat →
+   PRD **cache Cloudflare Worker di depan Apps Script** (app ambil data dari Cloudflare, Cloudflare memperbarui dari Google di belakang layar).
+4. **PRD print/export rekap tenaga per proyek** (backlog B2, pilihan Eddy 5 Okt). Tulis PRD dulu, tunggu "setuju".
+5. Opsional kecil: pengingat absensi di hari Minggu (tanya Eddy apakah Minggu selalu libur).
+- **Keamanan:** Gemini API key lama (AIzaSyC3…) ada di riwayat commit Mei 2026 → Eddy diminta mematikannya di Google AI Studio/Cloud
+  Credentials (belum dikonfirmasi). Repo privat (langkah 2) menutup riwayat dari publik ke depan.
 - **Diabaikan (keputusan Eddy 5 Okt):** stok material sisa (B1).
 - Utang yang masih terbuka: U4 (kolom R basi bila Q diedit manual) — info saja; U6 (blok ringkasan MASTER PROJECT) — Eddy memutuskan tidak diperbaiki.
 
